@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: holy_order_db
+    environment:
+      POSTGRES_USER: holy_user
+      POSTGRES_PASSWORD: holy_password
+      POSTGRES_DB: holy_order
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  postgres_data:
