@@ -12,7 +12,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
     phone = Column(String, unique=True, index=True) # 식별자 및 적립용
-    rank = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
+    duty = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -58,7 +58,7 @@ class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    user_rank_snapshot = Column(String) # 주문 당시의 직분
+    user_duty_snapshot = Column(String) # 주문 당시의 직분
     total_price = Column(Integer)
     payment_method = Column(String) # BANK_TRANSFER, KAKAOPAY 등
     status = Column(String, default="PENDING") # PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED
