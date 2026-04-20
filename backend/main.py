@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
 import models
-from database import engine, get_db
+from database import engine
 from config import settings
+from routers import menus, users, orders, admin
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -16,6 +16,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(menus.router)
+app.include_router(users.router)
+app.include_router(orders.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():

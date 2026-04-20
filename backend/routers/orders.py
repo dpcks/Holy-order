@@ -1,0 +1,76 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from datetime import datetime, date
+
+import models, schemas
+from database import get_db
+
+router = APIRouter(prefix="/api/v1", tags=["orders"])
+
+@router.post("/orders", response_model=schemas.OrderResponse)
+def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == order.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    # 당일 주문 번호 계산 (간단한 구현)
+    today = date.today()
+    last_order = db.query(models.Order).filter(models.Order.created_at >= today).order_by(models.Order.id.desc()).first()
+    next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
+
+    new_order = models.Order(
+        user_id=order.user_id,
+        user_duty_snapshot=user.duty,
+        total_price=order.total_price,
+        payment_method=order.payment_method,
+        status="PENDING",
+        order_number=next_order_number
+    )
+    db.add(new_order)
+    db.flush() # 아이디를 얻기 위해 flush
+    
+    for item in order.items:
+        menu = db.query(models.Menu).filter(models.Menu.id == item.menu_id).first()
+        if not menu:
+            continue
+        order_item = models.OrderItem(
+            order_id=new_order.id,
+            menu_id=item.menu_id,
+            menu_name_snapshot=menu.name,
+            menu_price_snapshot=menu.price,
+            quantity=item.quantity,
+            options_text=item.options_text,
+            sub_total=item.sub_total
+        )
+        db.add(order_item)
+        
+    db.commit()
+    db.refresh(new_order)
+    return new_order
+
+@router.get("/orders/status/{order_id}")
+def get_order_status(order_id: int, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return {"status": order.status}
+
+@router.post("/payments/bank-transfer")
+def bank_transfer_callback(payment: schemas.PaymentLogCreate, db: Session = Depends(get_db)):
+    order = db.query(models.Order).filter(models.Order.id == payment.order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    # 로그 남기기
+    log = models.PaymentLog(
+        order_id=payment.order_id,
+        log_type="REQUEST",
+        amount=payment.amount,
+        sender_name=payment.sender_name
+    )
+    db.add(log)
+    
+    # 상태 업데이트
+    order.status = "PAID"
+    db.commit()
+    return {"message": "Payment logged successfully"}
