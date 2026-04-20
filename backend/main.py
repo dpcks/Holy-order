@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import models
 from database import engine, get_db
+from config import settings
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -10,7 +11,7 @@ app = FastAPI(title="Holy-Order API", description="교회 카페 주문 시스�
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # 프론트엔드 도메인으로 나중에 제한 필요
+    allow_origins=settings.cors_origins_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
