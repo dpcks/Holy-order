@@ -170,6 +170,7 @@ export const Cart = () => {
         user_id: userId,
         payment_method: 'BANK_TRANSFER',
         total_price: finalPrice,
+        request: requests.trim() || null,
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,

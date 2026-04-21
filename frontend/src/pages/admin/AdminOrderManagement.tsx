@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, CheckCircle } from 'lucide-react';
+import { RefreshCw, CheckCircle, Phone, MessageSquare, Tag } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 
@@ -17,6 +17,8 @@ interface Order {
   status: string;
   user_name_snapshot: string | null;
   user_duty_snapshot: string;
+  user_phone_snapshot: string | null;
+  request: string | null;
   total_price: number;
   created_at: string;
   items: OrderItem[];
@@ -46,9 +48,11 @@ const getElapsed = (createdAt: string) => {
   return diff < 1 ? '방금 전' : `${diff}분 경과`;
 };
 
-// 주문 아이템 요약 텍스트
-const summarizeItems = (items: OrderItem[]) =>
-  items.map(i => `${i.menu_name_snapshot} ${i.quantity}`).join(', ');
+// 전화번호 포맷팅 (01012345678 -> 010-1234-5678)
+const formatPhone = (phone: string | null) => {
+  if (!phone) return '';
+  return phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+};
 
 export const AdminOrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -95,7 +99,7 @@ export const AdminOrderManagement = () => {
     ws.onclose = () => {
       console.log('WebSocket disconnected. Retrying in 3s...');
       setTimeout(() => {
-        // 재연결 로직 생략
+        // 재연결 로직
       }, 3000);
     };
 
@@ -164,7 +168,7 @@ export const AdminOrderManagement = () => {
           {COLUMNS.map((col) => {
             const colOrders = orders.filter(o => o.status === col.status);
             return (
-              <div key={col.status} className="flex-1 flex flex-col min-w-[320px]">
+              <div key={col.status} className="flex-1 flex flex-col min-w-[340px]">
                 <div className="flex items-center justify-between mb-6 px-1">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
@@ -175,7 +179,7 @@ export const AdminOrderManagement = () => {
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex flex-col gap-5 overflow-y-auto pr-2 custom-scrollbar">
                   {colOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-gray-100 text-gray-300">
                       <CheckCircle size={48} strokeWidth={1} className="mb-3 opacity-20" />
@@ -188,9 +192,10 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-3xl p-5 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
+                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
                         >
-                          <div className="flex items-center justify-between mb-4">
+                          {/* 헤더: 주문번호 & 경과시간 */}
+                          <div className="flex items-center justify-between mb-5">
                             <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
                               #{order.order_number}
                             </span>
@@ -201,22 +206,61 @@ export const AdminOrderManagement = () => {
                             </span>
                           </div>
 
-                          <div className="mb-4">
-                            <p className="text-[15px] font-black text-gray-800 mb-1 leading-snug">
-                              {summarizeItems(order.items)}
-                            </p>
-                            <span className="text-[12px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded italic">
-                              {order.user_name_snapshot || '손님'} {order.user_duty_snapshot}
-                            </span>
+                          {/* 주문자 정보 (이름, 직분, 전화번호) */}
+                          <div className="flex flex-col gap-1 mb-5 pb-5 border-b border-gray-50">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[16px] font-black text-gray-900">{order.user_name_snapshot || '손님'}</span>
+                              <span className="text-[11px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded tracking-tighter">
+                                {order.user_duty_snapshot}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-gray-400">
+                              <Phone size={12} />
+                              <span className="text-[13px] font-bold tracking-tight">{formatPhone(order.user_phone_snapshot)}</span>
+                            </div>
                           </div>
 
-                          <div className="flex items-center justify-between mb-5 border-t border-gray-50 pt-4">
+                          {/* 메뉴 리스트 & 옵션 */}
+                          <div className="flex flex-col gap-4 mb-5">
+                            {order.items.map((item, idx) => (
+                              <div key={idx} className="flex flex-col gap-1.5">
+                                <div className="flex items-center justify-between">
+                                  <p className="text-[15px] font-black text-gray-800 leading-snug">
+                                    {item.menu_name_snapshot} <span className="text-primary text-[13px] ml-1">{item.quantity}개</span>
+                                  </p>
+                                </div>
+                                {item.options_text && (
+                                  <div className="flex items-start gap-1.5 text-gray-500">
+                                    <Tag size={12} className="mt-0.5 shrink-0" />
+                                    <span className="text-[12px] font-medium leading-tight">{item.options_text}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* 고객 요청사항 */}
+                          {order.request && (
+                            <div className="mb-6 p-4 bg-orange-50/50 border border-orange-100 rounded-2xl flex gap-3">
+                              <MessageSquare size={16} className="text-orange-500 shrink-0 mt-0.5" />
+                              <div className="flex flex-col gap-1">
+                                <span className="text-[11px] font-black text-orange-600 uppercase tracking-widest">요청사항</span>
+                                <p className="text-[13px] font-bold text-orange-900 leading-relaxed whitespace-pre-wrap">
+                                  {order.request}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 합계 금액 */}
+                          <div className="flex items-center justify-between mb-6 pt-1">
                             <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">Total Price</span>
-                            <p className="text-[17px] font-black text-gray-900">
+                            <p className="text-[19px] font-black text-gray-900 tracking-tight">
                               ₩{order.total_price.toLocaleString()}
                             </p>
                           </div>
 
+                          {/* 상태 변경 버튼 */}
                           <div className="flex gap-3">
                             {order.status === 'PENDING' && (
                               <button
@@ -231,7 +275,7 @@ export const AdminOrderManagement = () => {
                               <button
                                 onClick={() => handleStatusChange(order.id, transition.next)}
                                 disabled={isUpdating}
-                                className={`flex-1 py-3.5 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
+                                className={`flex-1 py-4 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
                               >
                                 {isUpdating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={18} />}
                                 {transition.label}

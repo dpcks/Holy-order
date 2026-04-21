@@ -96,6 +96,7 @@ class OrderCreate(BaseModel):
     user_id: int
     total_price: int
     payment_method: PaymentMethodEnum
+    request: Optional[str] = None
     items: List[OrderItemCreate]
 
 class PaymentLogCreate(BaseModel):
@@ -117,6 +118,8 @@ class OrderResponse(BaseModel):
     order_number: int
     user_duty_snapshot: str
     user_name_snapshot: Optional[str] = None
+    user_phone_snapshot: Optional[str] = None
+    request: Optional[str] = None
     total_price: int
     payment_method: str
     status: str
