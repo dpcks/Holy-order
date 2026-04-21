@@ -125,8 +125,8 @@ export const AdminOrderManagement = () => {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-gray-900"></span>
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
                 <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">실시간</span>
               </div>
             </div>
@@ -137,11 +137,11 @@ export const AdminOrderManagement = () => {
 
           {/* 단순화된 카운트다운 */}
           <div className="h-10 w-[1px] bg-gray-100 hidden md:block" />
-          <div className="hidden md:flex items-center gap-2.5">
-            <div className="bg-gray-900 text-white w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg shadow-sm">
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-2xl font-black text-gray-300 w-6 text-center">
               {countdown}
-            </div>
-            <p className="text-[12px] text-gray-500 font-bold tracking-tight">초 후 갱신</p>
+            </span>
+            <p className="text-[12px] text-gray-400 font-bold tracking-tight">초 후 갱신</p>
           </div>
         </div>
 
