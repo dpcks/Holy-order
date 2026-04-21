@@ -188,7 +188,7 @@ export const Cart = () => {
 
   if (items.length === 0) {
     return (
-      <div className="flex flex-col min-h-screen bg-[#F9FAFB]">
+      <div className="flex flex-col min-h-screen bg-[#F9FAFB] max-w-[480px] mx-auto shadow-lg relative">
         <Header title="장바구니" showBack showCart={false} />
         <div className="flex-1 flex flex-col items-center justify-center p-4">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
@@ -211,7 +211,7 @@ export const Cart = () => {
         />
       )}
 
-      <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-32">
+      <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-32 max-w-[480px] mx-auto shadow-lg relative">
         <Header
           title={
             <div className="flex flex-col items-center">

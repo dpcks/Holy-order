@@ -89,7 +89,7 @@ export const MenuDetail = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-32">
+    <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-32 max-w-[480px] mx-auto shadow-lg relative">
       <Header title="메뉴상세" showBack showCart />
 
       <main className="flex-1">

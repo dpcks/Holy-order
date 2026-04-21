@@ -1,19 +1,35 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+
+// 사용자 페이지
 import { Home } from './pages/Home';
 import { MenuDetail } from './pages/MenuDetail';
 import { Cart } from './pages/Cart';
 import { OrderStatus } from './pages/OrderStatus';
+
+// 관리자 페이지
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { AdminOrderManagement } from './pages/admin/AdminOrderManagement';
+import { AdminMenuManagement } from './pages/admin/AdminMenuManagement';
+import { AdminSalesReports } from './pages/admin/AdminSalesReports';
 
 function App() {
   return (
     <CartProvider>
       <Router>
         <Routes>
+          {/* 사용자 화면 (모바일) */}
           <Route path="/" element={<Home />} />
           <Route path="/menu/:id" element={<MenuDetail />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/order/status/:id" element={<OrderStatus />} />
+
+          {/* 관리자 화면 (데스크탑) */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOrderManagement />} />
+            <Route path="menus" element={<AdminMenuManagement />} />
+            <Route path="reports" element={<AdminSalesReports />} />
+          </Route>
         </Routes>
       </Router>
     </CartProvider>

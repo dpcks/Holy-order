@@ -21,6 +21,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     new_order = models.Order(
         user_id=order.user_id,
         user_duty_snapshot=user.duty,
+        user_name_snapshot=user.name,
         total_price=order.total_price,
         payment_method=order.payment_method.value,
         status=schemas.OrderStatusEnum.PENDING.value,

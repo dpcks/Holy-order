@@ -62,6 +62,7 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     user_duty_snapshot = Column(String) # 주문 당시의 직분
+    user_name_snapshot = Column(String, nullable=True) # 주문 당시의 이름 (관리자 화면 표시용)
     total_price = Column(Integer)
     payment_method = Column(String) # BANK_TRANSFER, KAKAOPAY 등
     status = Column(String, default="PENDING") # PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED

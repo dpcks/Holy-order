@@ -116,6 +116,7 @@ class OrderResponse(BaseModel):
     id: int
     order_number: int
     user_duty_snapshot: str
+    user_name_snapshot: Optional[str] = None
     total_price: int
     payment_method: str
     status: str
@@ -154,6 +155,13 @@ class SettingUpdate(BaseModel):
     bank_name: Optional[str] = None
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
+
+class MenuUpdate(BaseModel):
+    name: Optional[str] = None
+    price: Optional[int] = None
+    description: Optional[str] = None
+    category_id: Optional[int] = None
+    is_available: Optional[bool] = None
 
 # ===============================
 # Admin & Auth

@@ -69,7 +69,7 @@ export const OrderStatus = () => {
   const isCompleted = status === 'COMPLETED' || status === 'READY';
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-8">
+    <div className="flex flex-col min-h-screen bg-[#F9FAFB] pb-8 max-w-[480px] mx-auto shadow-lg relative">
       {/* 커스텀 헤더 */}
       <header className="flex items-center justify-between px-4 h-14 bg-[#F9FAFB]">
         <button className="p-2 -ml-2 text-gray-800">
