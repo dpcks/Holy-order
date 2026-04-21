@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home } from 'lucide-react';
+import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiClient } from '../api/client';
 import type { StandardResponse } from '../api/client';
 
@@ -18,6 +18,7 @@ export const OrderStatus = () => {
   const [setting, setSetting] = useState<Setting | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [activeOrderIds, setActiveOrderIds] = useState<string[]>([]);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -32,9 +33,12 @@ export const OrderStatus = () => {
       
       if (orderRes?.success) {
         setOrder(orderRes.data);
-        // 주문이 완료되었으면 로컬스토리지 정리
+        // 주문이 완료되었으면 해당 아이디만 로컬스토리지에서 제거
         if (orderRes.data.status === 'COMPLETED') {
-          localStorage.removeItem('activeOrderId');
+          const ids = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
+          const filteredIds = ids.filter((activeId: string) => activeId !== id);
+          localStorage.setItem('activeOrderIds', JSON.stringify(filteredIds));
+          setActiveOrderIds(filteredIds);
         }
       }
       if (settingRes?.success) {
@@ -48,12 +52,12 @@ export const OrderStatus = () => {
   }, [id]);
 
   useEffect(() => {
+    const ids = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
+    setActiveOrderIds(ids);
     fetchData(true);
 
-    // WebSocket 연결 (실시간 업데이트)
     const wsUrl = `ws://${window.location.hostname}:8000/ws`;
     const ws = new WebSocket(wsUrl);
-
     ws.onmessage = (event) => {
       if (event.data === 'ORDER_UPDATED') {
         fetchData(false);
@@ -101,18 +105,59 @@ export const OrderStatus = () => {
   const isReady = status === 'READY';
   const isCompleted = status === 'COMPLETED';
 
+  // 현재 주문의 인덱스 확인
+  const currentIndex = activeOrderIds.indexOf(id || '');
+
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-8 shadow-2xl relative">
       <header className="flex items-center justify-between px-6 h-16 bg-[#F9FAFB]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
-        <div className="w-10" /> {/* 왼쪽 공백 (정렬용) */}
+        <div className="w-10">
+          {activeOrderIds.length > 1 && currentIndex > 0 && (
+            <button 
+              onClick={() => navigate(`/order/status/${activeOrderIds[currentIndex - 1]}`)}
+              className="p-2 text-gray-400 hover:text-gray-800 transition-colors"
+            >
+              <ChevronLeft size={24} />
+            </button>
+          )}
+        </div>
         <h1 className="text-lg font-black tracking-[0.2em] text-[#2D1616]">STATUS</h1>
-        <button 
-          onClick={() => navigate('/')}
-          className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-gray-800 border border-gray-100 shadow-sm active:scale-95 transition-all"
-        >
-          <Home size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          {activeOrderIds.length > 1 && currentIndex < activeOrderIds.length - 1 && (
+            <button 
+              onClick={() => navigate(`/order/status/${activeOrderIds[currentIndex + 1]}`)}
+              className="p-2 text-gray-400 hover:text-gray-800 transition-colors mr-2"
+            >
+              <ChevronRight size={24} />
+            </button>
+          )}
+          <button 
+            onClick={() => navigate('/')}
+            className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-gray-800 border border-gray-100 shadow-sm active:scale-95 transition-all"
+          >
+            <Home size={20} />
+          </button>
+        </div>
       </header>
+
+      {/* 주문 탭 (여러 개일 경우) */}
+      {activeOrderIds.length > 1 && (
+        <div className="px-6 py-3 flex gap-2 overflow-x-auto scrollbar-hide bg-white border-b border-gray-50">
+          {activeOrderIds.map((activeId, idx) => (
+            <button
+              key={activeId}
+              onClick={() => navigate(`/order/status/${activeId}`)}
+              className={`px-4 py-1.5 rounded-full text-[12px] font-black transition-all whitespace-nowrap ${
+                activeId === id 
+                  ? 'bg-[#1A0A0A] text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+            >
+              주문 {idx + 1}
+            </button>
+          ))}
+        </div>
+      )}
 
       <main className="flex-1 px-4 py-4 flex flex-col items-center gap-5">
         <div className="bg-white w-full rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center py-8 border border-gray-50 transition-all duration-500">
@@ -173,7 +218,7 @@ export const OrderStatus = () => {
           <div className="absolute top-[42px] left-10 right-10 h-1.5 bg-gray-100 -z-10 rounded-full" />
           <div className="absolute top-[42px] left-10 h-1.5 bg-primary -z-10 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(255,75,75,0.3)]" style={{ width: (isReady || isCompleted) ? 'calc(100% - 5rem)' : isPreparing ? 'calc(50% - 2.5rem)' : '0%' }} />
           <div className="flex flex-col items-center gap-3">
-            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white shadow-xl rotate-0' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><CheckCircle2 size={28} /></div>
+            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white shadow-xl rotate-0' : 'bg-white border-2 border-gray-200 text-gray-300'}`}><CheckCircle2 size={28} /></div>
             <span className={`text-[13px] font-black ${!isPending ? 'text-[#1A0A0A]' : 'text-gray-400'}`}>입금 확인</span>
           </div>
           <div className="flex flex-col items-center gap-3">
@@ -201,7 +246,7 @@ export const OrderStatus = () => {
               <span className="text-[15px] font-black text-gray-900">₩{item.sub_total.toLocaleString()}</span>
             </div>
           ))}
-          <div className="mt-6 pt-5 border-t border-gray-50 flex justify-between items-center">
+          <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between items-center">
             <span className="text-gray-400 text-[11px] font-black uppercase tracking-[0.2em]">Total Price</span>
             <span className="font-black text-[22px] text-primary tracking-tight">₩{totalAmount.toLocaleString()}</span>
           </div>

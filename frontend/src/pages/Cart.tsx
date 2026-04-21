@@ -168,8 +168,11 @@ export const Cart = () => {
 
       if (response.success) {
         clearCart();
-        // 실시간 추적을 위해 로컬 스토리지에 저장
-        localStorage.setItem('activeOrderId', response.data.id.toString());
+        
+        // 여러 주문을 추적하기 위해 배열로 관리
+        const existingIds = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
+        const updatedIds = [...new Set([...existingIds, response.data.id.toString()])];
+        localStorage.setItem('activeOrderIds', JSON.stringify(updatedIds));
         
         navigate(`/order/status/${response.data.id}`, {
           state: { orderNumber: response.data.order_number, total: finalPrice }
