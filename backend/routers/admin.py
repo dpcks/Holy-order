@@ -25,11 +25,29 @@ def get_orders_board(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=orders, message="주문 현황을 조회했습니다.")
 
 
+from typing import List, Optional
+
 @router.get("/orders/history", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
-def get_orders_history(page: int = 1, limit: int = 20, db: Session = Depends(get_db)):
-    """주문 내역 히스토리: 완료되거나 취소된 주문 포함 전체 조회"""
+def get_orders_history(
+    page: int = 1, 
+    limit: int = 20, 
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """주문 내역 히스토리: 필터링 및 페이징 지원"""
+    query = db.query(models.Order)
+    
+    if start_date:
+        query = query.filter(models.Order.order_date >= start_date)
+    if end_date:
+        query = query.filter(models.Order.order_date <= end_date)
+    if status:
+        query = query.filter(models.Order.status == status)
+        
     offset = (page - 1) * limit
-    orders = db.query(models.Order).order_by(models.Order.id.desc()).offset(offset).limit(limit).all()
+    orders = query.order_by(models.Order.id.desc()).offset(offset).limit(limit).all()
     return schemas.StandardResponse(success=True, data=orders, message="주문 내역을 조회했습니다.")
 
 
