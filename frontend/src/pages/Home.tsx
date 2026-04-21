@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, ChevronDown } from 'lucide-react';
+import { MapPin, ChevronDown, Coffee } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
 import type { StandardResponse } from '../api/client';
@@ -33,8 +33,13 @@ export const Home = () => {
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
 
   useEffect(() => {
+    // 진행 중인 주문 확인
+    const orderId = localStorage.getItem('activeOrderId');
+    setActiveOrderId(orderId);
+
     const fetchMenus = async () => {
       try {
         const response = await apiClient.get<any, StandardResponse<Category[]>>('/categories');
@@ -123,6 +128,33 @@ export const Home = () => {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* 실시간 주문 추적 플로팅 버튼 */}
+      {activeOrderId && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
+          <button 
+            onClick={() => navigate(`/order/status/${activeOrderId}`)}
+            className="w-full bg-[#1A0A0A] text-white py-4 px-6 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-primary p-2 rounded-xl">
+                <Coffee size={20} className="text-white" />
+              </div>
+              <div className="text-left">
+                <p className="text-[14px] font-black tracking-tight">주문이 진행 중입니다</p>
+                <p className="text-[11px] text-white/40 font-bold">내 주문 현황 바로가기</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                <span className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                <span className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                <span className="w-1 h-1 bg-primary rounded-full animate-bounce"></span>
+              </div>
+            </div>
+          </button>
         </div>
       )}
     </div>

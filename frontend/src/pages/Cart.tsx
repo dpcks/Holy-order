@@ -168,6 +168,9 @@ export const Cart = () => {
 
       if (response.success) {
         clearCart();
+        // 실시간 추적을 위해 로컬 스토리지에 저장
+        localStorage.setItem('activeOrderId', response.data.id.toString());
+        
         navigate(`/order/status/${response.data.id}`, {
           state: { orderNumber: response.data.order_number, total: finalPrice }
         });
