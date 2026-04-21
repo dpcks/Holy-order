@@ -61,7 +61,7 @@ export const Home = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-white pb-6 max-w-[480px] mx-auto shadow-lg relative">
+    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-6 shadow-2xl relative">
       <Header showSearch showCart onSearchChange={setSearchQuery} />
 
       {!searchQuery ? (
