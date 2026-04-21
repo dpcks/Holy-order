@@ -141,9 +141,23 @@ export const Cart = () => {
   const discount = 0;
   const finalPrice = totalPrice - discount;
 
-  // 주문 버튼 클릭 → 유저 정보 모달 오픈
+  // 주문 버튼 클릭 → 유저 정보가 있으면 바로 주문, 없으면 모달 오픈
   const handleOrderClick = () => {
     if (items.length === 0) return;
+    
+    const savedUser = localStorage.getItem('userInfo');
+    if (savedUser) {
+      try {
+        const userInfo = JSON.parse(savedUser);
+        if (userInfo.id) {
+          handleOrderWithUser(userInfo.id);
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved user info', e);
+      }
+    }
+    
     setShowUserModal(true);
   };
 
@@ -169,6 +183,13 @@ export const Cart = () => {
       if (response.success) {
         clearCart();
         
+        // 내 정보 저장 (다음 주문 시 바로 주문 가능하도록)
+        localStorage.setItem('userInfo', JSON.stringify({ 
+          id: userId,
+          // 이름과 직분은 API 응답에서 가져오거나 상위에서 전달받아야 함
+          // 여기서는 단순히 ID가 있음을 저장하여 재사용 유도
+        }));
+
         // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
         const existingOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
         const newOrder = { id: response.data.id.toString(), orderNumber: response.data.order_number };
