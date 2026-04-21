@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, CheckCircle, Phone, MessageSquare, Tag } from 'lucide-react';
+import { RefreshCw, CheckCircle, Phone, MessageSquare } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 
@@ -52,6 +52,39 @@ const getElapsed = (createdAt: string) => {
 const formatPhone = (phone: string | null) => {
   if (!phone) return '';
   return phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+};
+
+// 옵션 텍스트 파싱 및 뱃지 렌더링 컴포넌트
+const OptionBadges = ({ text }: { text: string | null }) => {
+  if (!text) return null;
+  
+  // ' / ' 또는 ', '로 구분된 옵션들을 분리
+  const options = text.split(/ \/ |, /);
+  
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {options.map((opt, i) => {
+        const trimmed = opt.trim();
+        if (!trimmed) return null;
+        
+        const isIce = trimmed.toUpperCase() === 'ICE';
+        const isHot = trimmed.toUpperCase() === 'HOT';
+        
+        return (
+          <span 
+            key={i} 
+            className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 ${
+              isIce ? 'bg-blue-100 text-blue-600 border border-blue-200' :
+              isHot ? 'bg-red-100 text-red-600 border border-red-200' :
+              'bg-gray-100 text-gray-500 border border-gray-200'
+            }`}
+          >
+            {trimmed}
+          </span>
+        );
+      })}
+    </div>
+  );
 };
 
 export const AdminOrderManagement = () => {
@@ -192,7 +225,7 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
+                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
                         >
                           {/* 헤더: 주문번호 & 경과시간 */}
                           <div className="flex items-center justify-between mb-5">
@@ -223,18 +256,13 @@ export const AdminOrderManagement = () => {
                           {/* 메뉴 리스트 & 옵션 */}
                           <div className="flex flex-col gap-4 mb-5">
                             {order.items.map((item, idx) => (
-                              <div key={idx} className="flex flex-col gap-1.5">
+                              <div key={idx} className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between">
                                   <p className="text-[15px] font-black text-gray-800 leading-snug">
                                     {item.menu_name_snapshot} <span className="text-primary text-[13px] ml-1">{item.quantity}개</span>
                                   </p>
                                 </div>
-                                {item.options_text && (
-                                  <div className="flex items-start gap-1.5 text-gray-500">
-                                    <Tag size={12} className="mt-0.5 shrink-0" />
-                                    <span className="text-[12px] font-medium leading-tight">{item.options_text}</span>
-                                  </div>
-                                )}
+                                <OptionBadges text={item.options_text} />
                               </div>
                             ))}
                           </div>
