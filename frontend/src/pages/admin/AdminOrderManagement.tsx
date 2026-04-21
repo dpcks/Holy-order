@@ -259,7 +259,7 @@ export const AdminOrderManagement = () => {
                               <div key={idx} className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between">
                                   <p className="text-[15px] font-black text-gray-800 leading-snug">
-                                    {item.menu_name_snapshot} <span className="text-primary text-[13px] ml-1">{item.quantity}개</span>
+                                    {item.menu_name_snapshot} <span className="text-primary text-[13px] ml-1.5 font-black uppercase">x {item.quantity}</span>
                                   </p>
                                 </div>
                                 <OptionBadges text={item.options_text} />
