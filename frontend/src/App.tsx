@@ -10,6 +10,7 @@ import { OrderStatus } from './pages/OrderStatus';
 // 관리자 페이지
 import { AdminLayout } from './pages/admin/AdminLayout';
 import { AdminOrderManagement } from './pages/admin/AdminOrderManagement';
+import { AdminOrderHistory } from './pages/admin/AdminOrderHistory';
 import { AdminMenuManagement } from './pages/admin/AdminMenuManagement';
 import { AdminSalesReports } from './pages/admin/AdminSalesReports';
 
@@ -27,6 +28,7 @@ function App() {
           {/* 관리자 화면 (데스크탑) */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOrderManagement />} />
+            <Route path="history" element={<AdminOrderHistory />} />
             <Route path="menus" element={<AdminMenuManagement />} />
             <Route path="reports" element={<AdminSalesReports />} />
           </Route>

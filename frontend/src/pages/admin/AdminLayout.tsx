@@ -1,11 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { ClipboardList, UtensilsCrossed, BarChart2, LogOut } from 'lucide-react';
+import { ClipboardList, UtensilsCrossed, BarChart2, LogOut, History } from 'lucide-react';
 
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
+  { to: '/admin/history', label: '주문 내역', icon: History },
   { to: '/admin/menus', label: '메뉴 관리', icon: UtensilsCrossed },
   { to: '/admin/reports', label: '매출 통계', icon: BarChart2 },
 ];
+
 
 export const AdminLayout = () => (
   <div className="flex h-screen bg-gray-100 overflow-hidden font-sans">

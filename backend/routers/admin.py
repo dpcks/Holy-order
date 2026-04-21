@@ -25,6 +25,15 @@ def get_orders_board(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=orders, message="주문 현황을 조회했습니다.")
 
 
+@router.get("/orders/history", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
+def get_orders_history(page: int = 1, limit: int = 20, db: Session = Depends(get_db)):
+    """주문 내역 히스토리: 완료되거나 취소된 주문 포함 전체 조회"""
+    offset = (page - 1) * limit
+    orders = db.query(models.Order).order_by(models.Order.id.desc()).offset(offset).limit(limit).all()
+    return schemas.StandardResponse(success=True, data=orders, message="주문 내역을 조회했습니다.")
+
+
+
 @router.patch("/orders/{order_id}/status")
 def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
     """주문 상태 변경 (입금승인, 준비완료, 수령완료, 취소)"""
