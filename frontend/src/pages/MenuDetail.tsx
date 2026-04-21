@@ -37,7 +37,7 @@ export const MenuDetail = () => {
     tempOptions.length > 0 ? tempOptions[0] : null
   );
   const [selectedCup, setSelectedCup] = useState<MenuOption | null>(
-    cupOptions.length > 0 ? cupOptions[0] : null
+    cupOptions.find(o => o.name === '일회용컵') || (cupOptions.length > 0 ? cupOptions[0] : null)
   );
 
   // 추가 옵션 (다중 선택 가능)
