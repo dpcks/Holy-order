@@ -8,7 +8,8 @@ from database import Base
 KST = timezone(timedelta(hours=9))
 
 def get_seoul_time():
-    return datetime.now(KST)
+    # 타임존 정보가 없는(naive) 서울 현재 시간을 반환하여 DB에 그대로 저장되게 함
+    return datetime.now(KST).replace(tzinfo=None)
 
 # ==========================================
 # 1. 마스터 데이터 (Master Data)
