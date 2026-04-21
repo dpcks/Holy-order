@@ -169,14 +169,15 @@ export const Cart = () => {
       if (response.success) {
         clearCart();
         
-        // 여러 주문을 추적하기 위해 배열로 관리
-        const existingIds = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
-        const updatedIds = [...new Set([...existingIds, response.data.id.toString()])];
-        localStorage.setItem('activeOrderIds', JSON.stringify(updatedIds));
+        // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
+        const existingOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+        const newOrder = { id: response.data.id.toString(), orderNumber: response.data.order_number };
         
-        navigate(`/order/status/${response.data.id}`, {
-          state: { orderNumber: response.data.order_number, total: finalPrice }
-        });
+        // 중복 방지 및 추가
+        const updatedOrders = [...existingOrders.filter((o: any) => o.id !== newOrder.id), newOrder];
+        localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
+        
+        navigate(`/order/status/${response.data.id}`);
       } else {
         alert(response.message || '주문에 실패했습니다.');
       }

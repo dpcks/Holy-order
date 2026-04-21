@@ -10,6 +10,11 @@ interface Setting {
   account_holder: string | null;
 }
 
+interface ActiveOrder {
+  id: string;
+  orderNumber: number;
+}
+
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
@@ -18,7 +23,7 @@ export const OrderStatus = () => {
   const [setting, setSetting] = useState<Setting | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-  const [activeOrderIds, setActiveOrderIds] = useState<string[]>([]);
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -35,10 +40,10 @@ export const OrderStatus = () => {
         setOrder(orderRes.data);
         // 주문이 완료되었으면 해당 아이디만 로컬스토리지에서 제거
         if (orderRes.data.status === 'COMPLETED') {
-          const ids = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
-          const filteredIds = ids.filter((activeId: string) => activeId !== id);
-          localStorage.setItem('activeOrderIds', JSON.stringify(filteredIds));
-          setActiveOrderIds(filteredIds);
+          const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+          const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
+          localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
+          setActiveOrders(filteredOrders);
         }
       }
       if (settingRes?.success) {
@@ -52,8 +57,8 @@ export const OrderStatus = () => {
   }, [id]);
 
   useEffect(() => {
-    const ids = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
-    setActiveOrderIds(ids);
+    const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+    setActiveOrders(orders);
     fetchData(true);
 
     const wsUrl = `ws://${window.location.hostname}:8000/ws`;
@@ -96,7 +101,9 @@ export const OrderStatus = () => {
     );
   }
 
-  const orderNumber = order?.order_number || passedOrderNumber || '-';
+  // 로컬스토리지에 저장된 주문 번호 찾기 (백엔드 응답 전까지 사용)
+  const storedOrder = activeOrders.find(o => o.id === id);
+  const orderNumber = order?.order_number || storedOrder?.orderNumber || passedOrderNumber || '-';
   const status = order?.status || 'PENDING';
   const totalAmount = passedTotal || order?.total_price || 0;
 
@@ -106,15 +113,15 @@ export const OrderStatus = () => {
   const isCompleted = status === 'COMPLETED';
 
   // 현재 주문의 인덱스 확인
-  const currentIndex = activeOrderIds.indexOf(id || '');
+  const currentIndex = activeOrders.findIndex(o => o.id === id);
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-8 shadow-2xl relative">
       <header className="flex items-center justify-between px-6 h-16 bg-[#F9FAFB]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
         <div className="w-10">
-          {activeOrderIds.length > 1 && currentIndex > 0 && (
+          {activeOrders.length > 1 && currentIndex > 0 && (
             <button 
-              onClick={() => navigate(`/order/status/${activeOrderIds[currentIndex - 1]}`)}
+              onClick={() => navigate(`/order/status/${activeOrders[currentIndex - 1].id}`)}
               className="p-2 text-gray-400 hover:text-gray-800 transition-colors"
             >
               <ChevronLeft size={24} />
@@ -123,9 +130,9 @@ export const OrderStatus = () => {
         </div>
         <h1 className="text-lg font-black tracking-[0.2em] text-[#2D1616]">STATUS</h1>
         <div className="flex items-center gap-2">
-          {activeOrderIds.length > 1 && currentIndex < activeOrderIds.length - 1 && (
+          {activeOrders.length > 1 && currentIndex < activeOrders.length - 1 && (
             <button 
-              onClick={() => navigate(`/order/status/${activeOrderIds[currentIndex + 1]}`)}
+              onClick={() => navigate(`/order/status/${activeOrders[currentIndex + 1].id}`)}
               className="p-2 text-gray-400 hover:text-gray-800 transition-colors mr-2"
             >
               <ChevronRight size={24} />
@@ -141,19 +148,19 @@ export const OrderStatus = () => {
       </header>
 
       {/* 주문 탭 (여러 개일 경우) */}
-      {activeOrderIds.length > 1 && (
+      {activeOrders.length > 1 && (
         <div className="px-6 py-3 flex gap-2 overflow-x-auto scrollbar-hide bg-white border-b border-gray-50">
-          {activeOrderIds.map((activeId, idx) => (
+          {activeOrders.map((activeOrder) => (
             <button
-              key={activeId}
-              onClick={() => navigate(`/order/status/${activeId}`)}
+              key={activeOrder.id}
+              onClick={() => navigate(`/order/status/${activeOrder.id}`)}
               className={`px-4 py-1.5 rounded-full text-[12px] font-black transition-all whitespace-nowrap ${
-                activeId === id 
+                activeOrder.id === id 
                   ? 'bg-[#1A0A0A] text-white shadow-md' 
                   : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               }`}
             >
-              주문 {idx + 1}
+              #{activeOrder.orderNumber}
             </button>
           ))}
         </div>
@@ -218,7 +225,7 @@ export const OrderStatus = () => {
           <div className="absolute top-[42px] left-10 right-10 h-1.5 bg-gray-100 -z-10 rounded-full" />
           <div className="absolute top-[42px] left-10 h-1.5 bg-primary -z-10 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(255,75,75,0.3)]" style={{ width: (isReady || isCompleted) ? 'calc(100% - 5rem)' : isPreparing ? 'calc(50% - 2.5rem)' : '0%' }} />
           <div className="flex flex-col items-center gap-3">
-            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white shadow-xl rotate-0' : 'bg-white border-2 border-gray-200 text-gray-300'}`}><CheckCircle2 size={28} /></div>
+            <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white shadow-xl rotate-0' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><CheckCircle2 size={28} /></div>
             <span className={`text-[13px] font-black ${!isPending ? 'text-[#1A0A0A]' : 'text-gray-400'}`}>입금 확인</span>
           </div>
           <div className="flex flex-col items-center gap-3">

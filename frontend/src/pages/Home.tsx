@@ -31,14 +31,14 @@ export const Home = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
-  const [activeOrderIds, setActiveOrderIds] = useState<string[]>([]);
+  const [activeOrders, setActiveOrders] = useState<{id: string, orderNumber: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     // 진행 중인 주문들 확인
-    const ids = JSON.parse(localStorage.getItem('activeOrderIds') || '[]');
-    setActiveOrderIds(ids);
+    const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+    setActiveOrders(orders);
 
     const fetchMenus = async () => {
       try {
@@ -132,10 +132,10 @@ export const Home = () => {
       )}
 
       {/* 실시간 주문 추적 플로팅 버튼 */}
-      {activeOrderIds.length > 0 && (
+      {activeOrders.length > 0 && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
           <button 
-            onClick={() => navigate(`/order/status/${activeOrderIds[activeOrderIds.length - 1]}`)}
+            onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
             className="w-full bg-[#1A0A0A] text-white py-4 px-6 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all"
           >
             <div className="flex items-center gap-3">
@@ -144,7 +144,7 @@ export const Home = () => {
               </div>
               <div className="text-left">
                 <p className="text-[14px] font-black tracking-tight">
-                  {activeOrderIds.length > 1 ? `진행 중인 주문이 ${activeOrderIds.length}건 있습니다` : '주문이 진행 중입니다'}
+                  {activeOrders.length > 1 ? `진행 중인 주문이 ${activeOrders.length}건 있습니다` : '주문이 진행 중입니다'}
                 </p>
                 <p className="text-[11px] text-white/40 font-bold">내 주문 현황 바로가기</p>
               </div>
