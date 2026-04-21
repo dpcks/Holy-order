@@ -7,24 +7,25 @@ from database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["orders"])
 
-@router.post("/orders", response_model=schemas.OrderResponse)
+@router.post("/orders", response_model=schemas.StandardResponse[schemas.OrderResponse])
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == order.user_id).first()
+    user = db.query(models.User).filter(models.User.id == order.user_id, models.User.is_active == True).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="User not found or inactive")
         
     # 당일 주문 번호 계산 (간단한 구현)
     today = date.today()
-    last_order = db.query(models.Order).filter(models.Order.created_at >= today).order_by(models.Order.id.desc()).first()
+    last_order = db.query(models.Order).filter(models.Order.order_date == today).order_by(models.Order.id.desc()).first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
     new_order = models.Order(
         user_id=order.user_id,
         user_duty_snapshot=user.duty,
         total_price=order.total_price,
-        payment_method=order.payment_method,
-        status="PENDING",
-        order_number=next_order_number
+        payment_method=order.payment_method.value,
+        status=schemas.OrderStatusEnum.PENDING.value,
+        order_number=next_order_number,
+        order_date=today
     )
     db.add(new_order)
     db.flush() # 아이디를 얻기 위해 flush
@@ -46,14 +47,14 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         
     db.commit()
     db.refresh(new_order)
-    return new_order
+    return schemas.StandardResponse(success=True, data=new_order, message="주문이 성공적으로 생성되었습니다.")
 
 @router.get("/orders/status/{order_id}")
 def get_order_status(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return {"status": order.status}
+    return {"success": True, "data": {"status": order.status}, "message": "주문 상태를 조회했습니다."}
 
 @router.post("/payments/bank-transfer")
 def bank_transfer_callback(payment: schemas.PaymentLogCreate, db: Session = Depends(get_db)):
@@ -71,6 +72,6 @@ def bank_transfer_callback(payment: schemas.PaymentLogCreate, db: Session = Depe
     db.add(log)
     
     # 상태 업데이트
-    order.status = "PAID"
+    order.status = schemas.OrderStatusEnum.PAID.value
     db.commit()
-    return {"message": "Payment logged successfully"}
+    return {"success": True, "data": None, "message": "Payment logged successfully"}

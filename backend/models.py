@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, JSON, DateTime, Date
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, JSON, DateTime, Date, UniqueConstraint
+from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -13,6 +14,8 @@ class User(Base):
     name = Column(String, index=True)
     phone = Column(String, unique=True, index=True) # 식별자 및 적립용
     duty = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
+    is_active = Column(Boolean, default=True) # 소프트 삭제용
+    deleted_at = Column(DateTime, nullable=True) # 삭제 시각 기록
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -62,9 +65,16 @@ class Order(Base):
     total_price = Column(Integer)
     payment_method = Column(String) # BANK_TRANSFER, KAKAOPAY 등
     status = Column(String, default="PENDING") # PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED
-    order_number = Column(Integer) # 당일 주문 번호 (#001, #002...)
+    
+    order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
+    order_date = Column(Date, default=func.current_date(), index=True) # DB 내부 무결성용
+    
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    __table_args__ = (
+        UniqueConstraint("order_number", "order_date", name="uq_order_number_per_day"),
+    )
     
     user = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
@@ -119,3 +129,5 @@ class Setting(Base):
     id = Column(Integer, primary_key=True, index=True)
     is_open = Column(Boolean, default=False) # 영업 여부
     notice = Column(String, nullable=True) # 공지사항
+    open_time = Column(String, nullable=True) # 오픈 시간
+    close_time = Column(String, nullable=True) # 마감 시간

@@ -1,14 +1,46 @@
-from pydantic import BaseModel, ConfigDict
-from typing import List, Optional
+from pydantic import BaseModel, ConfigDict, field_validator, Field
+from typing import List, Optional, Generic, TypeVar, Any
 from datetime import datetime
+from enum import Enum
+import re
+
+# ===============================
+# Generic Response
+# ===============================
+T = TypeVar("T")
+
+class StandardResponse(BaseModel, Generic[T]):
+    success: bool = True
+    message: str = "요청이 성공적으로 처리되었습니다."
+    data: Optional[T] = None
 
 # ===============================
 # Users
 # ===============================
+class DutyEnum(str, Enum):
+    학생 = "학생"
+    청년 = "청년"
+    성도 = "성도"
+    집사 = "집사"
+    안수집사 = "안수집사"
+    권사 = "권사"
+    장로 = "장로"
+    사모 = "사모"
+    전도사 = "전도사"
+    강도사 = "강도사"
+    부목사 = "부목사"
+    목사 = "목사"
+
 class UserCreate(BaseModel):
     name: str
     phone: str
-    duty: str
+    duty: DutyEnum
+
+    @field_validator("phone")
+    def validate_phone(cls, v):
+        if not re.match(r"^01[0-9]-?\d{3,4}-?\d{4}$", v):
+            raise ValueError("올바른 전화번호 형식이 아닙니다.")
+        return v
 
 class UserResponse(BaseModel):
     id: int
@@ -52,14 +84,18 @@ class CategoryWithMenusResponse(BaseModel):
 # ===============================
 class OrderItemCreate(BaseModel):
     menu_id: int
-    quantity: int
+    quantity: int = Field(gt=0, description="1 이상이어야 합니다")
     options_text: Optional[str] = None
-    sub_total: int
+    sub_total: int = Field(ge=0, description="0 이상이어야 합니다")
+
+class PaymentMethodEnum(str, Enum):
+    BANK_TRANSFER = "BANK_TRANSFER"
+    # KAKAOPAY = "KAKAOPAY" # 추후 개선안 (지금 당장 X)
 
 class OrderCreate(BaseModel):
     user_id: int
     total_price: int
-    payment_method: str
+    payment_method: PaymentMethodEnum
     items: List[OrderItemCreate]
 
 class PaymentLogCreate(BaseModel):
@@ -88,15 +124,46 @@ class OrderResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class OrderStatusEnum(str, Enum):
+    PENDING = "PENDING"
+    PAID = "PAID"
+    PREPARING = "PREPARING"
+    READY = "READY"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
 class OrderStatusUpdate(BaseModel):
-    status: str
+    status: OrderStatusEnum
 
 class SettingResponse(BaseModel):
     is_open: bool
     notice: Optional[str] = None
+    open_time: Optional[str] = None
+    close_time: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
 class SettingUpdate(BaseModel):
     is_open: Optional[bool] = None
     notice: Optional[str] = None
+    open_time: Optional[str] = None
+    close_time: Optional[str] = None
+
+# ===============================
+# Admin & Auth
+# ===============================
+class AdminLogin(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class ClosingReportResponse(BaseModel):
+    id: int
+    date: datetime
+    total_sales: int
+    total_orders: int
+
+    model_config = ConfigDict(from_attributes=True)
