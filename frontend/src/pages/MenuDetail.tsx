@@ -61,7 +61,7 @@ export const MenuDetail = () => {
   const unitPrice = menu.price + extraPriceSum;
   const totalPrice = unitPrice * quantity;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (shouldNavigate = true) => {
     // 선택된 옵션들을 '/' 구분자로 이어붙여 텍스트 요약 생성
     const optionsTextParts: string[] = [];
     if (selectedTemp) optionsTextParts.push(selectedTemp.name);
@@ -80,12 +80,14 @@ export const MenuDetail = () => {
       options_text: optionsTextParts.join(' / ') || null,
     });
 
-    navigate(-1);
+    if (shouldNavigate) {
+      navigate(-1);
+    }
   };
 
   const handleOrderNow = () => {
-    handleAddToCart();
-    navigate('/cart');
+    handleAddToCart(false); // 바로 주문 시에는 뒤로 가지 않고
+    navigate('/cart'); // 장바구니(주문하기) 화면으로 이동
   };
 
   return (
@@ -222,7 +224,7 @@ export const MenuDetail = () => {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={handleAddToCart}>
+          <Button variant="secondary" className="flex-1" onClick={() => handleAddToCart()}>
             장바구니 담기
           </Button>
           <Button variant="primary" className="flex-[1.5]" onClick={handleOrderNow}>
