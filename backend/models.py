@@ -131,3 +131,7 @@ class Setting(Base):
     notice = Column(String, nullable=True) # 공지사항
     open_time = Column(String, nullable=True) # 오픈 시간
     close_time = Column(String, nullable=True) # 마감 시간
+    # 계좌이체 정보 - 관리자 화면에서 변경 가능하도록 DB에서 관리
+    bank_name = Column(String, nullable=True) # 은행명 (예: 카카오뱅크)
+    account_number = Column(String, nullable=True) # 계좌번호
+    account_holder = Column(String, nullable=True) # 예금주

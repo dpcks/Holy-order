@@ -140,6 +140,9 @@ class SettingResponse(BaseModel):
     notice: Optional[str] = None
     open_time: Optional[str] = None
     close_time: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    account_holder: Optional[str] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -148,6 +151,9 @@ class SettingUpdate(BaseModel):
     notice: Optional[str] = None
     open_time: Optional[str] = None
     close_time: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    account_holder: Optional[str] = None
 
 # ===============================
 # Admin & Auth
