@@ -13,7 +13,6 @@ export const Cart = () => {
   
   const [requests, setRequests] = useState('');
   const [saveRequest, setSaveRequest] = useState(false);
-  const [paymentMethod] = useState<'bank-transfer'>('bank-transfer');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const discount = 0;
@@ -26,27 +25,38 @@ export const Cart = () => {
     try {
       const orderData = {
         user_id: 1, // TODO: 실제 로그인된 유저 ID로 교체 필요
+        // 백엔드 PaymentMethodEnum과 일치시켜야 함 (BANK_TRANSFER)
+        payment_method: 'BANK_TRANSFER',
+        // OrderCreate 스키마 필수 필드: total_price
+        total_price: finalPrice,
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,
-          options_text: item.options_text
+          options_text: item.options_text,
+          // OrderItemCreate 스키마 필수 필드: sub_total
+          sub_total: item.sub_total,
         })),
-        requests: requests || null,
-        payment_method: paymentMethod
       };
 
-      const response = await apiClient.post<any, StandardResponse<any>>('/orders/', orderData);
+      // trailing slash 제거 - FastAPI는 /orders 로 등록되어 있음
+      const response = await apiClient.post<any, StandardResponse<any>>('/orders', orderData);
       
       if (response.success) {
         clearCart();
-        // 주문 완료 페이지로 이동 (주문 번호 전달)
-        navigate(`/order/status/${response.data.id}`, { state: { orderNumber: response.data.order_number, total: finalPrice } });
+        navigate(`/order/status/${response.data.id}`, {
+          state: { orderNumber: response.data.order_number, total: finalPrice }
+        });
       } else {
         alert(response.message || '주문에 실패했습니다.');
       }
     } catch (error: any) {
-      console.error('Order submission failed:', error);
-      alert(error.response?.data?.message || '주문 처리 중 오류가 발생했습니다.');
+      // 백엔드의 실제 에러 메시지를 최대한 보여줌
+      const detail = error.response?.data?.detail;
+      const message = Array.isArray(detail)
+        ? detail.map((d: any) => d.msg).join(', ')
+        : detail || error.response?.data?.message || '주문 처리 중 오류가 발생했습니다.';
+      console.error('Order submission failed:', error.response?.data ?? error);
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
