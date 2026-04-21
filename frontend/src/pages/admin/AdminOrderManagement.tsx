@@ -50,6 +50,9 @@ export const AdminOrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  
+  // 카운트다운 상태 (5초)
+  const [countdown, setCountdown] = useState(5);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -57,6 +60,7 @@ export const AdminOrderManagement = () => {
       if (res.success && res.data) {
         setOrders(res.data);
         setLastUpdated(new Date());
+        setCountdown(5); // 데이터 가져온 후 카운트다운 리셋
       }
     } catch (err) {
       console.error('주문 조회 실패:', err);
@@ -65,11 +69,24 @@ export const AdminOrderManagement = () => {
     }
   }, []);
 
-  // 초기 로드 + 5초 폴링
+  // 초기 로드
   useEffect(() => {
     fetchOrders();
-    const interval = setInterval(fetchOrders, 5000);
-    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  // 실시간 카운트다운 (1초마다 실행)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          fetchOrders(); // 0초가 되면 데이터 갱신
+          return 5;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [fetchOrders]);
 
   const handleStatusChange = async (orderId: number, nextStatus: string) => {
@@ -101,36 +118,62 @@ export const AdminOrderManagement = () => {
   const todayTotal = orders.reduce((sum, o) => sum + o.total_price, 0);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-[#F9FAFB]">
       {/* 상단 헤더 */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
-        <div>
-          <div className="flex items-center gap-3 mb-0.5">
-            <h1 className="text-xl font-bold text-gray-900">실시간 주문 현황</h1>
-            <span className="flex items-center gap-1.5 text-[12px] text-green-600 font-semibold bg-green-50 px-2 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              실시간
-            </span>
+      <header className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
+        <div className="flex items-center gap-6">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
+              <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                </span>
+                <span className="text-[12px] text-green-700 font-bold uppercase tracking-wider">Live</span>
+              </div>
+            </div>
+            <p className="text-[12px] text-gray-400 font-medium">
+              마지막 업데이트: {lastUpdated.toLocaleTimeString('ko-KR')}
+            </p>
           </div>
-          <p className="text-[12px] text-gray-400">
-            마지막 업데이트: {lastUpdated.toLocaleTimeString('ko-KR')} · 5초마다 자동 갱신
-          </p>
+
+          {/* 카운트다운 타이틀 */}
+          <div className="h-10 w-[1px] bg-gray-100 hidden md:block" />
+          <div className="hidden md:flex flex-col">
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Auto Refresh In</p>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div 
+                    key={i} 
+                    className={`h-1.5 w-4 rounded-full transition-all duration-300 ${i <= countdown ? 'bg-primary' : 'bg-gray-100'}`} 
+                  />
+                ))}
+              </div>
+              <span className="text-[14px] font-black text-primary w-4">{countdown}s</span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-[11px] text-gray-400 font-medium">대기 주문</p>
-            <p className="text-lg font-black text-gray-900">{orders.length}건</p>
+
+        <div className="flex items-center gap-4">
+          <div className="text-right hidden sm:block">
+            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Pending Orders</p>
+            <p className="text-2xl font-black text-[#1A0A0A]">{orders.length}<span className="text-sm font-bold ml-0.5 text-gray-400">건</span></p>
           </div>
           <button
-            onClick={fetchOrders}
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
-            title="새로고침"
+            onClick={() => { fetchOrders(); setCountdown(5); }}
+            className="p-3 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-primary transition-all bg-gray-50 border border-gray-100"
+            title="즉시 새로고침"
           >
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
-          <button className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 relative">
-            <Bell size={18} />
-          </button>
+          <div className="relative">
+            <button className="p-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-all bg-gray-50 border border-gray-100">
+              <Bell size={20} />
+            </button>
+            <span className="absolute top-0 right-0 w-3 h-3 bg-primary border-2 border-white rounded-full"></span>
+          </div>
         </div>
       </header>
 
@@ -140,24 +183,24 @@ export const AdminOrderManagement = () => {
           {COLUMNS.map((col) => {
             const colOrders = orders.filter(o => o.status === col.status);
             return (
-              <div key={col.status} className="flex-1 flex flex-col min-w-[280px]">
+              <div key={col.status} className="flex-1 flex flex-col min-w-[320px]">
                 {/* 컬럼 헤더 */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${col.dot}`} />
-                    <span className={`font-bold text-[15px] ${col.color}`}>{col.label}</span>
+                <div className="flex items-center justify-between mb-6 px-1">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
+                    <span className={`font-black text-[17px] tracking-tight ${col.color}`}>{col.label}</span>
                   </div>
-                  <span className="bg-gray-800 text-white text-[11px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  <span className="bg-[#1A0A0A] text-white text-[12px] font-black px-3 py-1 rounded-full shadow-lg">
                     {colOrders.length}
                   </span>
                 </div>
 
                 {/* 주문 카드 목록 */}
-                <div className="flex flex-col gap-3 overflow-y-auto pr-1">
+                <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
                   {colOrders.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                      <CheckCircle size={32} strokeWidth={1.5} className="mb-2 opacity-40" />
-                      <p className="text-[13px] font-medium">대기 주문 없음</p>
+                    <div className="flex flex-col items-center justify-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-gray-100 text-gray-300">
+                      <CheckCircle size={48} strokeWidth={1} className="mb-3 opacity-20" />
+                      <p className="text-[14px] font-bold">진행 중인 주문 없음</p>
                     </div>
                   ) : (
                     colOrders.map((order) => {
@@ -166,54 +209,74 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                          className="bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
                         >
                           {/* 주문번호 + 경과시간 */}
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-2xl font-black text-[#1A0A0A]">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
                               #{order.order_number}
                             </span>
-                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                              order.status === 'PREPARING' ? 'bg-red-50 text-primary' : 'bg-gray-100 text-gray-500'
-                            }`}>
-                              {getElapsed(order.created_at)}
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                                order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
+                              }`}>
+                                {getElapsed(order.created_at)}
+                              </span>
+                            </div>
                           </div>
 
                           {/* 메뉴 요약 */}
-                          <p className="text-[13px] font-semibold text-gray-800 mb-1 leading-snug">
-                            {summarizeItems(order.items)}
-                          </p>
-                          <p className="text-[12px] text-gray-500 mb-3">
-                            {order.user_name_snapshot || '손님'} {order.user_duty_snapshot}
-                          </p>
+                          <div className="mb-4">
+                            <p className="text-[15px] font-black text-gray-800 mb-1 leading-snug">
+                              {summarizeItems(order.items)}
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[12px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded italic">
+                                {order.user_name_snapshot || '손님'} {order.user_duty_snapshot}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 상세 옵션 (있을 경우) */}
+                          {order.items.some(i => i.options_text) && (
+                            <div className="mb-4 p-3 bg-gray-50 rounded-2xl">
+                              {order.items.map((item, i) => item.options_text && (
+                                <p key={i} className="text-[11px] text-gray-400 font-medium leading-tight mb-1 last:mb-0">
+                                  • {item.menu_name_snapshot}: {item.options_text}
+                                </p>
+                              ))}
+                            </div>
+                          )}
 
                           {/* 금액 */}
-                          <p className="text-[13px] font-bold text-gray-900 mb-3">
-                            {order.total_price.toLocaleString()}원
-                          </p>
+                          <div className="flex items-center justify-between mb-5 border-t border-gray-50 pt-4">
+                            <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">Total Price</span>
+                            <p className="text-[17px] font-black text-gray-900">
+                              ₩{order.total_price.toLocaleString()}
+                            </p>
+                          </div>
 
                           {/* 액션 버튼 */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-3">
                             {order.status === 'PENDING' && (
                               <button
                                 onClick={() => handleCancel(order.id)}
                                 disabled={isUpdating}
-                                className="flex-1 py-2 text-[12px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+                                className="px-4 py-3 text-[13px] font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all disabled:opacity-50"
                               >
-                                주문 취소
+                                취소
                               </button>
                             )}
                             {transition && (
                               <button
                                 onClick={() => handleStatusChange(order.id, transition.next)}
                                 disabled={isUpdating}
-                                className={`flex-[2] py-2.5 text-[13px] font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 ${transition.color}`}
+                                className={`flex-1 py-3.5 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 ${transition.color}`}
                               >
                                 {isUpdating ? (
-                                  <RefreshCw size={14} className="animate-spin" />
+                                  <RefreshCw size={16} className="animate-spin" />
                                 ) : (
-                                  <CheckCircle size={14} />
+                                  <CheckCircle size={18} />
                                 )}
                                 {transition.label}
                               </button>
@@ -231,18 +294,27 @@ export const AdminOrderManagement = () => {
       </div>
 
       {/* 하단 요약 바 */}
-      <footer className="bg-white border-t border-gray-200 px-6 py-3 flex items-center gap-8 shrink-0">
-        <div>
-          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Today Orders</p>
-          <p className="text-xl font-black text-gray-900">{orders.length}건</p>
+      <footer className="bg-[#1A0A0A] px-10 py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
+        <div className="flex items-center gap-12">
+          <div>
+            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>
+            <p className="text-2xl font-black">{orders.length}<span className="text-xs font-bold text-white/40 ml-1">Orders</span></p>
+          </div>
+          <div className="w-[1px] h-10 bg-white/10" />
+          <div>
+            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
+            <p className="text-2xl font-black">₩{todayTotal.toLocaleString()}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Active Sales</p>
-          <p className="text-xl font-black text-gray-900">₩{todayTotal.toLocaleString()}</p>
+        
+        <div className="hidden lg:flex items-center gap-3 text-white/30 text-[12px] font-bold">
+          <XCircle size={16} />
+          취소 주문은 히스토리 페이지에서 확인할 수 있습니다.
         </div>
-        <div className="ml-auto flex items-center gap-2 text-[12px] text-gray-500">
-          <XCircle size={14} className="text-primary" />
-          취소 주문은 목록에서 자동으로 제거됩니다.
+
+        <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">System Online</span>
         </div>
       </footer>
     </div>
