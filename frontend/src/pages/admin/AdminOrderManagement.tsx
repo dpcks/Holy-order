@@ -125,12 +125,9 @@ export const AdminOrderManagement = () => {
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
-              <div className="flex items-center gap-2 bg-green-50 px-3 py-1 rounded-full">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span className="text-[12px] text-green-700 font-bold uppercase tracking-wider">Live</span>
+              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-gray-900"></span>
+                <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">실시간</span>
               </div>
             </div>
             <p className="text-[12px] text-gray-400 font-medium">
@@ -138,21 +135,13 @@ export const AdminOrderManagement = () => {
             </p>
           </div>
 
-          {/* 카운트다운 타이틀 */}
+          {/* 단순화된 카운트다운 */}
           <div className="h-10 w-[1px] bg-gray-100 hidden md:block" />
-          <div className="hidden md:flex flex-col">
-            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-0.5">Auto Refresh In</p>
-            <div className="flex items-center gap-2">
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div 
-                    key={i} 
-                    className={`h-1.5 w-4 rounded-full transition-all duration-300 ${i <= countdown ? 'bg-primary' : 'bg-gray-100'}`} 
-                  />
-                ))}
-              </div>
-              <span className="text-[14px] font-black text-primary w-4">{countdown}s</span>
+          <div className="hidden md:flex items-center gap-2.5">
+            <div className="bg-gray-900 text-white w-9 h-9 rounded-xl flex items-center justify-center font-black text-lg shadow-sm">
+              {countdown}
             </div>
+            <p className="text-[12px] text-gray-500 font-bold tracking-tight">초 후 갱신</p>
           </div>
         </div>
 
