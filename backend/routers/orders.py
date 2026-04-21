@@ -16,7 +16,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="User not found or inactive")
         
     # 당일 주문 번호 계산 (간단한 구현)
-    today = date.today()
+    today = models.get_seoul_time().date()
     last_order = db.query(models.Order).filter(models.Order.order_date == today).order_by(models.Order.id.desc()).first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
@@ -56,12 +56,12 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     
     return schemas.StandardResponse(success=True, data=new_order, message="주문이 성공적으로 생성되었습니다.")
 
-@router.get("/orders/status/{order_id}")
+@router.get("/orders/status/{order_id}", response_model=schemas.StandardResponse[schemas.OrderResponse])
 def get_order_status(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
-    return {"success": True, "data": {"status": order.status}, "message": "주문 상태를 조회했습니다."}
+    return schemas.StandardResponse(success=True, data=order, message="주문 상세 정보를 조회했습니다.")
 
 @router.post("/payments/bank-transfer")
 def bank_transfer_callback(payment: schemas.PaymentLogCreate, db: Session = Depends(get_db)):

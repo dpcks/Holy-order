@@ -38,12 +38,14 @@ export const OrderStatus = () => {
       
       if (orderRes?.success) {
         setOrder(orderRes.data);
-        // 주문이 완료되었으면 해당 아이디만 로컬스토리지에서 제거
+        
+        // 수령 완료 시 로컬 스토리지에서 즉시 삭제하지 않고, 
+        // 사용자가 이 페이지를 떠날 때나 홈으로 갈 때 처리하도록 로직 변경 가능
+        // 하지만 여기서는 리스트 관리를 위해 유지하되, 
+        // 데이터가 화면에서 사라지지 않게 API에서 전체 정보를 내려주도록 백엔드 수정됨
         if (orderRes.data.status === 'COMPLETED') {
-          const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-          const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
-          localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
-          setActiveOrders(filteredOrders);
+          // 완료된 주문도 일단 목록에는 유지 (사용자가 확인은 해야 하므로)
+          // 단, 홈 화면 플로팅 버튼 등에서는 제외하고 싶을 수 있음
         }
       }
       if (settingRes?.success) {
@@ -90,6 +92,16 @@ export const OrderStatus = () => {
     }
   };
 
+  const handleGoHome = () => {
+    // 수령 완료된 주문은 홈으로 갈 때 로컬스토리지에서 정리
+    if (order?.status === 'COMPLETED') {
+      const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+      const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
+      localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
+    }
+    navigate('/');
+  };
+
   if (loading && !order) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#F9FAFB]">
@@ -101,18 +113,17 @@ export const OrderStatus = () => {
     );
   }
 
-  // 로컬스토리지에 저장된 주문 번호 찾기 (백엔드 응답 전까지 사용)
+  // 데이터 우선순위: API 응답 > 로컬스토리지 저장값 > 내비게이션 state
   const storedOrder = activeOrders.find(o => o.id === id);
   const orderNumber = order?.order_number || storedOrder?.orderNumber || passedOrderNumber || '-';
   const status = order?.status || 'PENDING';
-  const totalAmount = passedTotal || order?.total_price || 0;
+  const totalAmount = order?.total_price || passedTotal || 0;
 
   const isPending = status === 'PENDING';
   const isPreparing = status === 'PREPARING';
   const isReady = status === 'READY';
   const isCompleted = status === 'COMPLETED';
 
-  // 현재 주문의 인덱스 확인
   const currentIndex = activeOrders.findIndex(o => o.id === id);
 
   return (
@@ -139,7 +150,7 @@ export const OrderStatus = () => {
             </button>
           )}
           <button 
-            onClick={() => navigate('/')}
+            onClick={handleGoHome}
             className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-gray-800 border border-gray-100 shadow-sm active:scale-95 transition-all"
           >
             <Home size={20} />
@@ -147,7 +158,6 @@ export const OrderStatus = () => {
         </div>
       </header>
 
-      {/* 주문 탭 (여러 개일 경우) */}
       {activeOrders.length > 1 && (
         <div className="px-6 py-3 flex gap-2 overflow-x-auto scrollbar-hide bg-white border-b border-gray-50">
           {activeOrders.map((activeOrder) => (
@@ -158,6 +168,9 @@ export const OrderStatus = () => {
                 activeOrder.id === id 
                   ? 'bg-[#1A0A0A] text-white shadow-md' 
                   : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              } ${
+                // 완료된 주문은 체크 표시나 다른 색상으로 구분 가능
+                activeOrder.id !== id && activeOrders.find(o => o.id === activeOrder.id)?.id === id ? 'opacity-50' : ''
               }`}
             >
               #{activeOrder.orderNumber}

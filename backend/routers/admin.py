@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 @router.get("/orders/board", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
 def get_orders_board(db: Session = Depends(get_db)):
     """칸반 보드용: 오늘 PENDING/PREPARING/READY 주문 전체 조회"""
-    today = date.today()
+    today = models.get_seoul_time().date()
     orders = db.query(models.Order).filter(
         models.Order.order_date == today,
         models.Order.status.in_(["PENDING", "PREPARING", "READY"])
@@ -117,7 +117,7 @@ def update_settings(setting_update: schemas.SettingUpdate, db: Session = Depends
 @router.get("/stats/today")
 def get_today_stats(db: Session = Depends(get_db)):
     """오늘의 매출/주문 통계 집계"""
-    today = date.today()
+    today = models.get_seoul_time().date()
 
     # 오늘 전체 주문
     all_orders = db.query(models.Order).filter(models.Order.order_date == today).all()

@@ -1,8 +1,14 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, JSON, DateTime, Date, UniqueConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from database import Base
+
+# 한국 시간(KST) 설정
+KST = timezone(timedelta(hours=9))
+
+def get_seoul_time():
+    return datetime.now(KST)
 
 # ==========================================
 # 1. 마스터 데이터 (Master Data)
@@ -16,8 +22,8 @@ class User(Base):
     duty = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
     is_active = Column(Boolean, default=True) # 소프트 삭제용
     deleted_at = Column(DateTime, nullable=True) # 삭제 시각 기록
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_seoul_time)
+    updated_at = Column(DateTime, default=get_seoul_time, onupdate=get_seoul_time)
     
     orders = relationship("Order", back_populates="user")
 
@@ -68,10 +74,10 @@ class Order(Base):
     status = Column(String, default="PENDING") # PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED
     
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
-    order_date = Column(Date, default=func.current_date(), index=True) # DB 내부 무결성용
+    order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=get_seoul_time, index=True)
+    updated_at = Column(DateTime, default=get_seoul_time, onupdate=get_seoul_time)
     
     __table_args__ = (
         UniqueConstraint("order_number", "order_date", name="uq_order_number_per_day"),
@@ -102,7 +108,7 @@ class PaymentLog(Base):
     amount = Column(Integer) # 입금/결제된 금액
     sender_name = Column(String, nullable=True) # 계좌이체 입금자명
     raw_data = Column(JSON, nullable=True) # 외부 API 응답 전문 또는 추가 상세 기록
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=get_seoul_time)
     
     order = relationship("Order", back_populates="payment_log")
 
@@ -123,7 +129,7 @@ class ClosingReport(Base):
     report_date = Column(Date, unique=True, index=True) # 마감 날짜
     total_sales = Column(Integer, default=0)
     total_orders = Column(Integer, default=0)
-    closed_at = Column(DateTime, default=datetime.utcnow)
+    closed_at = Column(DateTime, default=get_seoul_time)
 
 class Setting(Base):
     __tablename__ = "settings"
