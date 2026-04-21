@@ -1,7 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
+
+// react-date-range 라이브러리 및 스타일
+import { DateRangePicker } from 'react-date-range';
+import type { Range, RangeKeyDict } from 'react-date-range';
+import { ko } from 'date-fns/locale';
+import { format, addDays, startOfMonth, endOfMonth, startOfYesterday, endOfYesterday } from 'date-fns';
+import 'react-date-range/dist/styles.css'; // 기본 스타일
+import 'react-date-range/dist/theme/default.css'; // 테마 스타일
 
 interface OrderItem {
   id: number;
@@ -37,16 +45,28 @@ export const AdminOrderHistory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   // 필터 상태
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // react-date-range 상태
+  const [dateRange, setDateRange] = useState<Range[]>([
+    {
+      startDate: undefined,
+      endDate: undefined,
+      key: 'selection'
+    }
+  ]);
 
   const fetchHistory = useCallback(async () => {
     setLoading(true);
     try {
+      const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
+      const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
+      
       let url = `/admin/orders/history?page=${page}&limit=20`;
-      if (startDate) url += `&start_date=${startDate}`;
-      if (endDate) url += `&end_date=${endDate}`;
+      if (sDate) url += `&start_date=${sDate}`;
+      if (eDate) url += `&end_date=${eDate}`;
       if (statusFilter) url += `&status=${statusFilter}`;
 
       const res = await apiClient.get<any, StandardResponse<Order[]>>(url);
@@ -58,17 +78,33 @@ export const AdminOrderHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, startDate, endDate, statusFilter]);
+  }, [page, dateRange, statusFilter]);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
 
+  // 날짜 선택기 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleResetFilters = () => {
-    setStartDate('');
-    setEndDate('');
+    setDateRange([{ startDate: undefined, endDate: undefined, key: 'selection' }]);
     setStatusFilter('');
     setPage(1);
+  };
+
+  const handleDateSelect = (ranges: RangeKeyDict) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+    // 선택 완료 시 자동으로 닫지 않고 사용자가 확인하게 함 (또는 닫기 버튼 추가)
   };
 
   const filteredOrders = orders.filter(o => 
@@ -78,7 +114,7 @@ export const AdminOrderHistory = () => {
   );
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div className="flex flex-col h-full bg-white relative">
       {/* 헤더 */}
       <header className="px-8 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between mb-6">
@@ -86,7 +122,7 @@ export const AdminOrderHistory = () => {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">주문 내역 히스토리</h1>
             <p className="text-[13px] text-gray-400 mt-1 font-medium">카페 전체 주문 이력을 조회하고 필터링할 수 있습니다.</p>
           </div>
-          {(startDate || endDate || statusFilter) && (
+          {(dateRange[0].startDate || statusFilter) && (
             <button 
               onClick={handleResetFilters}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-primary bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
@@ -109,22 +145,56 @@ export const AdminOrderHistory = () => {
             />
           </div>
 
-          {/* 기간 필터 */}
-          <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5">
-            <Calendar size={15} className="text-gray-400 ml-1" />
-            <input 
-              type="date" 
-              value={startDate}
-              onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-              className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700"
-            />
-            <span className="text-gray-300">~</span>
-            <input 
-              type="date" 
-              value={endDate}
-              onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-              className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700"
-            />
+          {/* 기간 필터 (react-date-range 적용) */}
+          <div className="relative" ref={datePickerRef}>
+            <button 
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-all ${showDatePicker ? 'ring-2 ring-primary/20 bg-white border-primary/30' : 'hover:bg-gray-100'}`}
+            >
+              <Calendar size={16} className={dateRange[0].startDate ? 'text-primary' : 'text-gray-400'} />
+              {dateRange[0].startDate ? (
+                <span className="text-gray-900">
+                  {format(dateRange[0].startDate, 'yyyy.MM.dd')} ~ {dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy.MM.dd') : '...'}
+                </span>
+              ) : (
+                <span className="text-gray-500">기간 설정</span>
+              )}
+            </button>
+
+            {showDatePicker && (
+              <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden scale-90 origin-top-left xl:scale-100">
+                <DateRangePicker
+                  locale={ko}
+                  ranges={dateRange}
+                  onChange={handleDateSelect}
+                  months={2}
+                  direction="horizontal"
+                  rangeColors={['#FF4B4B']}
+                  staticRanges={[
+                    { label: '오늘', range: () => ({ startDate: new Date(), endDate: new Date() }) },
+                    { label: '어제', range: () => ({ startDate: startOfYesterday(), endDate: endOfYesterday() }) },
+                    { label: '최근 7일', range: () => ({ startDate: addDays(new Date(), -7), endDate: new Date() }) },
+                    { label: '이번 달', range: () => ({ startDate: startOfMonth(new Date()), endDate: endOfMonth(new Date()) }) },
+                    { label: '지난 달', range: () => ({ startDate: startOfMonth(addDays(startOfMonth(new Date()), -1)), endDate: endOfMonth(addDays(startOfMonth(new Date()), -1)) }) },
+                  ].map(r => ({ ...r, isSelected: () => false })) as any}
+                  inputRanges={[]} // 하단 'days from today' 입력 필드 제거
+                />
+                <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
+                  <button 
+                    onClick={() => setShowDatePicker(false)}
+                    className="px-4 py-2 text-[12px] font-bold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    닫기
+                  </button>
+                  <button 
+                    onClick={() => { setShowDatePicker(false); fetchHistory(); }}
+                    className="px-4 py-2 text-[12px] font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
+                  >
+                    적용하기
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 상태 필터 */}
@@ -221,7 +291,7 @@ export const AdminOrderHistory = () => {
         </table>
       </div>
 
-      {/* 페이지네이션 (가운데 정렬) */}
+      {/* 페이지네이션 */}
       <footer className="px-8 py-6 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
         <div className="flex items-center gap-6">
           <button 
