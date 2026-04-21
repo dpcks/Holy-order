@@ -106,11 +106,15 @@ export const MenuDetail = () => {
               />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            <div className="absolute bottom-6 left-6">
+            <div className="absolute bottom-6 left-6 pr-6">
               <h2 className="text-white text-3xl font-bold mb-1">
-                {menu.name.includes(' ') ? menu.name.split(' ')[0] : menu.name}
+                {menu.name}
               </h2>
-              <p className="text-gray-300 text-sm font-medium">{menu.name}</p>
+              {menu.description && (
+                <p className="text-white/70 text-[13px] font-medium leading-relaxed mt-2 line-clamp-2">
+                  {menu.description}
+                </p>
+              )}
             </div>
           </div>
         </div>

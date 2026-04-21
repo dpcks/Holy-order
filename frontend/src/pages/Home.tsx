@@ -151,7 +151,10 @@ const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => (
         NEW
       </div>
     </div>
-    <h3 className="font-bold text-gray-900 text-[15px] mb-1 leading-snug">{menu.name}</h3>
+    <h3 className="font-bold text-gray-900 text-[15px] mb-0.5 leading-snug">{menu.name}</h3>
+    {menu.description && (
+      <p className="text-[11px] text-gray-400 line-clamp-1 mb-1 font-medium">{menu.description}</p>
+    )}
     <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
   </div>
 );
