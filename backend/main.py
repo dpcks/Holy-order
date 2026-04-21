@@ -17,10 +17,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from websocket import manager
+from fastapi import WebSocket, WebSocketDisconnect
+
 app.include_router(menus.router)
 app.include_router(users.router)
 app.include_router(orders.router)
 app.include_router(admin.router)
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # 클라이언트로부터 메시지를 받을 필요는 없지만 연결 유지를 위해 대기
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 @app.get("/")
 def read_root():

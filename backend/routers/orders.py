@@ -7,8 +7,10 @@ from database import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["orders"])
 
+from websocket import manager
+
 @router.post("/orders", response_model=schemas.StandardResponse[schemas.OrderResponse])
-def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == order.user_id, models.User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found or inactive")
@@ -48,6 +50,10 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         
     db.commit()
     db.refresh(new_order)
+    
+    # 실시간 알림 전송
+    await manager.broadcast("ORDER_UPDATED")
+    
     return schemas.StandardResponse(success=True, data=new_order, message="주문이 성공적으로 생성되었습니다.")
 
 @router.get("/orders/status/{order_id}")

@@ -52,14 +52,20 @@ def get_orders_history(
 
 
 
+from websocket import manager
+
 @router.patch("/orders/{order_id}/status")
-def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+async def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
     """주문 상태 변경 (입금승인, 준비완료, 수령완료, 취소)"""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
     order.status = status_update.status.value
     db.commit()
+    
+    # 실시간 알림 전송
+    await manager.broadcast("ORDER_UPDATED")
+    
     return {"success": True, "data": {"status": order.status}, "message": "상태가 변경되었습니다."}
 
 

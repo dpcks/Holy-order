@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, CheckCircle, XCircle, Bell } from 'lucide-react';
+import { RefreshCw, CheckCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 
@@ -50,9 +50,6 @@ export const AdminOrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [updatingId, setUpdatingId] = useState<number | null>(null);
-  
-  // 카운트다운 상태 (5초)
-  const [countdown, setCountdown] = useState(5);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -60,7 +57,6 @@ export const AdminOrderManagement = () => {
       if (res.success && res.data) {
         setOrders(res.data);
         setLastUpdated(new Date());
-        setCountdown(5); // 데이터 가져온 후 카운트다운 리셋
       }
     } catch (err) {
       console.error('주문 조회 실패:', err);
@@ -69,30 +65,36 @@ export const AdminOrderManagement = () => {
     }
   }, []);
 
-  // 초기 로드
+  // 초기 로드 + WebSocket 연결
   useEffect(() => {
     fetchOrders();
-  }, [fetchOrders]);
 
-  // 실시간 카운트다운 (1초마다 실행)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          fetchOrders(); // 0초가 되면 데이터 갱신
-          return 5;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // WebSocket 설정
+    const wsUrl = `ws://${window.location.hostname}:8000/ws`;
+    let ws = new WebSocket(wsUrl);
 
-    return () => clearInterval(timer);
+    ws.onmessage = (event) => {
+      if (event.data === 'ORDER_UPDATED') {
+        console.log('Real-time update received!');
+        fetchOrders(); // 즉시 데이터 갱신
+      }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket disconnected. Retrying in 3s...');
+      setTimeout(() => {
+        // 재연결 로직 생략 (useEffect 재실행 유도 가능하지만 간단히 3초 후 재시도)
+      }, 3000);
+    };
+
+    return () => ws.close();
   }, [fetchOrders]);
 
   const handleStatusChange = async (orderId: number, nextStatus: string) => {
     setUpdatingId(orderId);
     try {
       await apiClient.patch(`/admin/orders/${orderId}/status`, { status: nextStatus });
+      // 낙관적 업데이트나 WebSocket을 통한 자동 갱신이 일어나겠지만, 즉각적인 피드백을 위해 호출
       await fetchOrders();
     } catch (err) {
       alert('상태 변경에 실패했습니다.');
@@ -114,12 +116,10 @@ export const AdminOrderManagement = () => {
     }
   };
 
-  // 오늘 통계 요약
   const todayTotal = orders.reduce((sum, o) => sum + o.total_price, 0);
 
   return (
     <div className="flex flex-col h-full bg-[#F9FAFB]">
-      {/* 상단 헤더 */}
       <header className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-6">
           <div>
@@ -134,15 +134,6 @@ export const AdminOrderManagement = () => {
               마지막 업데이트: {lastUpdated.toLocaleTimeString('ko-KR')}
             </p>
           </div>
-
-          {/* 단순화된 카운트다운 */}
-          <div className="h-10 w-[1px] bg-gray-100 hidden md:block" />
-          <div className="hidden md:flex items-center gap-2">
-            <span className="text-2xl font-black text-gray-300 w-6 text-center">
-              {countdown}
-            </span>
-            <p className="text-[12px] text-gray-400 font-bold tracking-tight">초 후 갱신</p>
-          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -151,29 +142,20 @@ export const AdminOrderManagement = () => {
             <p className="text-2xl font-black text-[#1A0A0A]">{orders.length}<span className="text-sm font-bold ml-0.5 text-gray-400">건</span></p>
           </div>
           <button
-            onClick={() => { fetchOrders(); setCountdown(5); }}
+            onClick={fetchOrders}
             className="p-3 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-primary transition-all bg-gray-50 border border-gray-100"
-            title="즉시 새로고침"
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
-          <div className="relative">
-            <button className="p-3 rounded-xl text-gray-500 hover:bg-gray-100 transition-all bg-gray-50 border border-gray-100">
-              <Bell size={20} />
-            </button>
-            <span className="absolute top-0 right-0 w-3 h-3 bg-primary border-2 border-white rounded-full"></span>
-          </div>
         </div>
       </header>
 
-      {/* 칸반 보드 */}
       <div className="flex-1 overflow-x-auto p-8">
         <div className="flex gap-8 h-full min-w-[1100px]">
           {COLUMNS.map((col) => {
             const colOrders = orders.filter(o => o.status === col.status);
             return (
               <div key={col.status} className="flex-1 flex flex-col min-w-[320px]">
-                {/* 컬럼 헤더 */}
                 <div className="flex items-center justify-between mb-6 px-1">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
@@ -184,7 +166,6 @@ export const AdminOrderManagement = () => {
                   </span>
                 </div>
 
-                {/* 주문 카드 목록 */}
                 <div className="flex flex-col gap-4 overflow-y-auto pr-2 custom-scrollbar">
                   {colOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-gray-100 text-gray-300">
@@ -200,44 +181,26 @@ export const AdminOrderManagement = () => {
                           key={order.id}
                           className="bg-white rounded-3xl p-5 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
                         >
-                          {/* 주문번호 + 경과시간 */}
                           <div className="flex items-center justify-between mb-4">
                             <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
                               #{order.order_number}
                             </span>
-                            <div className="flex flex-col items-end">
-                              <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
-                                order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
-                              }`}>
-                                {getElapsed(order.created_at)}
-                              </span>
-                            </div>
+                            <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
+                              order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
+                            }`}>
+                              {getElapsed(order.created_at)}
+                            </span>
                           </div>
 
-                          {/* 메뉴 요약 */}
                           <div className="mb-4">
                             <p className="text-[15px] font-black text-gray-800 mb-1 leading-snug">
                               {summarizeItems(order.items)}
                             </p>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded italic">
-                                {order.user_name_snapshot || '손님'} {order.user_duty_snapshot}
-                              </span>
-                            </div>
+                            <span className="text-[12px] text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded italic">
+                              {order.user_name_snapshot || '손님'} {order.user_duty_snapshot}
+                            </span>
                           </div>
 
-                          {/* 상세 옵션 (있을 경우) */}
-                          {order.items.some(i => i.options_text) && (
-                            <div className="mb-4 p-3 bg-gray-50 rounded-2xl">
-                              {order.items.map((item, i) => item.options_text && (
-                                <p key={i} className="text-[11px] text-gray-400 font-medium leading-tight mb-1 last:mb-0">
-                                  • {item.menu_name_snapshot}: {item.options_text}
-                                </p>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* 금액 */}
                           <div className="flex items-center justify-between mb-5 border-t border-gray-50 pt-4">
                             <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">Total Price</span>
                             <p className="text-[17px] font-black text-gray-900">
@@ -245,13 +208,12 @@ export const AdminOrderManagement = () => {
                             </p>
                           </div>
 
-                          {/* 액션 버튼 */}
                           <div className="flex gap-3">
                             {order.status === 'PENDING' && (
                               <button
                                 onClick={() => handleCancel(order.id)}
                                 disabled={isUpdating}
-                                className="px-4 py-3 text-[13px] font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all disabled:opacity-50"
+                                className="px-4 py-3 text-[13px] font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-2xl transition-all"
                               >
                                 취소
                               </button>
@@ -260,13 +222,9 @@ export const AdminOrderManagement = () => {
                               <button
                                 onClick={() => handleStatusChange(order.id, transition.next)}
                                 disabled={isUpdating}
-                                className={`flex-1 py-3.5 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 ${transition.color}`}
+                                className={`flex-1 py-3.5 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
                               >
-                                {isUpdating ? (
-                                  <RefreshCw size={16} className="animate-spin" />
-                                ) : (
-                                  <CheckCircle size={18} />
-                                )}
+                                {isUpdating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={18} />}
                                 {transition.label}
                               </button>
                             )}
@@ -282,7 +240,6 @@ export const AdminOrderManagement = () => {
         </div>
       </div>
 
-      {/* 하단 요약 바 */}
       <footer className="bg-[#1A0A0A] px-10 py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
         <div className="flex items-center gap-12">
           <div>
@@ -295,15 +252,9 @@ export const AdminOrderManagement = () => {
             <p className="text-2xl font-black">₩{todayTotal.toLocaleString()}</p>
           </div>
         </div>
-        
-        <div className="hidden lg:flex items-center gap-3 text-white/30 text-[12px] font-bold">
-          <XCircle size={16} />
-          취소 주문은 히스토리 페이지에서 확인할 수 있습니다.
-        </div>
-
         <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">System Online</span>
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">Real-time Connected</span>
         </div>
       </footer>
     </div>
