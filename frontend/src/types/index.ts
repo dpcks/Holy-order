@@ -40,6 +40,7 @@ export interface Menu {
   image_url: string | null;
   is_available: boolean;
   options: MenuOption[];
+  created_at: string;
 }
 
 export interface Category {
@@ -136,4 +137,12 @@ export interface StandardResponse<T> {
   success: boolean;
   data: T;
   message: string;
+}
+
+export interface OrderListResponse {
+  items: Order[];
+  total_count: number;
+  page: number;
+  limit: number;
+  total_pages: number;
 }

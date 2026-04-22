@@ -23,8 +23,8 @@ class User(Base):
     duty = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
     is_active = Column(Boolean, default=True) # 소프트 삭제용
     deleted_at = Column(DateTime, nullable=True) # 삭제 시각 기록
-    created_at = Column(DateTime, default=get_seoul_time)
-    updated_at = Column(DateTime, default=get_seoul_time, onupdate=get_seoul_time)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     orders = relationship("Order", back_populates="user")
 
@@ -34,6 +34,8 @@ class Category(Base):
     name = Column(String, index=True) # 커피, 음료, 디저트 등
     display_order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     menus = relationship("Menu", back_populates="category")
 
@@ -49,6 +51,8 @@ class Menu(Base):
     
     category = relationship("Category", back_populates="menus")
     options = relationship("MenuOption", back_populates="menu")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class MenuOption(Base):
     __tablename__ = "menu_options"
@@ -57,6 +61,8 @@ class MenuOption(Base):
     name = Column(String) # 예: "샷 추가", "Hot", "Ice"
     extra_price = Column(Integer, default=0)
     is_active = Column(Boolean, default=True) # 옵션 개별 품절/숨김 처리용
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     menu = relationship("Menu", back_populates="options")
 
@@ -79,8 +85,8 @@ class Order(Base):
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
-    created_at = Column(DateTime, default=get_seoul_time, index=True)
-    updated_at = Column(DateTime, default=get_seoul_time, onupdate=get_seoul_time)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     __table_args__ = (
         UniqueConstraint("order_number", "order_date", name="uq_order_number_per_day"),
@@ -100,6 +106,8 @@ class OrderItem(Base):
     quantity = Column(Integer, default=1)
     options_text = Column(String, nullable=True) # 예: "ICE, 샷 추가 1"
     sub_total = Column(Integer)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     order = relationship("Order", back_populates="items")
 
@@ -111,7 +119,8 @@ class PaymentLog(Base):
     amount = Column(Integer) # 입금/결제된 금액
     sender_name = Column(String, nullable=True) # 계좌이체 입금자명
     raw_data = Column(JSON, nullable=True) # 외부 API 응답 전문 또는 추가 상세 기록
-    created_at = Column(DateTime, default=get_seoul_time)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     order = relationship("Order", back_populates="payment_log")
 
@@ -125,6 +134,8 @@ class Admin(Base):
     login_id = Column(String, unique=True, index=True)
     password_hash = Column(String)
     name = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class ClosingReport(Base):
     __tablename__ = "closing_reports"
@@ -132,7 +143,9 @@ class ClosingReport(Base):
     report_date = Column(Date, unique=True, index=True) # 마감 날짜
     total_sales = Column(Integer, default=0)
     total_orders = Column(Integer, default=0)
-    closed_at = Column(DateTime, default=get_seoul_time)
+    closed_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class Setting(Base):
     __tablename__ = "settings"
@@ -145,3 +158,5 @@ class Setting(Base):
     bank_name = Column(String, nullable=True) # 은행명 (예: 카카오뱅크)
     account_number = Column(String, nullable=True) # 계좌번호
     account_holder = Column(String, nullable=True) # 예금주
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

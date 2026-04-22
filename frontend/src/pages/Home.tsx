@@ -159,9 +159,21 @@ const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => (
           <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80" alt="coffee placeholder" className="w-full h-full object-cover opacity-80" />
         </div>
       )}
-      <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-        NEW
-      </div>
+      {(() => {
+        const createdDate = new Date(menu.created_at);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 8) {
+          return (
+            <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+              NEW
+            </div>
+          );
+        }
+        return null;
+      })()}
     </div>
     <h3 className="font-bold text-gray-900 text-[15px] mb-0.5 leading-snug">{menu.name}</h3>
     {menu.description && (

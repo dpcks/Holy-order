@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import type { Order, StandardResponse } from '../../types';
+import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
 import { DateRangePicker } from 'react-date-range';
@@ -21,6 +21,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export const AdminOrderHistory = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,9 +52,11 @@ export const AdminOrderHistory = () => {
       if (eDate) url += `&end_date=${eDate}`;
       if (statusFilter) url += `&status=${statusFilter}`;
 
-      const res = await apiClient.get<Order[], StandardResponse<Order[]>>(url);
+      const res = await apiClient.get<OrderListResponse, StandardResponse<OrderListResponse>>(url);
       if (res.success && res.data) {
-        setOrders(res.data);
+        setOrders(res.data.items);
+        setTotalCount(res.data.total_count);
+        setTotalPages(res.data.total_pages);
       }
     } catch (err) {
       console.error('히스토리 조회 실패:', err);
@@ -291,7 +295,7 @@ export const AdminOrderHistory = () => {
           </div>
 
           <button 
-            disabled={orders.length < 20}
+            disabled={page >= totalPages || loading}
             onClick={() => setPage(p => p + 1)}
             className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"
           >
@@ -299,7 +303,7 @@ export const AdminOrderHistory = () => {
           </button>
         </div>
         <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-          Showing {filteredOrders.length} records in this view
+          Showing {orders.length} of {totalCount} records
         </p>
       </footer>
     </div>

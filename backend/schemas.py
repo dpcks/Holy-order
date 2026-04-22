@@ -128,6 +128,13 @@ class OrderResponse(BaseModel):
     
     model_config = ConfigDict(from_attributes=True)
 
+class OrderListResponse(BaseModel):
+    items: List[OrderResponse]
+    total_count: int
+    page: int
+    limit: int
+    total_pages: int
+
 class OrderStatusEnum(str, Enum):
     PENDING = "PENDING"
     PAID = "PAID"

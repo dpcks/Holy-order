@@ -27,7 +27,7 @@ def get_orders_board(db: Session = Depends(get_db)):
 
 from typing import List, Optional
 
-@router.get("/orders/history", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
+@router.get("/orders/history", response_model=schemas.StandardResponse[schemas.OrderListResponse])
 def get_orders_history(
     page: int = 1, 
     limit: int = 20, 
@@ -46,9 +46,21 @@ def get_orders_history(
     if status:
         query = query.filter(models.Order.status == status)
         
+    total_count = query.count()
     offset = (page - 1) * limit
     orders = query.order_by(models.Order.id.desc()).offset(offset).limit(limit).all()
-    return schemas.StandardResponse(success=True, data=orders, message="주문 내역을 조회했습니다.")
+    
+    total_pages = (total_count + limit - 1) // limit
+    
+    data = {
+        "items": orders,
+        "total_count": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+    
+    return schemas.StandardResponse(success=True, data=data, message="주문 내역을 조회했습니다.")
 
 
 
