@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
@@ -20,13 +21,14 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export const AdminOrderHistory = () => {
+  const [searchParams] = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+
   // 필터 상태
   const [statusFilter, setStatusFilter] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -46,11 +48,12 @@ export const AdminOrderHistory = () => {
     try {
       const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
       const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
-      
+
       let url = `/admin/orders/history?page=${page}&limit=20`;
       if (sDate) url += `&start_date=${sDate}`;
       if (eDate) url += `&end_date=${eDate}`;
       if (statusFilter) url += `&status=${statusFilter}`;
+      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
 
       const res = await apiClient.get<OrderListResponse, StandardResponse<OrderListResponse>>(url);
       if (res.success && res.data) {
@@ -63,7 +66,7 @@ export const AdminOrderHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, dateRange, statusFilter]);
+  }, [page, dateRange, statusFilter, searchQuery]);
 
   useEffect(() => {
     fetchHistory();
@@ -92,12 +95,6 @@ export const AdminOrderHistory = () => {
     // 선택 완료 시 자동으로 닫지 않고 사용자가 확인하게 함 (또는 닫기 버튼 추가)
   };
 
-  const filteredOrders = orders.filter(o => 
-    String(o.order_number).includes(searchQuery) || 
-    (o.user_name_snapshot?.includes(searchQuery)) ||
-    o.items.some(i => i.menu_name_snapshot.includes(searchQuery))
-  );
-
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* 헤더 */}
@@ -108,7 +105,7 @@ export const AdminOrderHistory = () => {
             <p className="text-[13px] text-gray-400 mt-1 font-medium">카페 전체 주문 이력을 조회하고 필터링할 수 있습니다.</p>
           </div>
           {(dateRange[0].startDate || statusFilter) && (
-            <button 
+            <button
               onClick={handleResetFilters}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-primary bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
             >
@@ -121,9 +118,9 @@ export const AdminOrderHistory = () => {
           {/* 검색바 */}
           <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 w-full max-w-xs focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search size={18} className="text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="주문번호, 고객명 검색..." 
+            <input
+              type="text"
+              placeholder="주문번호, 고객명 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-none outline-none text-[14px] flex-1 text-gray-700 placeholder-gray-400 font-medium"
@@ -132,7 +129,7 @@ export const AdminOrderHistory = () => {
 
           {/* 기간 필터 (react-date-range 적용) */}
           <div className="relative" ref={datePickerRef}>
-            <button 
+            <button
               onClick={() => setShowDatePicker(!showDatePicker)}
               className={`flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-all ${showDatePicker ? 'ring-2 ring-primary/20 bg-white border-primary/30' : 'hover:bg-gray-100'}`}
             >
@@ -165,13 +162,13 @@ export const AdminOrderHistory = () => {
                   inputRanges={[]} // 하단 'days from today' 입력 필드 제거
                 />
                 <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-2">
-                  <button 
+                  <button
                     onClick={() => setShowDatePicker(false)}
                     className="px-4 py-2 text-[12px] font-bold text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
                   >
                     닫기
                   </button>
-                  <button 
+                  <button
                     onClick={() => { setShowDatePicker(false); fetchHistory(); }}
                     className="px-4 py-2 text-[12px] font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
                   >
@@ -185,7 +182,7 @@ export const AdminOrderHistory = () => {
           {/* 상태 필터 */}
           <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5">
             <Filter size={15} className="text-gray-400 ml-1" />
-            <select 
+            <select
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
               className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 pr-2 cursor-pointer"
@@ -223,7 +220,7 @@ export const AdminOrderHistory = () => {
                   </div>
                 </td>
               </tr>
-            ) : filteredOrders.length === 0 ? (
+            ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-32 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-300">
@@ -234,7 +231,7 @@ export const AdminOrderHistory = () => {
                 </td>
               </tr>
             ) : (
-              filteredOrders.map((order) => (
+              orders.map((order) => (
                 <tr key={order.id} className="hover:bg-gray-50/80 transition-colors group cursor-default">
                   <td className="py-5 pl-4 font-black text-[#1A0A0A] text-[16px]">#{order.order_number}</td>
                   <td className="py-5">
@@ -259,11 +256,10 @@ export const AdminOrderHistory = () => {
                     <span className="text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
                   </td>
                   <td className="py-5">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-black border ${
-                      order.payment_method === 'CASH' 
-                        ? 'bg-orange-50 text-orange-600 border-orange-100' 
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
-                    }`}>
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-black border ${order.payment_method === 'CASH'
+                      ? 'bg-orange-50 text-orange-600 border-orange-100'
+                      : 'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>
                       {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
                       {order.payment_method === 'CASH' ? '현금' : '계좌'}
                     </div>
@@ -275,8 +271,8 @@ export const AdminOrderHistory = () => {
                   </td>
                   <td className="py-5 pr-4">
                     <span className="text-[12px] text-gray-500 font-medium">
-                      {new Date(order.created_at).toLocaleString('ko-KR', { 
-                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
+                      {new Date(order.created_at).toLocaleString('ko-KR', {
+                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
                   </td>
@@ -290,14 +286,14 @@ export const AdminOrderHistory = () => {
       {/* 페이지네이션 */}
       <footer className="px-8 py-6 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
         <div className="flex items-center gap-6">
-          <button 
+          <button
             disabled={page === 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
             className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"
           >
             <ChevronLeft size={16} /> 이전
           </button>
-          
+
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-black text-primary bg-primary/5 px-3 py-1 rounded-lg">
               {page}
@@ -305,7 +301,7 @@ export const AdminOrderHistory = () => {
             <span className="text-[13px] text-gray-300 font-bold">페이지</span>
           </div>
 
-          <button 
+          <button
             disabled={page >= totalPages || loading}
             onClick={() => setPage(p => p + 1)}
             className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"

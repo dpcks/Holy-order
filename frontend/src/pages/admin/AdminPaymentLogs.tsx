@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, ArrowLeftRight } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
@@ -8,7 +9,7 @@ import { DateRangePicker } from 'react-date-range';
 import type { Range, RangeKeyDict } from 'react-date-range';
 import { ko } from 'date-fns/locale';
 import { format } from 'date-fns';
-import 'react-date-range/dist/styles.css'; 
+import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
 export const AdminPaymentLogs = () => {
@@ -18,7 +19,7 @@ export const AdminPaymentLogs = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // 필터 상태
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -38,7 +39,7 @@ export const AdminPaymentLogs = () => {
     try {
       const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
       const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
-      
+
       let url = `/admin/payments/logs?page=${page}&limit=20`;
       if (sDate) url += `&start_date=${sDate}`;
       if (eDate) url += `&end_date=${eDate}`;
@@ -102,13 +103,13 @@ export const AdminPaymentLogs = () => {
               <ArrowLeftRight size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">입금 승인 내역 감사</h1>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">입금 승인 내역</h1>
               <p className="text-gray-400 text-[13px] font-bold uppercase tracking-widest mt-0.5">Payment Audit Logs</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {(dateRange[0].startDate || paymentMethodFilter || searchQuery) && (
-              <button 
+              <button
                 onClick={handleResetFilters}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-primary bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
               >
@@ -126,9 +127,9 @@ export const AdminPaymentLogs = () => {
           {/* 검색바 */}
           <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 w-full max-w-xs focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search size={18} className="text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="주문번호, 입금자명 검색..." 
+            <input
+              type="text"
+              placeholder="주문번호, 입금자명 검색..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -140,7 +141,7 @@ export const AdminPaymentLogs = () => {
 
           {/* 기간 필터 */}
           <div className="relative" ref={datePickerRef}>
-            <button 
+            <button
               onClick={() => setShowDatePicker(!showDatePicker)}
               className={`flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-all ${showDatePicker ? 'ring-2 ring-primary/20 bg-white border-primary/30' : 'hover:bg-gray-100'}`}
             >
@@ -171,19 +172,19 @@ export const AdminPaymentLogs = () => {
 
           {/* 결제수단 필터 */}
           <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
-            <button 
+            <button
               onClick={() => { setPaymentMethodFilter(''); setPage(1); }}
               className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               전체
             </button>
-            <button 
+            <button
               onClick={() => { setPaymentMethodFilter('BANK_TRANSFER'); setPage(1); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               <Building2 size={13} /> 계좌
             </button>
-            <button 
+            <button
               onClick={() => { setPaymentMethodFilter('CASH'); setPage(1); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
@@ -198,8 +199,8 @@ export const AdminPaymentLogs = () => {
         <table className="w-full max-w-[1200px] mx-auto text-left border-separate border-spacing-0">
           <thead>
             <tr className="text-gray-400 text-[11px] font-black uppercase tracking-[0.2em]">
-              <th className="pb-4 font-black border-b border-gray-50 pl-2">ID</th>
-              <th className="pb-4 font-black border-b border-gray-50">주문 ID</th>
+              <th className="pb-4 font-black border-b border-gray-50 pl-2">순번</th>
+              <th className="pb-4 font-black border-b border-gray-50">주문번호</th>
               <th className="pb-4 font-black border-b border-gray-50">유형</th>
               <th className="pb-4 font-black border-b border-gray-50">수단</th>
               <th className="pb-4 font-black border-b border-gray-50">입금자명</th>
@@ -227,24 +228,25 @@ export const AdminPaymentLogs = () => {
                     <span className="text-[14px] font-black text-gray-400">{log.id}</span>
                   </td>
                   <td className="py-5">
-                    <span className="text-[14px] font-black text-gray-900 underline decoration-gray-200 underline-offset-4">
-                      Order #{log.order_id}
-                    </span>
+                    <Link 
+                      to={`/admin/history?search=${log.order_id}`}
+                      className="text-[14px] font-black text-gray-900 underline decoration-gray-200 underline-offset-4 hover:text-primary hover:decoration-primary/30 transition-all"
+                    >
+                      Order #{log.raw_data?.order_number || log.order_id}
+                    </Link>
                   </td>
                   <td className="py-5">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight ${
-                      log.log_type === 'APPROVED' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight ${log.log_type === 'APPROVED' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                      }`}>
                       {log.log_type}
                     </span>
                   </td>
                   <td className="py-5">
                     {log.raw_data?.payment_method ? (
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${
-                        log.raw_data.payment_method === 'CASH' 
-                          ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${log.raw_data.payment_method === 'CASH'
+                          ? 'bg-orange-50 text-orange-600 border-orange-100'
                           : 'bg-blue-50 text-blue-600 border-blue-100'
-                      }`}>
+                        }`}>
                         {log.raw_data.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
                         {log.raw_data.payment_method === 'CASH' ? '현금' : '계좌'}
                       </div>
@@ -265,7 +267,7 @@ export const AdminPaymentLogs = () => {
                   </td>
                   <td className="py-5 pr-2">
                     <span className="text-[12px] text-gray-500 font-medium">
-                      {new Date(log.created_at).toLocaleString('ko-KR', { 
+                      {new Date(log.created_at).toLocaleString('ko-KR', {
                         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'
                       })}
                     </span>
@@ -280,14 +282,14 @@ export const AdminPaymentLogs = () => {
       {/* 페이지네이션 */}
       <footer className="px-8 py-6 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
         <div className="flex items-center gap-6">
-          <button 
+          <button
             disabled={page === 1 || loading}
             onClick={() => setPage(p => Math.max(1, p - 1))}
             className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"
           >
             <ChevronLeft size={16} /> 이전
           </button>
-          
+
           <div className="flex items-center gap-2">
             <span className="text-[14px] font-black text-primary bg-primary/5 px-3 py-1 rounded-lg">
               {page}
@@ -295,7 +297,7 @@ export const AdminPaymentLogs = () => {
             <span className="text-[13px] text-gray-300 font-bold">/ {totalPages} 페이지</span>
           </div>
 
-          <button 
+          <button
             disabled={page >= totalPages || loading}
             onClick={() => setPage(p => p + 1)}
             className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"

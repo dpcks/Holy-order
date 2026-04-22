@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, desc, or_
 from typing import List
 from datetime import date, datetime
 
@@ -34,15 +34,29 @@ def get_orders_history(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     status: Optional[str] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """주문 내역 히스토리: 필터링 및 페이징 지원"""
     query = db.query(models.Order)
     
-    if start_date:
-        query = query.filter(models.Order.order_date >= start_date)
-    if end_date:
-        query = query.filter(models.Order.order_date <= end_date)
+    # 검색어가 있는 경우 처리
+    if search:
+        if search.isdigit():
+            # 숫자인 경우: ID 또는 주문번호로 검색 (이 경우 날짜 필터 무시)
+            query = query.filter(or_(models.Order.id == int(search), models.Order.order_number == int(search)))
+        else:
+            # 텍스트인 경우: 주문자명 검색
+            query = query.filter(models.Order.user_name_snapshot.ilike(f"%{search}%"))
+    
+    # 검색어가 없을 때만 일반 필터 적용 (또는 검색어와 함께 필터 적용하고 싶다면 로직 조정 필요)
+    # 여기서는 검색어가 있으면 날짜 필터를 타이트하게 적용하지 않도록 설계 (ID 검색 배려)
+    if not search or not search.isdigit():
+        if start_date:
+            query = query.filter(models.Order.order_date >= start_date)
+        if end_date:
+            query = query.filter(models.Order.order_date <= end_date)
+            
     if status:
         query = query.filter(models.Order.status == status)
         
