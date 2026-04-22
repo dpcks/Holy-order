@@ -66,9 +66,14 @@ export const AdminMenuManagement = () => {
     };
 
     ws.onmessage = (event) => {
-      if (event.data === 'MENU_UPDATED') {
-        console.log('🔔 [WebSocket] 메뉴 데이터 갱신 감지');
-        fetchMenus();
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'MENU_UPDATED') {
+          console.log('🔔 [WebSocket] 메뉴 데이터 갱신 감지:', data);
+          fetchMenus();
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
       }
     };
 

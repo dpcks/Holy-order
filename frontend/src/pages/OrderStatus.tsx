@@ -88,8 +88,13 @@ export const OrderStatus = () => {
     };
 
     ws.onmessage = (event) => {
-      if (event.data === 'ORDER_UPDATED') {
-        fetchData(false);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'ORDER_UPDATED') {
+          fetchData(false);
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
       }
     };
 

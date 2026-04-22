@@ -53,8 +53,12 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     db.commit()
     db.refresh(new_order)
     
-    # 실시간 알림 전송
-    await manager.broadcast("ORDER_UPDATED")
+    # 실시간 알림 전송 (JSON 구조화)
+    await manager.broadcast({
+        "type": "ORDER_UPDATED",
+        "order_id": new_order.id,
+        "timestamp": datetime.now().isoformat()
+    })
     
     return schemas.StandardResponse(success=True, data=new_order, message="주문이 성공적으로 생성되었습니다.")
 

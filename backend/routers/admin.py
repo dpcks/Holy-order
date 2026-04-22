@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
-from datetime import date
+from datetime import date, datetime
 
 import models, schemas
 from database import get_db
@@ -82,8 +82,13 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     order.status = status_update.status.value
     db.commit()
     
-    # 실시간 알림 전송
-    await manager.broadcast("ORDER_UPDATED")
+    # 실시간 알림 전송 (JSON 구조화)
+    await manager.broadcast({
+        "type": "ORDER_UPDATED",
+        "order_id": order_id,
+        "status": order.status,
+        "timestamp": datetime.now().isoformat()
+    })
     
     return {"success": True, "data": {"status": order.status}, "message": "상태가 변경되었습니다."}
 
@@ -103,8 +108,12 @@ async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session =
     db.commit()
     db.refresh(menu)
     
-    # 메뉴 변경 알림 전송
-    await manager.broadcast("MENU_UPDATED")
+    # 메뉴 변경 알림 전송 (JSON 구조화)
+    await manager.broadcast({
+        "type": "MENU_UPDATED",
+        "menu_id": menu_id,
+        "timestamp": datetime.now().isoformat()
+    })
     
     return {"success": True, "data": None, "message": "메뉴가 수정되었습니다."}
 

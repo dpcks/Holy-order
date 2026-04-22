@@ -133,9 +133,14 @@ export const AdminOrderManagement = () => {
     };
 
     ws.onmessage = (event) => {
-      if (event.data === 'ORDER_UPDATED') {
-        console.log('🔔 [WebSocket] 새 주문 업데이트 감지');
-        fetchOrders();
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'ORDER_UPDATED') {
+          console.log('🔔 [WebSocket] 새 주문 업데이트 감지:', data);
+          fetchOrders();
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
       }
     };
 
