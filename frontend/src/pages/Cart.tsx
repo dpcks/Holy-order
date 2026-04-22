@@ -13,9 +13,11 @@ type Duty = typeof DUTY_OPTIONS[number];
 
 // 주문자 정보 입력 모달 컴포넌트
 const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => void; onClose: () => void }) => {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [duty, setDuty] = useState<Duty>('성도');
+  // 저장된 정보가 있으면 초기값으로 사용
+  const savedUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
+  const [name, setName] = useState(savedUser.name || '');
+  const [phone, setPhone] = useState(savedUser.phone || '');
+  const [duty, setDuty] = useState<Duty>(savedUser.duty || '성도');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,6 +38,13 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
       });
 
       if (response.success && response.data) {
+        // ID뿐만 아니라 전체 정보를 저장하여 다음 주문 시 자동완성 지원
+        localStorage.setItem('userInfo', JSON.stringify({
+          id: response.data.id,
+          name: name.trim(),
+          phone: phone.trim(),
+          duty,
+        }));
         onConfirm(response.data.id);
       } else {
         setError(response.message || '사용자 등록 중 오류가 발생했습니다.');
@@ -141,23 +150,9 @@ export const Cart = () => {
   const discount = 0;
   const finalPrice = totalPrice - discount;
 
-  // 주문 버튼 클릭 → 유저 정보가 있으면 바로 주문, 없으면 모달 오픈
+  // 주문 버튼 클릭 → 사용자 정보 확인을 위해 항상 모달 오픈
   const handleOrderClick = () => {
     if (items.length === 0) return;
-    
-    const savedUser = localStorage.getItem('userInfo');
-    if (savedUser) {
-      try {
-        const userInfo = JSON.parse(savedUser);
-        if (userInfo.id) {
-          handleOrderWithUser(userInfo.id);
-          return;
-        }
-      } catch (e) {
-        console.error('Failed to parse saved user info', e);
-      }
-    }
-    
     setShowUserModal(true);
   };
 
@@ -184,11 +179,11 @@ export const Cart = () => {
       if (response.success) {
         clearCart();
         
-        // 내 정보 저장 (다음 주문 시 바로 주문 가능하도록)
+        // 내 정보 저장 (이미 UserInfoModal에서 저장하지만, 여기서도 최신 상태를 유지하도록 확인)
+        const savedUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
         localStorage.setItem('userInfo', JSON.stringify({ 
+          ...savedUser,
           id: userId,
-          // 이름과 직분은 API 응답에서 가져오거나 상위에서 전달받아야 함
-          // 여기서는 단순히 ID가 있음을 저장하여 재사용 유도
         }));
 
         // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
