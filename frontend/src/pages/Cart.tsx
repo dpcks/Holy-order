@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Building2, MessageSquare, ChevronDown } from 'lucide-react';
+import { X, Building2, MessageSquare, ChevronDown, Wallet } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../api/client';
-import type { Duty, StandardResponse } from '../types';
+import type { Duty, StandardResponse, PaymentMethod } from '../types';
 
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
@@ -143,6 +143,7 @@ export const Cart = () => {
 
   const [requests, setRequests] = useState('');
   const [saveRequest, setSaveRequest] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
 
@@ -162,7 +163,7 @@ export const Cart = () => {
     try {
       const orderData = {
         user_id: userId,
-        payment_method: 'BANK_TRANSFER',
+        payment_method: paymentMethod,
         total_price: finalPrice,
         request: requests.trim() || null,
         items: items.map(item => ({
@@ -331,14 +332,27 @@ export const Cart = () => {
               <h2 className="font-bold text-[15px] text-gray-900">결제수단</h2>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-[#2D1616] text-white border border-transparent shadow-sm">
+              <button 
+                onClick={() => setPaymentMethod('BANK_TRANSFER')}
+                className={`flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
+                  paymentMethod === 'BANK_TRANSFER' 
+                    ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
+                    : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                }`}
+              >
                 <Building2 size={20} />
                 <span className="text-[12px] font-bold">계좌이체</span>
               </button>
-              <button disabled className="flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-[#F3F4F6] text-gray-400 border border-transparent relative opacity-70">
-                <div className="absolute top-2 right-2 bg-gray-200 text-gray-500 text-[9px] px-1.5 py-0.5 rounded font-bold">준비 중</div>
-                <MessageSquare size={20} />
-                <span className="text-[12px] font-bold">카카오페이</span>
+              <button 
+                onClick={() => setPaymentMethod('CASH')}
+                className={`flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
+                  paymentMethod === 'CASH' 
+                    ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
+                    : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                }`}
+              >
+                <Wallet size={20} />
+                <span className="text-[12px] font-bold">현금 결제</span>
               </button>
             </div>
           </section>

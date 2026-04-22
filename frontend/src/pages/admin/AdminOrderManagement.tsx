@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RefreshCw, CheckCircle, Phone, MessageSquare } from 'lucide-react';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, MoreVertical, Coffee, Wallet, Building2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
@@ -307,11 +307,21 @@ export const AdminOrderManagement = () => {
                           key={order.id}
                           className="bg-white rounded-3xl p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
                         >
-                          {/* 헤더: 주문번호 & 경과시간 */}
+                          {/* 헤더: 주문번호 & 결제수단 & 경과시간 */}
                           <div className="flex items-center justify-between mb-5">
-                            <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
-                              #{order.order_number}
-                            </span>
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
+                                #{order.order_number}
+                              </span>
+                              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border ${
+                                order.payment_method === 'CASH' 
+                                  ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                                  : 'bg-blue-50 text-blue-600 border-blue-100'
+                              }`}>
+                                {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
+                                {order.payment_method === 'CASH' ? '현금' : '계좌'}
+                              </div>
+                            </div>
                             <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
                               order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
                             }`}>

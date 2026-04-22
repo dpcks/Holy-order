@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft } from 'lucide-react';
+import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft, Wallet } from 'lucide-react';
 import { apiClient } from '../api/client';
 import type { StandardResponse } from '../api/client';
 import type { Order, Setting, ActiveOrder } from '../types';
@@ -257,11 +257,13 @@ export const OrderStatus = () => {
           </h2>
         </div>
 
-        {isPending && setting?.account_number && (
+        {isPending && (
           <div className="w-full bg-white rounded-3xl border-2 border-primary/20 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="bg-primary/10 px-6 py-3.5 flex items-center gap-2.5">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-primary font-black text-[13px] tracking-wide uppercase">입금 확인 대기</span>
+              <span className="text-primary font-black text-[13px] tracking-wide uppercase">
+                {order?.payment_method === 'CASH' ? '현금 결제 대기' : '입금 확인 대기'}
+              </span>
             </div>
             <div className="px-6 py-6 flex flex-col gap-5">
               <div className="text-center">
@@ -270,24 +272,38 @@ export const OrderStatus = () => {
                   {totalAmount.toLocaleString()}<span className="text-[20px] font-bold ml-1 text-gray-400">원</span>
                 </p>
               </div>
+              
               <div className="h-[1px] w-full bg-gray-50 border-t border-dashed border-gray-200" />
-              <div className="flex flex-col gap-2.5">
-                <div className="flex justify-between items-center text-[14px]">
-                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[11px]">Bank</span>
-                  <span className="font-black text-gray-900">{setting.bank_name}</span>
+              
+              {order?.payment_method === 'CASH' ? (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+                    <Wallet size={32} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-black text-gray-900 text-[17px]">카운터에서 결제해 주세요</p>
+                    <p className="text-[13px] text-gray-500 font-medium mt-1">현금을 준비해 주시면 빠른 접수가 가능합니다.</p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center text-[14px]">
-                  <span className="text-gray-400 font-bold uppercase tracking-wider text-[11px]">Holder</span>
-                  <span className="font-black text-gray-900">{setting.account_holder}</span>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex justify-between items-center text-[14px]">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[11px]">Bank</span>
+                    <span className="font-black text-gray-900">{setting?.bank_name}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[14px]">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[11px]">Holder</span>
+                    <span className="font-black text-gray-900">{setting?.account_holder}</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-5 py-4 mt-1 border border-gray-100">
+                    <span className="text-[17px] font-black text-[#1A0A0A] tracking-wide">{setting?.account_number}</span>
+                    <button onClick={handleCopyAccount} className={`flex items-center gap-1.5 text-[12px] font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm ${copied ? 'bg-green-500 text-white' : 'bg-[#1A0A0A] text-white hover:bg-gray-800'}`}>
+                      {copied ? <Check size={14} /> : <Copy size={14} />}
+                      {copied ? '복사됨!' : '복사'}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 rounded-2xl px-5 py-4 mt-1 border border-gray-100">
-                  <span className="text-[17px] font-black text-[#1A0A0A] tracking-wide">{setting.account_number}</span>
-                  <button onClick={handleCopyAccount} className={`flex items-center gap-1.5 text-[12px] font-bold px-3.5 py-2 rounded-xl transition-all shadow-sm ${copied ? 'bg-green-500 text-white' : 'bg-[#1A0A0A] text-white hover:bg-gray-800'}`}>
-                    {copied ? <Check size={14} /> : <Copy size={14} />}
-                    {copied ? '복사됨!' : '복사'}
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         )}

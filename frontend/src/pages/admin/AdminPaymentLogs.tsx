@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Receipt, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Receipt, ArrowLeftRight, Building2, Wallet } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
 
@@ -59,6 +59,7 @@ export const AdminPaymentLogs = () => {
               <th className="pb-4 font-black border-b border-gray-50 pl-2">ID</th>
               <th className="pb-4 font-black border-b border-gray-50">주문 ID</th>
               <th className="pb-4 font-black border-b border-gray-50">유형</th>
+              <th className="pb-4 font-black border-b border-gray-50">수단</th>
               <th className="pb-4 font-black border-b border-gray-50">입금자명</th>
               <th className="pb-4 font-black border-b border-gray-50">금액</th>
               <th className="pb-4 font-black border-b border-gray-50 pr-2">승인 시각</th>
@@ -94,6 +95,20 @@ export const AdminPaymentLogs = () => {
                     }`}>
                       {log.log_type}
                     </span>
+                  </td>
+                  <td className="py-5">
+                    {log.raw_data?.payment_method ? (
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${
+                        log.raw_data.payment_method === 'CASH' 
+                          ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>
+                        {log.raw_data.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
+                        {log.raw_data.payment_method === 'CASH' ? '현금' : '계좌'}
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-gray-300 font-bold">-</span>
+                    )}
                   </td>
                   <td className="py-5">
                     <div className="flex items-center gap-2">

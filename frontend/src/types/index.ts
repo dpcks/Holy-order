@@ -19,7 +19,7 @@ export type Duty =
   | '부목사' | '목사';
 
 /** 결제 수단 */
-export type PaymentMethod = 'BANK_TRANSFER' | 'KAKAOPAY';
+export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'KAKAOPAY';
 
 
 // ==========================================

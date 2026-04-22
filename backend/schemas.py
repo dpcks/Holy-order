@@ -90,7 +90,7 @@ class OrderItemCreate(BaseModel):
 
 class PaymentMethodEnum(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"
-    # KAKAOPAY = "KAKAOPAY" # 추후 개선안 (지금 당장 X)
+    CASH = "CASH"
 
 class OrderCreate(BaseModel):
     user_id: int

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
@@ -208,6 +208,7 @@ export const AdminOrderHistory = () => {
               <th className="pb-4">고객 정보</th>
               <th className="pb-4">주문 내역</th>
               <th className="pb-4">결제 금액</th>
+              <th className="pb-4">결제수단</th>
               <th className="pb-4">상태</th>
               <th className="pb-4 pr-4">주문 시간</th>
             </tr>
@@ -256,6 +257,16 @@ export const AdminOrderHistory = () => {
                   </td>
                   <td className="py-5">
                     <span className="text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
+                  </td>
+                  <td className="py-5">
+                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-black border ${
+                      order.payment_method === 'CASH' 
+                        ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                        : 'bg-blue-50 text-blue-600 border-blue-100'
+                    }`}>
+                      {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
+                      {order.payment_method === 'CASH' ? '현금' : '계좌'}
+                    </div>
                   </td>
                   <td className="py-5">
                     <span className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black tracking-tight ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-400'}`}>
