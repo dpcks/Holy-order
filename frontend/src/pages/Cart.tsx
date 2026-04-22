@@ -331,10 +331,10 @@ export const Cart = () => {
               <Building2 size={16} className="text-gray-700" />
               <h2 className="font-bold text-[15px] text-gray-900">결제수단</h2>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <button 
                 onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                className={`flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
+                className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
                   paymentMethod === 'BANK_TRANSFER' 
                     ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
                     : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
@@ -345,7 +345,7 @@ export const Cart = () => {
               </button>
               <button 
                 onClick={() => setPaymentMethod('CASH')}
-                className={`flex-1 py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
+                className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
                   paymentMethod === 'CASH' 
                     ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
                     : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
@@ -353,6 +353,14 @@ export const Cart = () => {
               >
                 <Wallet size={20} />
                 <span className="text-[12px] font-bold">현금 결제</span>
+              </button>
+              <button 
+                disabled
+                className="py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 text-gray-300 border border-gray-100 relative opacity-60 cursor-not-allowed"
+              >
+                <div className="absolute top-1 right-1 bg-gray-200 text-gray-500 text-[8px] px-1 py-0.5 rounded font-bold scale-90">준비중</div>
+                <MessageSquare size={20} />
+                <span className="text-[12px] font-bold text-gray-300">카카오페이</span>
               </button>
             </div>
           </section>
