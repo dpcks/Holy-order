@@ -35,6 +35,16 @@ export const AdminOrderHistory = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // 반응형 너비 감지
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 1024;
 
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
@@ -181,8 +191,8 @@ export const AdminOrderHistory = () => {
                   locale={ko}
                   ranges={dateRange}
                   onChange={handleDateSelect}
-                  months={2}
-                  direction="horizontal"
+                  months={isMobile ? 1 : 2}
+                  direction={isMobile ? 'vertical' : 'horizontal'}
                   rangeColors={['#FF4B4B']}
                   staticRanges={[
                     { label: '오늘', range: () => ({ startDate: new Date(), endDate: new Date() }) },

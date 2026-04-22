@@ -24,6 +24,16 @@ export const AdminPaymentLogs = () => {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // 반응형 너비 감지
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 1024;
 
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
@@ -161,8 +171,8 @@ export const AdminPaymentLogs = () => {
                   ranges={dateRange}
                   onChange={handleDateSelect}
                   locale={ko}
-                  months={2}
-                  direction="horizontal"
+                  months={isMobile ? 1 : 2}
+                  direction={isMobile ? 'vertical' : 'horizontal'}
                   rangeColors={['#2D1616']}
                   showDateDisplay={false}
                   staticRanges={[
