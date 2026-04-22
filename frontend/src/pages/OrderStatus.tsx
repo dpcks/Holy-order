@@ -156,12 +156,34 @@ export const OrderStatus = () => {
 
   const handleCopyAccount = async () => {
     if (!setting?.account_number) return;
+    const textToCopy = setting.account_number;
+
     try {
-      await navigator.clipboard.writeText(setting.account_number);
+      // 1. 현대적인 Clipboard API 시도 (HTTPS 또는 localhost에서만 작동)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(textToCopy);
+      } else {
+        // 2. HTTP 환경을 위한 Fallback (textarea 생성 방식)
+        const textArea = document.createElement("textarea");
+        textArea.value = textToCopy;
+        // 화면에 보이지 않도록 설정
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        if (!successful) throw new Error('Fallback copy failed');
+      }
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      alert('계좌번호를 복사해 주세요: ' + setting.account_number);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // 복사 실패 시 안내 메시지와 함께 수동 복사 유도
+      alert('자동 복사에 실패했습니다. 직접 입력해 주세요: ' + textToCopy);
     }
   };
 
