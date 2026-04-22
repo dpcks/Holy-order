@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiClient } from '../api/client';
@@ -24,6 +24,15 @@ export const OrderStatus = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+
+  // WebSocket 상태 관리
+  type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
+  const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
+  
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryCountRef = useRef(0);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -58,28 +67,87 @@ export const OrderStatus = () => {
     }
   }, [id]);
 
-  useEffect(() => {
-    const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-    setActiveOrders(orders);
-    fetchData(true);
+  // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
+  const connectWebSocket = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+    }
 
-    const wsUrl = `ws://${window.location.hostname}:8000/ws`;
+    const isDev = window.location.hostname === 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = isDev ? ':8000' : '';
+    const wsUrl = `${protocol}//${host}${port}/ws`;
+
+    setWsStatus('RECONNECTING');
     const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ [WebSocket] 주문 추적 연결 성공');
+      setWsStatus('CONNECTED');
+      retryCountRef.current = 0;
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+
     ws.onmessage = (event) => {
       if (event.data === 'ORDER_UPDATED') {
         fetchData(false);
       }
     };
 
-    const pollInterval = setInterval(() => {
-      fetchData(false);
-    }, 5000);
+    ws.onclose = (event) => {
+      if (event.wasClean) {
+        setWsStatus('DISCONNECTED');
+        return;
+      }
+
+      console.log('❌ [WebSocket] 연결 끊김. 추적 폴백 활성화...');
+      setWsStatus('DISCONNECTED');
+      
+      // 사용자용 페이지는 좀 더 빈번하게 폴링 (10초)
+      if (!pollingTimerRef.current) {
+        pollingTimerRef.current = setInterval(() => fetchData(false), 10000);
+      }
+
+      const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
+      reconnectTimerRef.current = setTimeout(() => {
+        retryCountRef.current += 1;
+        connectWebSocket();
+      }, delay);
+    };
+
+    ws.onerror = () => ws.close();
+  }, [fetchData]);
+
+  useEffect(() => {
+    const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+    setActiveOrders(orders);
+    fetchData(true);
+    connectWebSocket();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
+        console.log('📱 [Visibility] 화면 활성화 - 주문 상태 즉시 갱신');
+        fetchData(false);
+        connectWebSocket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      ws.close();
-      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
-  }, [fetchData]);
+  }, [fetchData, connectWebSocket]);
 
   const handleCopyAccount = async () => {
     if (!setting?.account_number) return;
@@ -272,11 +340,18 @@ export const OrderStatus = () => {
           </div>
         </div>
 
-        <div className="w-full bg-gray-900 rounded-3xl p-5 flex gap-4 items-center border border-gray-800 shadow-xl">
+        <div className="w-full bg-gray-900 rounded-3xl p-5 flex gap-4 items-center border border-gray-800 shadow-xl relative overflow-hidden">
           <div className="bg-white/10 p-3 rounded-2xl shrink-0"><Coffee className="text-primary" size={22} /></div>
           <div>
-            <h5 className="font-black text-white text-[14px] mb-0.5 tracking-tight">실시간 추적 중</h5>
-            <p className="text-white/40 text-[12px] leading-relaxed font-bold">관리자가 주문을 승인하면 <span className="text-white underline">즉시</span> 알려드려요.</p>
+            <div className="flex items-center gap-2 mb-0.5">
+              <h5 className="font-black text-white text-[14px] tracking-tight">실시간 추적 중</h5>
+              <div className={`w-1.5 h-1.5 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 'bg-orange-400 animate-pulse'}`} />
+            </div>
+            <p className="text-white/40 text-[12px] leading-relaxed font-bold">
+              {wsStatus === 'CONNECTED' 
+                ? '관리자가 주문을 승인하면 즉시 알려드려요.' 
+                : '연결이 불안정하여 10초마다 상태를 확인 중입니다.'}
+            </p>
           </div>
         </div>
       </main>

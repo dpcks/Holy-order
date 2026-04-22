@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, Plus, Pencil, X, Check } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
@@ -18,7 +18,16 @@ export const AdminMenuManagement = () => {
   const [editForm, setEditForm] = useState<EditForm>({ name: '', price: '', description: '', category_id: 0 });
   const [savingId, setSavingId] = useState<number | null>(null);
 
-  const fetchMenus = async () => {
+  // WebSocket 상태 관리
+  type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
+  const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
+  
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryCountRef = useRef(0);
+
+  const fetchMenus = useCallback(async () => {
     try {
       const res = await apiClient.get<any, StandardResponse<Category[]>>('/categories');
       if (res.success && res.data) {
@@ -29,9 +38,85 @@ export const AdminMenuManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchMenus(); }, []);
+  // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
+  const connectWebSocket = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.close();
+    }
+
+    const isDev = window.location.hostname === 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = isDev ? ':8000' : '';
+    const wsUrl = `${protocol}//${host}${port}/ws`;
+
+    setWsStatus('RECONNECTING');
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ [WebSocket] 메뉴 관리 연결 성공');
+      setWsStatus('CONNECTED');
+      retryCountRef.current = 0;
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+
+    ws.onmessage = (event) => {
+      if (event.data === 'MENU_UPDATED') {
+        console.log('🔔 [WebSocket] 메뉴 데이터 갱신 감지');
+        fetchMenus();
+      }
+    };
+
+    ws.onclose = (event) => {
+      if (event.wasClean) {
+        setWsStatus('DISCONNECTED');
+        return;
+      }
+
+      console.log('❌ [WebSocket] 연결 끊김. 메뉴 폴백 활성화...');
+      setWsStatus('DISCONNECTED');
+      
+      if (!pollingTimerRef.current) {
+        pollingTimerRef.current = setInterval(fetchMenus, 30000);
+      }
+
+      const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
+      reconnectTimerRef.current = setTimeout(() => {
+        retryCountRef.current += 1;
+        connectWebSocket();
+      }, delay);
+    };
+
+    ws.onerror = () => ws.close();
+  }, [fetchMenus]);
+
+  useEffect(() => {
+    fetchMenus();
+    connectWebSocket();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
+        connectWebSocket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+    };
+  }, [fetchMenus, connectWebSocket]);
 
   const allMenus = categories.flatMap(c => c.menus.map(m => ({ ...m, categoryName: c.name, categoryId: c.id })));
   const displayedMenus = allMenus.filter(m => {
@@ -76,7 +161,19 @@ export const AdminMenuManagement = () => {
       <header className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 mb-0.5">메뉴 관리</h1>
+            <div className="flex items-center gap-3 mb-0.5">
+              <h1 className="text-xl font-bold text-gray-900">메뉴 관리</h1>
+              <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-100">
+                <span className={`w-1 h-1 rounded-full ${
+                  wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
+                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
+                  'bg-red-400'
+                }`}></span>
+                <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                  {wsStatus === 'CONNECTED' ? 'Live' : wsStatus === 'RECONNECTING' ? 'Wait' : 'Off'}
+                </span>
+              </div>
+            </div>
             <p className="text-[12px] text-gray-400">카페 메뉴의 가격, 옵션 및 판매 상태를 관리하세요.</p>
           </div>
           <div className="flex gap-2">

@@ -17,11 +17,16 @@ class ConnectionManager:
         await websocket.send_text(message)
 
     async def broadcast(self, message: str):
+        # 순회 중 리스트가 변경되는 것을 방지하기 위해 복사본 사용
+        # 또는 에러 발생한 세션을 모아서 한꺼번에 제거
+        disconnected = []
         for connection in self.active_connections:
             try:
                 await connection.send_text(message)
             except Exception:
-                # 연결이 끊긴 경우 리스트에서 제거 (순회 중 제거 방지를 위해 추후 정리)
-                pass
+                disconnected.append(connection)
+        
+        for connection in disconnected:
+            self.disconnect(connection)
 
 manager = ConnectionManager()

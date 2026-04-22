@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { RefreshCw, CheckCircle, Phone, MessageSquare } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
@@ -94,6 +94,15 @@ export const AdminOrderManagement = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
+  // WebSocket 상태 관리
+  type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
+  const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
+  
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryCountRef = useRef(0);
+
   const fetchOrders = useCallback(async () => {
     try {
       const [boardRes, statsRes] = await Promise.all([
@@ -115,29 +124,97 @@ export const AdminOrderManagement = () => {
     }
   }, []);
 
-  // 초기 로드 + WebSocket 연결
-  useEffect(() => {
-    fetchOrders();
+  // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
+  const connectWebSocket = useCallback(() => {
+    // 기존 타이머 및 연결 정리
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    if (wsRef.current) {
+      wsRef.current.onclose = null; // 중복 호출 방지
+      wsRef.current.close();
+    }
 
-    // WebSocket 설정
-    const wsUrl = `ws://${window.location.hostname}:8000/ws`;
-    let ws = new WebSocket(wsUrl);
+    // WebSocket URL 설정 (HTTP -> WS, HTTPS -> WSS)
+    // 로컬 개발 환경(8000포트)과 운영 환경을 모두 고려
+    const isDev = window.location.hostname === 'localhost';
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const port = isDev ? ':8000' : '';
+    const wsUrl = `${protocol}//${host}${port}/ws`;
 
-    ws.onmessage = (event) => {
-      if (event.data === 'ORDER_UPDATED') {
-        fetchOrders(); // 즉시 데이터 갱신
+    setWsStatus('RECONNECTING');
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ [WebSocket] 연결 성공');
+      setWsStatus('CONNECTED');
+      retryCountRef.current = 0;
+      
+      // 연결 성공 시 REST 폴링 중단
+      if (pollingTimerRef.current) {
+        clearInterval(pollingTimerRef.current);
+        pollingTimerRef.current = null;
       }
     };
 
-    ws.onclose = () => {
-      console.log('WebSocket disconnected. Retrying in 3s...');
-      setTimeout(() => {
-        // 재연결 로직
-      }, 3000);
+    ws.onmessage = (event) => {
+      if (event.data === 'ORDER_UPDATED') {
+        console.log('🔔 [WebSocket] 새 주문 업데이트 감지');
+        fetchOrders();
+      }
     };
 
-    return () => ws.close();
+    ws.onclose = (event) => {
+      if (event.wasClean) {
+        setWsStatus('DISCONNECTED');
+        return;
+      }
+
+      console.log('❌ [WebSocket] 연결 끊김. 재연결 시도 중...');
+      setWsStatus('DISCONNECTED');
+      
+      // 1. REST Polling Fallback 시작 (WebSocket이 죽어도 30초마다 데이터 갱신)
+      if (!pollingTimerRef.current) {
+        console.log('🔄 [Fallback] REST Polling 활성화 (30s)');
+        pollingTimerRef.current = setInterval(fetchOrders, 30000);
+      }
+
+      // 2. 지수 백오프(Exponential Backoff) 기반 재연결 시도 (최대 30초)
+      const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
+      reconnectTimerRef.current = setTimeout(() => {
+        retryCountRef.current += 1;
+        connectWebSocket();
+      }, delay);
+    };
+
+    ws.onerror = (error) => {
+      console.error('⚠️ [WebSocket] 에러 발생:', error);
+      ws.close();
+    };
   }, [fetchOrders]);
+
+  // 초기 로드 + WebSocket 생명주기 관리
+  useEffect(() => {
+    fetchOrders();
+    connectWebSocket();
+
+    // 페이지 가시성 변화 감지 (백그라운드에서 돌아왔을 때 즉시 재연결)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
+        console.log('📱 [Visibility] 화면 활성화 감지 - 즉시 재연결 시도');
+        connectWebSocket();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+    };
+  }, [fetchOrders, connectWebSocket]);
 
   const handleStatusChange = async (orderId: number, nextStatus: string) => {
     setUpdatingId(orderId);
@@ -172,8 +249,14 @@ export const AdminOrderManagement = () => {
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">실시간</span>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
+                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
+                  'bg-red-400'
+                }`}></span>
+                <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">
+                  {wsStatus === 'CONNECTED' ? '실시간' : wsStatus === 'RECONNECTING' ? '재연결중' : '오프라인'}
+                </span>
               </div>
             </div>
             <p className="text-[12px] text-gray-400 font-medium">
@@ -338,9 +421,19 @@ export const AdminOrderManagement = () => {
             <p className="text-2xl font-black">{stats.total_orders}<span className="text-xs font-bold text-white/40 ml-1">Total</span></p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-white/5 px-4 py-2 rounded-xl">
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">Real-time Connected</span>
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+          wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
+        }`}>
+          <div className={`w-2 h-2 rounded-full ${
+            wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
+            wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
+            'bg-red-500'
+          }`} />
+          <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">
+            {wsStatus === 'CONNECTED' ? 'Real-time Connected' : 
+             wsStatus === 'RECONNECTING' ? 'Attempting to Reconnect...' : 
+             'Disconnected (Auto-Polling Active)'}
+          </span>
         </div>
       </footer>
     </div>

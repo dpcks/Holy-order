@@ -74,7 +74,7 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
 # ────────────────────────────────────────
 
 @router.patch("/menus/{menu_id}")
-def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db)):
+async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db)):
     """메뉴 정보 수정 (이름, 가격, 설명, 카테고리, 판매여부)"""
     menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
     if not menu:
@@ -83,6 +83,10 @@ def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depen
         setattr(menu, field, value)
     db.commit()
     db.refresh(menu)
+    
+    # 메뉴 변경 알림 전송
+    await manager.broadcast("MENU_UPDATED")
+    
     return {"success": True, "data": None, "message": "메뉴가 수정되었습니다."}
 
 
