@@ -35,6 +35,22 @@ export const AdminPaymentLogs = () => {
 
   const isMobile = windowWidth < 1024;
 
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    let start = Math.max(1, page - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
     {
@@ -298,33 +314,45 @@ export const AdminPaymentLogs = () => {
 
       {/* 페이지네이션 */}
       <footer className="px-8 py-6 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2">
           <button
             disabled={page === 1 || loading}
             onClick={() => setPage(p => Math.max(1, p - 1))}
-            className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"
+            className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-gray-600 shadow-sm"
           >
-            <ChevronLeft size={16} /> 이전
+            <ChevronLeft size={18} />
           </button>
 
-          <div className="flex items-center gap-2">
-            <span className="text-[14px] font-black text-primary bg-primary/5 px-3 py-1 rounded-lg">
-              {page}
-            </span>
-            <span className="text-[13px] text-gray-300 font-bold">/ {totalPages} 페이지</span>
+          <div className="flex items-center gap-1">
+            {getPageNumbers().map(p => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-10 h-10 rounded-xl text-[14px] font-black transition-all ${
+                  page === p 
+                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                  : 'text-gray-500 hover:bg-gray-50 border border-transparent hover:border-gray-100'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
           </div>
 
           <button
             disabled={page >= totalPages || loading}
             onClick={() => setPage(p => p + 1)}
-            className="flex items-center gap-1 px-4 py-2 border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-[13px] font-bold text-gray-600"
+            className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-gray-600 shadow-sm"
           >
-            다음 <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
-        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-          Showing {logs.length} of {totalCount} records
-        </p>
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
+          <p className="text-[12px] text-gray-400 font-bold tracking-tight">
+            전체 {totalCount}개 중 {totalCount > 0 ? (page - 1) * 20 + 1 : 0}-{Math.min(totalCount, page * 20)}번째 로그
+          </p>
+        </div>
       </footer>
     </div>
   );
