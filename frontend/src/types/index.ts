@@ -146,3 +146,21 @@ export interface OrderListResponse {
   limit: number;
   total_pages: number;
 }
+
+export interface PaymentLog {
+  id: number;
+  order_id: number;
+  log_type: string;
+  amount: number;
+  sender_name: string | null;
+  raw_data: any;
+  created_at: string;
+}
+
+export interface PaymentLogListResponse {
+  items: PaymentLog[];
+  total_count: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}

@@ -104,6 +104,24 @@ class PaymentLogCreate(BaseModel):
     amount: int
     sender_name: str
 
+class PaymentLogResponse(BaseModel):
+    id: int
+    order_id: int
+    log_type: str
+    amount: int
+    sender_name: Optional[str] = None
+    raw_data: Optional[Any] = None
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+class PaymentLogListResponse(BaseModel):
+    items: List[PaymentLogResponse]
+    total_count: int
+    page: int
+    limit: int
+    total_pages: int
+
 class OrderItemResponse(BaseModel):
     id: int
     menu_name_snapshot: str

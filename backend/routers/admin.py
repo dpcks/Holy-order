@@ -220,14 +220,43 @@ def get_today_stats(db: Session = Depends(get_db)):
     return {
         "success": True,
         "data": {
-            "total_orders": total_orders,
             "total_sales": total_sales,
+            "total_orders": total_orders,
             "avg_order_value": avg_order_value,
-            "top_menu": top_menus[0]["name"] if top_menus else None,
             "status_counts": status_counts,
             "top_menus": top_menus,
             "duty_breakdown": duty_breakdown,
-            "hourly_orders": hourly_orders,
+            "hourly_orders": hourly_orders
         },
-        "message": "통계를 조회했습니다.",
+        "message": "통계 데이터를 조회했습니다."
     }
+
+
+# ────────────────────────────────────────
+# 입금 감사 (Payment Audit)
+# ────────────────────────────────────────
+
+@router.get("/payments/logs", response_model=schemas.StandardResponse[schemas.PaymentLogListResponse])
+def get_payment_logs(
+    page: int = 1,
+    limit: int = 20,
+    db: Session = Depends(get_db)
+):
+    """입금 승인 로그 조회"""
+    query = db.query(models.PaymentLog)
+    
+    total_count = query.count()
+    offset = (page - 1) * limit
+    logs = query.order_by(models.PaymentLog.id.desc()).offset(offset).limit(limit).all()
+    
+    total_pages = (total_count + limit - 1) // limit
+    
+    data = {
+        "items": logs,
+        "total_count": total_count,
+        "page": page,
+        "limit": limit,
+        "total_pages": total_pages
+    }
+    
+    return schemas.StandardResponse(success=True, data=data, message="입금 로그를 조회했습니다.")

@@ -13,6 +13,7 @@ import { AdminOrderManagement } from './pages/admin/AdminOrderManagement';
 import { AdminOrderHistory } from './pages/admin/AdminOrderHistory';
 import { AdminMenuManagement } from './pages/admin/AdminMenuManagement';
 import { AdminSalesReports } from './pages/admin/AdminSalesReports';
+import { AdminPaymentLogs } from './pages/admin/AdminPaymentLogs';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOrderManagement />} />
             <Route path="history" element={<AdminOrderHistory />} />
+            <Route path="payments" element={<AdminPaymentLogs />} />
             <Route path="menus" element={<AdminMenuManagement />} />
             <Route path="reports" element={<AdminSalesReports />} />
           </Route>
