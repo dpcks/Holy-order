@@ -32,7 +32,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             # 클라이언트로부터 메시지를 받을 필요는 없지만 연결 유지를 위해 대기
             await websocket.receive_text()
-    except WebSocketDisconnect:
+    except Exception:
         manager.disconnect(websocket)
 
 @app.get("/")

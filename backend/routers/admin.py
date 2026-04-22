@@ -60,6 +60,25 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+    
+    # 입금 승인 시 (PENDING → PREPARING) PaymentLog 기록
+    # 주문 상태 변경과 로그 생성을 단일 트랜잭션으로 처리하여 데이터 일관성 보장
+    if order.status == "PENDING" and status_update.status == schemas.OrderStatusEnum.PREPARING:
+        log = models.PaymentLog(
+            order_id=order_id,
+            log_type="APPROVED",
+            amount=order.total_price,
+            sender_name=order.user_name_snapshot,
+            # 추후 정산을 위해 승인 당시의 주문 원본 데이터를 JSON으로 함께 저장
+            raw_data={
+                "order_number": order.order_number,
+                "payment_method": order.payment_method,
+                "user_duty": order.user_duty_snapshot,
+                "item_count": len(order.items),
+            }
+        )
+        db.add(log)
+    
     order.status = status_update.status.value
     db.commit()
     
