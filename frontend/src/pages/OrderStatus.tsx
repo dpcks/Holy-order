@@ -45,8 +45,13 @@ export const OrderStatus = () => {
           const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
           localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
           
-          // 현재 페이지의 탭 목록 상태도 동기화
           setActiveOrders(filteredOrders);
+
+          // [개선] 현재 보던 주문이 완료되었고, 다른 대기 중인 주문이 있다면 자동으로 이동
+          if (filteredOrders.length > 0) {
+            console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
+            navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
+          }
         }
       }
       if (settingRes?.success) {
