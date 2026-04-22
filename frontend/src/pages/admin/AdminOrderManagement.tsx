@@ -110,11 +110,14 @@ export const AdminOrderManagement = () => {
 
     // WebSocket URL 설정 (HTTP -> WS, HTTPS -> WSS)
     // 로컬 개발 환경(8000포트)과 운영 환경을 모두 고려
-    const isDev = window.location.hostname === 'localhost';
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const port = isDev ? ':8000' : '';
-    const wsUrl = `${protocol}//${host}${port}/ws`;
+    const { hostname, protocol } = window.location;
+    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+    
+    // 개발 환경(localhost 또는 IP 접속)에서는 8000 포트 사용
+    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const wsPort = isLocal ? ':8000' : '';
+    
+    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
 
     setWsStatus('RECONNECTING');
     const ws = new WebSocket(wsUrl);
