@@ -15,11 +15,28 @@ interface ActiveOrder {
   orderNumber: number;
 }
 
+interface OrderItem {
+  id: number;
+  menu_name_snapshot: string;
+  quantity: number;
+  options_text: string | null;
+  sub_total: number;
+}
+
+interface Order {
+  id: number;
+  order_number: number;
+  status: 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+  total_price: number;
+  created_at: string;
+  items: OrderItem[];
+}
+
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [setting, setSetting] = useState<Setting | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -41,8 +58,8 @@ export const OrderStatus = () => {
     if (showLoading) setLoading(true);
     try {
       const [orderRes, settingRes] = await Promise.all([
-        id ? apiClient.get<any, StandardResponse<any>>(`/orders/status/${id}`) : Promise.resolve(null),
-        apiClient.get<any, StandardResponse<Setting>>('/settings'),
+        id ? apiClient.get<Order, StandardResponse<Order>>(`/orders/status/${id}`) : Promise.resolve(null),
+        apiClient.get<Setting, StandardResponse<Setting>>('/settings'),
       ]);
       
       if (orderRes?.success) {
@@ -326,7 +343,7 @@ export const OrderStatus = () => {
             주문 내역 요약
             <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">Receipt</span>
           </h4>
-          {order?.items?.map((item: any, idx: number) => (
+          {order?.items?.map((item, idx) => (
             <div key={idx} className="flex gap-4 items-center mb-4 last:mb-0">
               <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100"><img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=100&q=80" alt="coffee" className="w-full h-full object-cover" /></div>
               <div className="flex-1 min-w-0">
