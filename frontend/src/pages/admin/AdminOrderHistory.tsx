@@ -21,13 +21,15 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 };
 
 export const AdminOrderHistory = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialOrderId = searchParams.get('order_id');
   const [orders, setOrders] = useState<Order[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [focusedOrderId, setFocusedOrderId] = useState<string | null>(initialOrderId);
 
   // 필터 상태
   const [statusFilter, setStatusFilter] = useState('');
@@ -50,10 +52,16 @@ export const AdminOrderHistory = () => {
       const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
 
       let url = `/admin/orders/history?page=${page}&limit=20`;
-      if (sDate) url += `&start_date=${sDate}`;
-      if (eDate) url += `&end_date=${eDate}`;
       if (statusFilter) url += `&status=${statusFilter}`;
-      if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+      
+      // 특정 주문 ID로 조회 중일 때는 날짜 필터 무시
+      if (focusedOrderId) {
+        url += `&search=${focusedOrderId}`;
+      } else {
+        if (sDate) url += `&start_date=${sDate}`;
+        if (eDate) url += `&end_date=${eDate}`;
+        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+      }
 
       const res = await apiClient.get<OrderListResponse, StandardResponse<OrderListResponse>>(url);
       if (res.success && res.data) {
@@ -66,7 +74,7 @@ export const AdminOrderHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, dateRange, statusFilter, searchQuery]);
+  }, [page, dateRange, statusFilter, searchQuery, focusedOrderId]);
 
   useEffect(() => {
     fetchHistory();
@@ -86,6 +94,9 @@ export const AdminOrderHistory = () => {
   const handleResetFilters = () => {
     setDateRange([{ startDate: undefined, endDate: undefined, key: 'selection' }]);
     setStatusFilter('');
+    setSearchQuery('');
+    setFocusedOrderId(null);
+    setSearchParams({});
     setPage(1);
   };
 
@@ -113,6 +124,27 @@ export const AdminOrderHistory = () => {
             </button>
           )}
         </div>
+
+        {focusedOrderId && (
+          <div className="mb-6 flex items-center gap-3 bg-primary/5 text-primary px-4 py-3 rounded-2xl border border-primary/10 animate-in fade-in slide-in-from-top-2">
+            <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+              <Filter size={14} className="animate-pulse" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[13px] font-black">특정 주문 집중 조회 모드</p>
+              <p className="text-[11px] font-bold opacity-70">입금 내역에서 선택한 주문(고유 ID: {focusedOrderId})을 확인하고 있습니다.</p>
+            </div>
+            <button 
+              onClick={() => {
+                setFocusedOrderId(null);
+                setSearchParams({});
+              }}
+              className="text-[11px] font-black uppercase tracking-wider bg-white px-3 py-1.5 rounded-xl border border-primary/20 hover:bg-primary hover:text-white hover:border-transparent transition-all shadow-sm"
+            >
+              모든 주문 보기
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-4">
           {/* 검색바 */}
