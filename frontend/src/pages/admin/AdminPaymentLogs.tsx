@@ -224,7 +224,7 @@ export const AdminPaymentLogs = () => {
               logs.map((log) => (
                 <tr key={log.id} className="group hover:bg-gray-50/50 transition-colors">
                   <td className="py-5 pl-2">
-                    <span className="text-[14px] font-black text-gray-400">#{log.id}</span>
+                    <span className="text-[14px] font-black text-gray-400">{log.id}</span>
                   </td>
                   <td className="py-5">
                     <span className="text-[14px] font-black text-gray-900 underline decoration-gray-200 underline-offset-4">
