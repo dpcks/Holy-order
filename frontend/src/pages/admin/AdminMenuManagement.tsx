@@ -1,17 +1,23 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, Plus, Pencil, X, Check } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import { Category, Menu, StandardResponse } from '../../types';
+import type { Category, Menu, StandardResponse } from '../../types';
 
 
 interface EditForm { name: string; price: string; description: string; category_id: number; }
+
+/** 관리 도구에서 카테고리 정보가 포함된 메뉴 타입 */
+interface AdminMenu extends Menu {
+  categoryId: number;
+  categoryName: string;
+}
 
 export const AdminMenuManagement = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [editingMenu, setEditingMenu] = useState<Menu | null>(null);
+  const [editingMenu, setEditingMenu] = useState<AdminMenu | null>(null);
   const [editForm, setEditForm] = useState<EditForm>({ name: '', price: '', description: '', category_id: 0 });
   const [savingId, setSavingId] = useState<number | null>(null);
 
@@ -120,14 +126,17 @@ export const AdminMenuManagement = () => {
     };
   }, [fetchMenus, connectWebSocket]);
 
-  const allMenus = categories.flatMap(c => c.menus.map(m => ({ ...m, categoryName: c.name, categoryId: c.id })));
+  const allMenus: AdminMenu[] = categories.flatMap(c => 
+    c.menus.map(m => ({ ...m, categoryName: c.name, categoryId: c.id }))
+  );
+  
   const displayedMenus = allMenus.filter(m => {
     const matchCat = activeCategory === 'all' || m.categoryId === activeCategory;
     const matchSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchSearch;
   });
 
-  const handleToggleAvailability = async (menu: Menu) => {
+  const handleToggleAvailability = async (menu: AdminMenu) => {
     setSavingId(menu.id);
     try {
       await apiClient.patch(`/admin/menus/${menu.id}`, { is_available: !menu.is_available });
@@ -136,9 +145,14 @@ export const AdminMenuManagement = () => {
     finally { setSavingId(null); }
   };
 
-  const handleOpenEdit = (menu: Menu & { categoryId: number }) => {
+  const handleOpenEdit = (menu: AdminMenu) => {
     setEditingMenu(menu);
-    setEditForm({ name: menu.name, price: String(menu.price), description: menu.description || '', category_id: menu.categoryId });
+    setEditForm({ 
+      name: menu.name, 
+      price: String(menu.price), 
+      description: menu.description || '', 
+      category_id: menu.categoryId 
+    });
   };
 
   const handleSaveEdit = async () => {
@@ -225,7 +239,7 @@ export const AdminMenuManagement = () => {
           <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {displayedMenus.map(menu => {
               const isSaving = savingId === menu.id;
-              const optionTags = menu.options.map(o => o.name).join(' / ') || '-';
+              const optionTags = menu.options?.map(o => o.name).join(' / ') || '-';
               return (
                 <div key={menu.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all ${menu.is_available ? 'border-gray-100' : 'border-dashed border-gray-300 opacity-60'}`}>
                   {/* 이미지 */}
@@ -268,7 +282,7 @@ export const AdminMenuManagement = () => {
 
                     {/* 수정 버튼 */}
                     <button
-                      onClick={() => handleOpenEdit(menu as any)}
+                      onClick={() => handleOpenEdit(menu)}
                       className="w-full flex items-center justify-center gap-1.5 py-2 text-[12px] font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
                     >
                       <Pencil size={12} />수정
