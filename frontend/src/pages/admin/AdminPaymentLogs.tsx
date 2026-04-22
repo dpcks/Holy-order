@@ -1,7 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Receipt, ArrowLeftRight, Building2, Wallet } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, ArrowLeftRight } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
+
+// react-date-range 라이브러리 및 스타일
+import { DateRangePicker } from 'react-date-range';
+import type { Range, RangeKeyDict } from 'react-date-range';
+import { ko } from 'date-fns/locale';
+import { format } from 'date-fns';
+import 'react-date-range/dist/styles.css'; 
+import 'react-date-range/dist/theme/default.css';
 
 export const AdminPaymentLogs = () => {
   const [logs, setLogs] = useState<PaymentLog[]>([]);
@@ -9,11 +17,42 @@ export const AdminPaymentLogs = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // 필터 상태
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  // react-date-range 상태
+  const [dateRange, setDateRange] = useState<Range[]>([
+    {
+      startDate: undefined,
+      endDate: undefined,
+      key: 'selection'
+    }
+  ]);
 
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiClient.get<PaymentLogListResponse, StandardResponse<PaymentLogListResponse>>(`/admin/payments/logs?page=${page}&limit=20`);
+      const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
+      const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
+      
+      let url = `/admin/payments/logs?page=${page}&limit=20`;
+      if (sDate) url += `&start_date=${sDate}`;
+      if (eDate) url += `&end_date=${eDate}`;
+      if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
+      if (searchQuery) {
+        // 검색어가 숫자인 경우 order_id로 검색 시도, 아니면 sender_name
+        if (/^\d+$/.test(searchQuery)) {
+          url += `&order_id=${searchQuery}`;
+        } else {
+          url += `&sender_name=${searchQuery}`;
+        }
+      }
+
+      const res = await apiClient.get<PaymentLogListResponse, StandardResponse<PaymentLogListResponse>>(url);
       if (res.success && res.data) {
         setLogs(res.data.items);
         setTotalCount(res.data.total_count);
@@ -24,29 +63,132 @@ export const AdminPaymentLogs = () => {
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, dateRange, paymentMethodFilter, searchQuery]);
 
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
 
+  // 날짜 선택기 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleResetFilters = () => {
+    setDateRange([{ startDate: undefined, endDate: undefined, key: 'selection' }]);
+    setPaymentMethodFilter('');
+    setSearchQuery('');
+    setPage(1);
+  };
+
+  const handleDateSelect = (ranges: RangeKeyDict) => {
+    setDateRange([ranges.selection]);
+    setPage(1);
+  };
+
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* 헤더 */}
       <header className="px-8 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
-        <div className="flex justify-between items-center max-w-[1200px] mx-auto">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
               <ArrowLeftRight size={24} />
             </div>
             <div>
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">입금 승인 내역</h1>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">입금 승인 내역 감사</h1>
               <p className="text-gray-400 text-[13px] font-bold uppercase tracking-widest mt-0.5">Payment Audit Logs</p>
             </div>
           </div>
-          <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
-            <span className="text-[12px] text-gray-500 font-bold mr-2">총 로그 수</span>
-            <span className="text-lg font-black text-primary">{totalCount.toLocaleString()}</span>
+          <div className="flex items-center gap-3">
+            {(dateRange[0].startDate || paymentMethodFilter || searchQuery) && (
+              <button 
+                onClick={handleResetFilters}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-primary bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                <X size={14} /> 필터 초기화
+              </button>
+            )}
+            <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+              <span className="text-[12px] text-gray-500 font-bold mr-2">검색 결과</span>
+              <span className="text-lg font-black text-primary">{totalCount.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          {/* 검색바 */}
+          <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 w-full max-w-xs focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            <Search size={18} className="text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="주문번호, 입금자명 검색..." 
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPage(1);
+              }}
+              className="bg-transparent border-none outline-none text-[14px] flex-1 text-gray-700 placeholder-gray-400 font-medium"
+            />
+          </div>
+
+          {/* 기간 필터 */}
+          <div className="relative" ref={datePickerRef}>
+            <button 
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-[13px] font-bold transition-all ${showDatePicker ? 'ring-2 ring-primary/20 bg-white border-primary/30' : 'hover:bg-gray-100'}`}
+            >
+              <Calendar size={16} className={dateRange[0].startDate ? 'text-primary' : 'text-gray-400'} />
+              {dateRange[0].startDate ? (
+                <span className="text-gray-900">
+                  {format(dateRange[0].startDate, 'yyyy.MM.dd')} ~ {dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy.MM.dd') : '...'}
+                </span>
+              ) : (
+                <span className="text-gray-500">기간 설정</span>
+              )}
+            </button>
+
+            {showDatePicker && (
+              <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                <DateRangePicker
+                  ranges={dateRange}
+                  onChange={handleDateSelect}
+                  locale={ko}
+                  months={2}
+                  direction="horizontal"
+                  rangeColors={['#2D1616']}
+                  showDateDisplay={false}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* 결제수단 필터 */}
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
+            <button 
+              onClick={() => { setPaymentMethodFilter(''); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              전체
+            </button>
+            <button 
+              onClick={() => { setPaymentMethodFilter('BANK_TRANSFER'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <Building2 size={13} /> 계좌
+            </button>
+            <button 
+              onClick={() => { setPaymentMethodFilter('CASH'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <Wallet size={13} /> 현금
+            </button>
           </div>
         </div>
       </header>
@@ -68,13 +210,13 @@ export const AdminPaymentLogs = () => {
           <tbody className="divide-y divide-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center">
+                <td colSpan={7} className="py-20 text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
                 </td>
               </tr>
             ) : logs.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-20 text-center text-gray-400 font-bold">
+                <td colSpan={7} className="py-20 text-center text-gray-400 font-bold">
                   기록된 입금 로그가 없습니다.
                 </td>
               </tr>
@@ -161,6 +303,9 @@ export const AdminPaymentLogs = () => {
             다음 <ChevronRight size={16} />
           </button>
         </div>
+        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+          Showing {logs.length} of {totalCount} records
+        </p>
       </footer>
     </div>
   );

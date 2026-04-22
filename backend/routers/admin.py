@@ -240,11 +240,27 @@ def get_today_stats(db: Session = Depends(get_db)):
 def get_payment_logs(
     page: int = 1,
     limit: int = 20,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    sender_name: Optional[str] = None,
+    order_id: Optional[int] = None,
+    payment_method: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """입금 승인 로그 조회"""
-    query = db.query(models.PaymentLog)
+    """입금 승인 로그 조회: 필터링 및 페이징 지원"""
+    query = db.query(models.PaymentLog).join(models.Order, models.Order.id == models.PaymentLog.order_id)
     
+    if start_date:
+        query = query.filter(func.date(models.PaymentLog.created_at) >= start_date)
+    if end_date:
+        query = query.filter(func.date(models.PaymentLog.created_at) <= end_date)
+    if sender_name:
+        query = query.filter(models.PaymentLog.sender_name.ilike(f"%{sender_name}%"))
+    if order_id:
+        query = query.filter(models.PaymentLog.order_id == order_id)
+    if payment_method:
+        query = query.filter(models.Order.payment_method == payment_method)
+        
     total_count = query.count()
     offset = (page - 1) * limit
     logs = query.order_by(models.PaymentLog.id.desc()).offset(offset).limit(limit).all()
