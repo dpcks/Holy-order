@@ -1,17 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download } from 'lucide-react';
 import { apiClient } from '../../api/client';
-
-interface Stats {
-  total_orders: number;
-  total_sales: number;
-  avg_order_value: number;
-  top_menu: string | null;
-  status_counts: Record<string, number>;
-  top_menus: { name: string; count: number; revenue: number }[];
-  duty_breakdown: Record<string, number>;
-  hourly_orders: Record<string, number>;
-}
+import { ReportStats, StandardResponse } from '../../types';
 
 // CSS 진행 바 컴포넌트
 const ProgressBar = ({ value, max, color = 'bg-[#1A0A0A]' }: { value: number; max: number; color?: string }) => (
@@ -102,14 +92,14 @@ const groupDuty = (duty_breakdown: Record<string, number>) => {
 };
 
 export const AdminSalesReports = () => {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<ReportStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'일간' | '주간' | '월간'>('일간');
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await apiClient.get<any, any>('/admin/stats/today');
+        const res = await apiClient.get<ReportStats, StandardResponse<ReportStats>>('/admin/stats/today');
         if (res.success) setStats(res.data);
       } catch (err) {
         console.error('통계 조회 실패:', err);

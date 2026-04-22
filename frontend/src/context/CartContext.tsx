@@ -1,17 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 
-// 백엔드의 OrderItemCreate 구조와 유사하지만 프론트에서 관리할 고유 ID가 필요함
-export interface CartItem {
-  cartItemId: string; // 로컬 식별용 고유 ID (수정/삭제용)
-  menu_id: number;
-  name: string;
-  image_url?: string;
-  quantity: number;
-  options_text: string | null;
-  price: number; // 메뉴 기본가 + 옵션 추가금액 합계 (단가)
-  sub_total: number; // 단가 * 수량
-}
+import { CartItem } from '../types';
 
 interface CartContextType {
   items: CartItem[];

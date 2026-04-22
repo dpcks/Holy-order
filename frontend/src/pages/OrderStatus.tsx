@@ -3,34 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft } from 'lucide-react';
 import { apiClient } from '../api/client';
 import type { StandardResponse } from '../api/client';
-
-interface Setting {
-  bank_name: string | null;
-  account_number: string | null;
-  account_holder: string | null;
-}
-
-interface ActiveOrder {
-  id: string;
-  orderNumber: number;
-}
-
-interface OrderItem {
-  id: number;
-  menu_name_snapshot: string;
-  quantity: number;
-  options_text: string | null;
-  sub_total: number;
-}
-
-interface Order {
-  id: number;
-  order_number: number;
-  status: 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
-  total_price: number;
-  created_at: string;
-  items: OrderItem[];
-}
+import type { Order, Setting, ActiveOrder } from '../types';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();

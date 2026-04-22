@@ -2,32 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { RefreshCw, CheckCircle, Phone, MessageSquare } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
-
-interface OrderItem {
-  id: number;
-  menu_name_snapshot: string;
-  quantity: number;
-  options_text: string | null;
-  sub_total: number;
-}
-
-interface Order {
-  id: number;
-  order_number: number;
-  status: string;
-  user_name_snapshot: string | null;
-  user_duty_snapshot: string;
-  user_phone_snapshot: string | null;
-  request: string | null;
-  total_price: number;
-  created_at: string;
-  items: OrderItem[];
-}
-
-interface Stats {
-  total_orders: number;
-  total_sales: number;
-}
+import type { Order, OrderItem, DashboardStats } from '../../types';
 
 // 상태 전이 정의
 const STATUS_TRANSITIONS: Record<string, { label: string; next: string; color: string } | null> = {
@@ -89,7 +64,7 @@ const OptionBadges = ({ text }: { text: string | null }) => {
 
 export const AdminOrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState<Stats>({ total_orders: 0, total_sales: 0 });
+  const [stats, setStats] = useState<DashboardStats>({ total_orders: 0, total_sales: 0 });
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -106,8 +81,8 @@ export const AdminOrderManagement = () => {
   const fetchOrders = useCallback(async () => {
     try {
       const [boardRes, statsRes] = await Promise.all([
-        apiClient.get<any, StandardResponse<Order[]>>('/admin/orders/board'),
-        apiClient.get<any, StandardResponse<Stats>>('/admin/stats/today')
+        apiClient.get<Order[], StandardResponse<Order[]>>('/admin/orders/board'),
+        apiClient.get<DashboardStats, StandardResponse<DashboardStats>>('/admin/stats/today')
       ]);
 
       if (boardRes.success && boardRes.data) {

@@ -1,11 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, Plus, Pencil, X, Check } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import type { StandardResponse } from '../../api/client';
+import { Category, Menu, StandardResponse } from '../../types';
 
-interface MenuOption { id: number; name: string; extra_price: number; }
-interface Menu { id: number; name: string; price: number; description: string | null; image_url: string | null; is_available: boolean; options: MenuOption[]; }
-interface Category { id: number; name: string; menus: Menu[]; }
 
 interface EditForm { name: string; price: string; description: string; category_id: number; }
 
@@ -29,7 +26,7 @@ export const AdminMenuManagement = () => {
 
   const fetchMenus = useCallback(async () => {
     try {
-      const res = await apiClient.get<any, StandardResponse<Category[]>>('/categories');
+      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
       if (res.success && res.data) {
         setCategories(res.data);
       }

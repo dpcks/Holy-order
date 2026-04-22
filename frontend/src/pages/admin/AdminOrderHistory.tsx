@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import type { StandardResponse } from '../../api/client';
+import { Order, StandardResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
 import { DateRangePicker } from 'react-date-range';
@@ -10,25 +10,6 @@ import { ko } from 'date-fns/locale';
 import { format, addDays, startOfMonth, endOfMonth, startOfYesterday, endOfYesterday } from 'date-fns';
 import 'react-date-range/dist/styles.css'; // 기본 스타일
 import 'react-date-range/dist/theme/default.css'; // 테마 스타일
-
-interface OrderItem {
-  id: number;
-  menu_name_snapshot: string;
-  quantity: number;
-  options_text: string | null;
-  sub_total: number;
-}
-
-interface Order {
-  id: number;
-  order_number: number;
-  status: string;
-  user_name_snapshot: string | null;
-  user_duty_snapshot: string;
-  total_price: number;
-  created_at: string;
-  items: OrderItem[];
-}
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   PENDING: { label: '입금대기', color: 'bg-orange-100 text-orange-600' },
@@ -69,7 +50,7 @@ export const AdminOrderHistory = () => {
       if (eDate) url += `&end_date=${eDate}`;
       if (statusFilter) url += `&status=${statusFilter}`;
 
-      const res = await apiClient.get<any, StandardResponse<Order[]>>(url);
+      const res = await apiClient.get<Order[], StandardResponse<Order[]>>(url);
       if (res.success && res.data) {
         setOrders(res.data);
       }

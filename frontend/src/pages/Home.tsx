@@ -3,29 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, Coffee } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
-import type { StandardResponse } from '../api/client';
-
-export interface MenuOption {
-  id: number;
-  name: string;
-  extra_price: number;
-}
-
-export interface Menu {
-  id: number;
-  name: string;
-  price: number;
-  description: string | null;
-  image_url: string | null;
-  is_available: boolean;
-  options: MenuOption[];
-}
-
-export interface Category {
-  id: number;
-  name: string;
-  menus: Menu[];
-}
+import { Category, StandardResponse } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -42,7 +20,7 @@ export const Home = () => {
 
     const fetchMenus = async () => {
       try {
-        const response = await apiClient.get<any, StandardResponse<Category[]>>('/categories');
+        const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
         if (response.success && response.data) {
           setCategories(response.data);
           if (response.data.length > 0) {

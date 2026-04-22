@@ -5,11 +5,10 @@ import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
 import { apiClient } from '../api/client';
-import type { StandardResponse } from '../api/client';
+import { Duty, StandardResponse } from '../types';
 
 // 백엔드 DutyEnum과 동일하게 유지
-const DUTY_OPTIONS = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'] as const;
-type Duty = typeof DUTY_OPTIONS[number];
+const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
 
 // 주문자 정보 입력 모달 컴포넌트
 const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => void; onClose: () => void }) => {
