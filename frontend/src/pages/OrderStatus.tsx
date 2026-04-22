@@ -48,13 +48,15 @@ export const OrderStatus = () => {
       if (orderRes?.success) {
         setOrder(orderRes.data);
         
-        // 수령 완료 시 로컬 스토리지에서 즉시 삭제하지 않고, 
-        // 사용자가 이 페이지를 떠날 때나 홈으로 갈 때 처리하도록 로직 변경 가능
-        // 하지만 여기서는 리스트 관리를 위해 유지하되, 
-        // 데이터가 화면에서 사라지지 않게 API에서 전체 정보를 내려주도록 백엔드 수정됨
+        // 수령 완료 시 (COMPLETED) 로컬 스토리지의 활성 주문 목록에서 자동으로 제거
+        // 이를 통해 사용자가 홈 버튼을 누르지 않아도 홈 화면의 플로팅 버튼이 즉시 사라짐
         if (orderRes.data.status === 'COMPLETED') {
-          // 완료된 주문도 일단 목록에는 유지 (사용자가 확인은 해야 하므로)
-          // 단, 홈 화면 플로팅 버튼 등에서는 제외하고 싶을 수 있음
+          const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+          const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
+          localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
+          
+          // 현재 페이지의 탭 목록 상태도 동기화
+          setActiveOrders(filteredOrders);
         }
       }
       if (settingRes?.success) {
