@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, ChevronDown, Coffee } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
-import { Category, StandardResponse } from '../types';
+import type { Category, StandardResponse, Menu } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();

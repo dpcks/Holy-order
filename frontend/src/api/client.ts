@@ -9,7 +9,7 @@ export const apiClient = axios.create({
   },
 });
 
-import { StandardResponse } from '../types';
+import type { StandardResponse } from '../types';
 export type { StandardResponse };
 
 // 응답 인터셉터를 추가하여 StandardResponse 구조에서 data만 추출하거나 에러를 처리할 수 있음

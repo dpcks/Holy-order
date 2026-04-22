@@ -4,7 +4,7 @@ import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { useCart } from '../context/CartContext';
-import type { Menu, MenuOption } from './Home';
+import type { Menu, MenuOption } from '../types';
 
 // ICE/HOT 옵션인지 판별하는 상수 - 백엔드 name 값 기준
 const TEMP_OPTION_NAMES = ['ICE', 'HOT'];

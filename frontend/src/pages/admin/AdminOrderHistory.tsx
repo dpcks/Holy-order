@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import { Order, StandardResponse } from '../../types';
+import type { Order, StandardResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
 import { DateRangePicker } from 'react-date-range';

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import { ReportStats, StandardResponse } from '../../types';
+import type { ReportStats, StandardResponse } from '../../types';
 
 // CSS 진행 바 컴포넌트
 const ProgressBar = ({ value, max, color = 'bg-[#1A0A0A]' }: { value: number; max: number; color?: string }) => (

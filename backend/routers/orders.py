@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from datetime import datetime, date
 
 import models, schemas
@@ -32,26 +33,34 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         order_number=next_order_number,
         order_date=today
     )
-    db.add(new_order)
-    db.flush() # 아이디를 얻기 위해 flush
-    
-    for item in order.items:
-        menu = db.query(models.Menu).filter(models.Menu.id == item.menu_id).first()
-        if not menu:
-            continue
-        order_item = models.OrderItem(
-            order_id=new_order.id,
-            menu_id=item.menu_id,
-            menu_name_snapshot=menu.name,
-            menu_price_snapshot=menu.price,
-            quantity=item.quantity,
-            options_text=item.options_text,
-            sub_total=item.sub_total
-        )
-        db.add(order_item)
+    try:
+        db.add(new_order)
+        db.flush() # 아이디를 얻기 위해 flush
         
-    db.commit()
-    db.refresh(new_order)
+        for item in order.items:
+            menu = db.query(models.Menu).filter(models.Menu.id == item.menu_id).first()
+            if not menu:
+                continue
+            order_item = models.OrderItem(
+                order_id=new_order.id,
+                menu_id=item.menu_id,
+                menu_name_snapshot=menu.name,
+                menu_price_snapshot=menu.price,
+                quantity=item.quantity,
+                options_text=item.options_text,
+                sub_total=item.sub_total
+            )
+            db.add(order_item)
+            
+        db.commit()
+        db.refresh(new_order)
+    except IntegrityError:
+        db.rollback()
+        return schemas.StandardResponse(
+            success=False, 
+            data=None, 
+            message="잠깐 주문이 겹쳤어요. 다시 시도해주시면 바로 접수됩니다 🙏"
+        )
     
     # 실시간 알림 전송 (JSON 구조화)
     await manager.broadcast({

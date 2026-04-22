@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { RefreshCw, CheckCircle, Phone, MessageSquare } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
-import type { Order, OrderItem, DashboardStats } from '../../types';
+import type { Order, DashboardStats } from '../../types';
 
 // 상태 전이 정의
 const STATUS_TRANSITIONS: Record<string, { label: string; next: string; color: string } | null> = {
@@ -145,12 +145,7 @@ export const AdminOrderManagement = () => {
     };
 
     ws.onclose = (event) => {
-      if (event.wasClean) {
-        setWsStatus('DISCONNECTED');
-        return;
-      }
-
-      console.log('❌ [WebSocket] 연결 끊김. 재연결 시도 중...');
+      console.log(`❌ [WebSocket] 연결 종료 (Code: ${event.code}, Clean: ${event.wasClean}). 재연결 시도 중...`);
       setWsStatus('DISCONNECTED');
       
       // 1. REST Polling Fallback 시작 (WebSocket이 죽어도 30초마다 데이터 갱신)
@@ -178,7 +173,7 @@ export const AdminOrderManagement = () => {
     fetchOrders();
     connectWebSocket();
 
-    // 페이지 가시성 변화 감지 (백그라운드에서 돌아왔을 때 즉시 재연결)
+    // 페이지 가시성 변화 감지
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
         console.log('📱 [Visibility] 화면 활성화 감지 - 즉시 재연결 시도');
@@ -190,11 +185,33 @@ export const AdminOrderManagement = () => {
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (wsRef.current) wsRef.current.close();
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+      }
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
   }, [fetchOrders, connectWebSocket]);
+
+  // 5초마다 실제 소켓 상태 강제 확인 (UI 동기화 보정용 - 별도 이펙트로 분리하여 재연결 루프 방지)
+  useEffect(() => {
+    const statusCheckInterval = setInterval(() => {
+      if (!wsRef.current) return;
+      const realReadyState = wsRef.current.readyState;
+      
+      setWsStatus(prev => {
+        if (realReadyState === WebSocket.OPEN && prev !== 'CONNECTED') return 'CONNECTED';
+        if (realReadyState !== WebSocket.OPEN && realReadyState !== WebSocket.CONNECTING && prev === 'CONNECTED') {
+          console.log('⚠️ [Sync] 소켓 끊김 감지 - 상태 업데이트');
+          return 'DISCONNECTED';
+        }
+        return prev;
+      });
+    }, 5000);
+
+    return () => clearInterval(statusCheckInterval);
+  }, []);
 
   const handleStatusChange = async (orderId: number, nextStatus: string) => {
     setUpdatingId(orderId);
