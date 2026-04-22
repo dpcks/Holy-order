@@ -8,7 +8,7 @@ import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../..
 import { DateRangePicker } from 'react-date-range';
 import type { Range, RangeKeyDict } from 'react-date-range';
 import { ko } from 'date-fns/locale';
-import { format } from 'date-fns';
+import { format, addDays, startOfYesterday, endOfYesterday, startOfMonth, endOfMonth } from 'date-fns';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
@@ -165,6 +165,13 @@ export const AdminPaymentLogs = () => {
                   direction="horizontal"
                   rangeColors={['#2D1616']}
                   showDateDisplay={false}
+                  staticRanges={[
+                    { label: '오늘', range: () => ({ startDate: new Date(), endDate: new Date() }), isSelected: () => false },
+                    { label: '어제', range: () => ({ startDate: startOfYesterday(), endDate: endOfYesterday() }), isSelected: () => false },
+                    { label: '최근 7일', range: () => ({ startDate: addDays(new Date(), -7), endDate: new Date() }), isSelected: () => false },
+                    { label: '이번 달', range: () => ({ startDate: startOfMonth(new Date()), endDate: endOfMonth(new Date()) }), isSelected: () => false },
+                  ]}
+                  inputRanges={[]}
                 />
               </div>
             )}
