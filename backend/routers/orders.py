@@ -50,7 +50,10 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
 
     # 2. 당일 주문 번호 계산
     today = models.get_seoul_time().date()
-    last_order = db.query(models.Order).filter(models.Order.order_date == today).order_by(models.Order.id.desc()).first()
+    last_order = db.query(models.Order)\
+        .filter(models.Order.order_date == today)\
+        .order_by(models.Order.order_number.desc())\
+        .first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
     # 3. 주문 및 상세 내역 저장

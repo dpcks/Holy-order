@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
@@ -20,6 +20,41 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: '취소', color: 'bg-red-100 text-red-600' },
 };
 
+// 옵션 텍스트 파싱 및 뱃지 렌더링 컴포넌트
+const OptionBadges = ({ text }: { text: string | null }) => {
+  if (!text) return null;
+  const options = text.split(/ \/ |, /);
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {options.map((opt, i) => {
+        const trimmed = opt.trim();
+        if (!trimmed) return null;
+        const isIce = trimmed.toUpperCase() === 'ICE';
+        const isHot = trimmed.toUpperCase() === 'HOT';
+        const isShot = trimmed.includes('샷 추가');
+        const isTumblr = trimmed.includes('텀블러');
+        return (
+          <span key={i} className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${
+            isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
+            isHot ? 'bg-red-100 text-red-600 border-red-200' :
+            isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+            isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
+            'bg-gray-100 text-gray-500 border-gray-200'
+          }`}>
+            {trimmed}
+          </span>
+        );
+      })}
+    </div>
+  );
+};
+
+// 전화번호 포맷팅
+const formatPhone = (phone: string | null) => {
+  if (!phone) return '';
+  return phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
+};
+
 export const AdminOrderHistory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialOrderId = searchParams.get('order_id');
@@ -30,6 +65,8 @@ export const AdminOrderHistory = () => {
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(initialOrderId);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 필터 상태
   const [statusFilter, setStatusFilter] = useState('');
@@ -130,6 +167,16 @@ export const AdminOrderHistory = () => {
     setDateRange([ranges.selection]);
     setPage(1);
     // 선택 완료 시 자동으로 닫지 않고 사용자가 확인하게 함 (또는 닫기 버튼 추가)
+  };
+
+  const handleOpenDetail = (order: Order) => {
+    setSelectedOrder(order);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setIsDetailModalOpen(false);
+    setSelectedOrder(null);
   };
 
   return (
@@ -290,7 +337,11 @@ export const AdminOrderHistory = () => {
               </tr>
             ) : (
               orders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50/80 transition-colors group cursor-default">
+                <tr 
+                  key={order.id} 
+                  onClick={() => handleOpenDetail(order)}
+                  className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                >
                   <td className="py-5 pl-4 font-black text-[#1A0A0A] text-[16px]">#{order.order_number}</td>
                   <td className="py-5">
                     <div className="flex flex-col">
@@ -378,6 +429,120 @@ export const AdminOrderHistory = () => {
           전체 {totalCount}개 중 {orders.length}개의 주문내역
         </p>
       </footer>
+
+      {/* 주문 상세 모달 */}
+      {isDetailModalOpen && selectedOrder && (
+        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm" onClick={handleCloseDetail}>
+          <div className="bg-white rounded-[40px] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            {/* 모달 헤더 */}
+            <div className="bg-[#1A0A0A] p-8 text-white flex justify-between items-start">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-4xl font-black tracking-tighter">#{selectedOrder.order_number}</span>
+                  <span className="bg-white/10 text-white/80 text-[12px] font-black px-3 py-1 rounded-full uppercase tracking-widest">
+                    History Detail
+                  </span>
+                </div>
+                <p className="text-white/40 text-[13px] font-medium">
+                  주문 일시: {new Date(selectedOrder.created_at).toLocaleString('ko-KR')}
+                </p>
+              </div>
+              <button onClick={handleCloseDetail} className="p-2 hover:bg-white/10 rounded-full transition-all">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-10 space-y-10 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              {/* 고객 및 주문 정보 요약 */}
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Customer Information</h4>
+                  <div className="space-y-1">
+                    <p className="text-2xl font-black text-gray-900 leading-tight">
+                      {selectedOrder.user_name_snapshot || '손님'} 
+                      <span className="text-[13px] ml-2 font-bold text-gray-400">[{selectedOrder.user_duty_snapshot}]</span>
+                    </p>
+                    <p className="text-[15px] font-bold text-gray-500">{formatPhone(selectedOrder.user_phone_snapshot)}</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Order Summary</h4>
+                  <div className="space-y-1">
+                    <p className="text-[15px] font-bold text-gray-900">결제수단: {selectedOrder.payment_method === 'CASH' ? '현금 결제' : '계좌 이체'}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold text-gray-500">주문 상태:</span>
+                      <span className={`text-[12px] font-black px-2.5 py-0.5 rounded-lg ${STATUS_LABELS[selectedOrder.status]?.color}`}>
+                        {STATUS_LABELS[selectedOrder.status]?.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 주문 아이템 테이블 */}
+              <div className="space-y-4">
+                <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Order Items</h4>
+                <div className="border border-gray-100 rounded-3xl overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest">Item</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-center">Qty</th>
+                        <th className="px-6 py-4 text-[11px] font-black text-gray-400 uppercase tracking-widest text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {selectedOrder.items.map((item, idx) => (
+                        <tr key={idx} className="group hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-5">
+                            <p className="text-[15px] font-black text-gray-900 mb-1">{item.menu_name_snapshot}</p>
+                            <OptionBadges text={item.options_text} />
+                          </td>
+                          <td className="px-6 py-5 text-center">
+                            <span className="text-[14px] font-black text-gray-900">x {item.quantity}</span>
+                          </td>
+                          <td className="px-6 py-5 text-right">
+                            <span className="text-[15px] font-black text-gray-900">₩{item.sub_total.toLocaleString()}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="bg-gray-50/50">
+                      <tr>
+                        <td colSpan={2} className="px-6 py-6 text-right text-[13px] font-bold text-gray-500 uppercase tracking-widest">Total Amount</td>
+                        <td className="px-6 py-6 text-right text-2xl font-black text-primary tracking-tight">₩{selectedOrder.total_price.toLocaleString()}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {/* 요청 사항 */}
+              {selectedOrder.request && (
+                <div className="space-y-4">
+                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Customer Request</h4>
+                  <div className="p-6 bg-orange-50/50 border border-orange-100 rounded-3xl flex gap-4">
+                    <MessageSquare size={20} className="text-orange-500 shrink-0 mt-0.5" />
+                    <p className="text-[15px] font-bold text-orange-900 leading-relaxed whitespace-pre-wrap">
+                      {selectedOrder.request}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 모달 하단 액션 */}
+            <div className="p-8 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={handleCloseDetail}
+                className="w-full py-4 text-[15px] font-black text-gray-500 bg-white border border-gray-200 hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

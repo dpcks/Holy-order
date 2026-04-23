@@ -188,13 +188,15 @@ export const Cart = () => {
 
         // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
         const existingOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-        const newOrder = { id: response.data.id.toString(), orderNumber: response.data.order_number };
+        const newOrder = { id: String(response.data.id), orderNumber: response.data.order_number };
         
-        // 중복 방지 및 추가
-        const updatedOrders = [...existingOrders.filter((o: any) => o.id !== newOrder.id), newOrder];
+        // 중복 방지 및 추가 (타입 안정성을 위해 String으로 비교)
+        const updatedOrders = [...existingOrders.filter((o: any) => String(o.id) !== String(newOrder.id)), newOrder];
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
         
-        navigate(`/order/status/${response.data.id}`);
+        navigate(`/order/status/${response.data.id}`, { 
+          state: { orderNumber: response.data.order_number, total: finalPrice } 
+        });
       } else {
         alert(response.message || '주문에 실패했습니다.');
       }

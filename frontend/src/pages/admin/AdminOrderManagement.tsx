@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RefreshCw, CheckCircle, MessageSquare, Phone, MoreVertical, Coffee, Wallet, Building2 } from 'lucide-react';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, MoreVertical, Coffee, Wallet, Building2, X } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
@@ -18,9 +18,15 @@ const COLUMNS = [
 ];
 
 // 경과 시간 계산 헬퍼
-const getElapsed = (createdAt: string) => {
-  const diff = Math.floor((Date.now() - new Date(createdAt).getTime()) / 60000);
-  return diff < 1 ? '방금 전' : `${diff}분 경과`;
+const getElapsed = (createdAt: string, now: number) => {
+  const diff = Math.floor((now - new Date(createdAt).getTime()) / 60000);
+  if (diff < 1) return '방금 전';
+  if (diff >= 60) {
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    return `${hours}시간 ${mins}분 경과`;
+  }
+  return `${diff}분 경과`;
 };
 
 // 전화번호 포맷팅 (01012345678 -> 010-1234-5678)
@@ -72,6 +78,7 @@ export const AdminOrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [now, setNow] = useState<number>(Date.now());
 
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
@@ -181,6 +188,14 @@ export const AdminOrderManagement = () => {
       ws.close();
     };
   }, [fetchOrders]);
+
+  // 실시간 경과 시간 업데이트 타이머 (30초마다)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // 초기 로드 + WebSocket 생명주기 관리
   useEffect(() => {
@@ -337,7 +352,7 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500"
+                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500 relative"
                         >
                           {/* 헤더: 주문번호 & 결제수단 & 경과시간 */}
                           <div className="flex items-center justify-between mb-5">
@@ -356,8 +371,10 @@ export const AdminOrderManagement = () => {
                             </div>
                             <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
                               order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
+                            } ${
+                              Math.floor((now - new Date(order.created_at).getTime()) / 60000) >= 10 ? 'text-red-600 animate-pulse bg-red-50' : ''
                             }`}>
-                              {getElapsed(order.created_at)}
+                              {getElapsed(order.created_at, now)}
                             </span>
                           </div>
 
@@ -442,6 +459,8 @@ export const AdminOrderManagement = () => {
           })}
         </div>
       </div>
+
+
 
       <footer className="bg-[#1A0A0A] px-10 py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
         <div className="flex items-center gap-12">

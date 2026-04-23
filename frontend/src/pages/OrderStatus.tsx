@@ -42,7 +42,7 @@ export const OrderStatus = () => {
         // 수령 완료 시 (COMPLETED) 로컬 스토리지의 활성 주문 목록에서 자동으로 제거
         if (orderRes.data.status === 'COMPLETED') {
           const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-          const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
+          const filteredOrders = orders.filter((o: ActiveOrder) => String(o.id) !== String(id));
           localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
           
           setActiveOrders(filteredOrders);
@@ -50,6 +50,8 @@ export const OrderStatus = () => {
           if (filteredOrders.length > 0) {
             console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
             navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
+          } else {
+            navigate('/', { replace: true });
           }
         }
       }
@@ -130,6 +132,9 @@ export const OrderStatus = () => {
   useEffect(() => {
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
+    
+    // 신규 주문으로 변경 시 이전 데이터 초기화
+    setOrder(null);
     fetchData(true);
     connectWebSocket();
 
@@ -188,7 +193,7 @@ export const OrderStatus = () => {
     // 수령 완료된 주문은 홈으로 갈 때 로컬스토리지에서 정리
     if (order?.status === 'COMPLETED') {
       const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-      const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
+      const filteredOrders = orders.filter((o: ActiveOrder) => String(o.id) !== String(id));
       localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
     }
     navigate('/');
@@ -206,7 +211,7 @@ export const OrderStatus = () => {
   }
 
   // 데이터 우선순위: API 응답 > 로컬스토리지 저장값 > 내비게이션 state
-  const storedOrder = activeOrders.find(o => o.id === id);
+  const storedOrder = activeOrders.find(o => String(o.id) === String(id));
   const orderNumber = order?.order_number || storedOrder?.orderNumber || passedOrderNumber || '-';
   const status = order?.status || 'PENDING';
   const totalAmount = order?.total_price || passedTotal || 0;
@@ -257,12 +262,12 @@ export const OrderStatus = () => {
               key={activeOrder.id}
               onClick={() => navigate(`/order/status/${activeOrder.id}`)}
               className={`px-4 py-1.5 rounded-full text-[12px] font-black transition-all whitespace-nowrap ${
-                activeOrder.id === id 
+                String(activeOrder.id) === String(id) 
                   ? 'bg-[#1A0A0A] text-white shadow-md' 
                   : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               } ${
                 // 완료된 주문은 체크 표시나 다른 색상으로 구분 가능
-                activeOrder.id !== id && activeOrders.find(o => o.id === activeOrder.id)?.id === id ? 'opacity-50' : ''
+                String(activeOrder.id) !== String(id) && activeOrders.find(o => String(o.id) === String(activeOrder.id))?.id === id ? 'opacity-50' : ''
               }`}
             >
               #{activeOrder.orderNumber}
