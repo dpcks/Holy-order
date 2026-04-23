@@ -149,23 +149,123 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
 
 @router.patch("/menus/{menu_id}")
 async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db)):
-    """메뉴 정보 수정 (이름, 가격, 설명, 카테고리, 판매여부)"""
+    """메뉴 정보 수정 (이름, 가격, 설명, 카테고리, 판매여부, 이미지, 옵션)"""
     menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
     if not menu:
         raise HTTPException(status_code=404, detail="메뉴를 찾을 수 없습니다.")
-    for field, value in menu_data.model_dump(exclude_none=True).items():
+    
+    # 기본 필드 업데이트
+    update_data = menu_data.model_dump(exclude_none=True, exclude={"options"})
+    for field, value in update_data.items():
         setattr(menu, field, value)
+    
+    # 옵션 업데이트 (제공된 경우에만)
+    if menu_data.options is not None:
+        # 기존 옵션 삭제
+        db.query(models.MenuOption).filter(models.MenuOption.menu_id == menu_id).delete()
+        # 새 옵션 추가
+        for opt_data in menu_data.options:
+            new_opt = models.MenuOption(
+                menu_id=menu_id,
+                name=opt_data.name,
+                extra_price=opt_data.extra_price
+            )
+            db.add(new_opt)
+            
     db.commit()
     db.refresh(menu)
     
-    # 메뉴 변경 알림 전송 (JSON 구조화)
     await manager.broadcast({
         "type": "MENU_UPDATED",
         "menu_id": menu_id,
         "timestamp": datetime.now().isoformat()
     })
-    
     return {"success": True, "data": None, "message": "메뉴가 수정되었습니다."}
+
+@router.post("/menus", response_model=schemas.StandardResponse)
+async def create_menu(menu_data: schemas.MenuCreate, db: Session = Depends(get_db)):
+    """새 메뉴 추가 (옵션 포함 가능)"""
+    new_menu = models.Menu(
+        category_id=menu_data.category_id,
+        name=menu_data.name,
+        price=menu_data.price,
+        description=menu_data.description,
+        image_url=menu_data.image_url,
+        is_available=True
+    )
+    db.add(new_menu)
+    db.flush() # ID 생성을 위해 flush
+    
+    # 옵션 추가
+    for opt in menu_data.options:
+        option = models.MenuOption(menu_id=new_menu.id, name=opt.name, extra_price=opt.extra_price)
+        db.add(option)
+        
+    db.commit()
+    
+    await manager.broadcast({
+        "type": "MENU_CREATED",
+        "timestamp": datetime.now().isoformat()
+    })
+    return {"success": True, "data": None, "message": "메뉴가 추가되었습니다."}
+
+@router.delete("/menus/{menu_id}")
+async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
+    """메뉴 삭제 (물리적 삭제 대신 is_active 필드가 있다면 소프트 삭제를 권장하나 여기서는 우선 물리적 삭제)"""
+    menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
+    if not menu:
+        raise HTTPException(status_code=404, detail="메뉴를 찾을 수 없습니다.")
+    
+    db.delete(menu)
+    db.commit()
+    
+    await manager.broadcast({
+        "type": "MENU_DELETED",
+        "menu_id": menu_id,
+        "timestamp": datetime.now().isoformat()
+    })
+    return {"success": True, "data": None, "message": "메뉴가 삭제되었습니다."}
+
+# ─── 카테고리 관리 ───
+
+@router.post("/categories", response_model=schemas.StandardResponse)
+async def create_category(category_data: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    new_cat = models.Category(name=category_data.name, display_order=category_data.display_order)
+    db.add(new_cat)
+    db.commit()
+    return {"success": True, "data": None, "message": "카테고리가 추가되었습니다."}
+
+@router.patch("/categories/{category_id}")
+async def update_category(category_id: int, category_data: schemas.CategoryUpdate, db: Session = Depends(get_db)):
+    cat = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
+    for field, value in category_data.model_dump(exclude_none=True).items():
+        setattr(cat, field, value)
+    db.commit()
+    return {"success": True, "data": None, "message": "카테고리가 수정되었습니다."}
+
+@router.delete("/categories/{category_id}")
+async def delete_category(category_id: int, db: Session = Depends(get_db)):
+    cat = db.query(models.Category).filter(models.Category.id == category_id).first()
+    if not cat:
+        raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
+    
+    # 카테고리에 속한 메뉴가 있는지 확인
+    if db.query(models.Menu).filter(models.Menu.category_id == category_id).first():
+        raise HTTPException(status_code=400, detail="메뉴가 포함된 카테고리는 삭제할 수 없습니다.")
+        
+    db.delete(cat)
+    db.commit()
+    return {"success": True, "data": None, "message": "카테고리가 삭제되었습니다."}
+
+@router.patch("/categories/reorder")
+async def reorder_categories(category_ids: List[int], db: Session = Depends(get_db)):
+    """카테고리 순서 일괄 변경"""
+    for index, cat_id in enumerate(category_ids):
+        db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
+    db.commit()
+    return {"success": True, "message": "순서가 변경되었습니다."}
 
 
 # ────────────────────────────────────────

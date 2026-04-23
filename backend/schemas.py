@@ -183,12 +183,35 @@ class SettingUpdate(BaseModel):
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
 
+class MenuOptionCreate(BaseModel):
+    name: str
+    extra_price: int = 0
+
 class MenuUpdate(BaseModel):
     name: Optional[str] = None
     price: Optional[int] = None
     description: Optional[str] = None
     category_id: Optional[int] = None
+    image_url: Optional[str] = None
     is_available: Optional[bool] = None
+    options: Optional[List[MenuOptionCreate]] = None
+
+class MenuCreate(BaseModel):
+    name: str
+    price: int
+    description: Optional[str] = None
+    category_id: int
+    image_url: Optional[str] = None
+    options: List[MenuOptionCreate] = []
+
+class CategoryCreate(BaseModel):
+    name: str
+    display_order: int = 0
+
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    display_order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 # ===============================
 # Admin & Auth

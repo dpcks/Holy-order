@@ -79,7 +79,7 @@ export const AdminOrderHistory = () => {
 
       let url = `/admin/orders/history?page=${page}&limit=20`;
       if (statusFilter) url += `&status=${statusFilter}`;
-      
+
       // 특정 주문 ID로 조회 중일 때는 날짜 필터 무시
       if (focusedOrderId) {
         url += `&search=${focusedOrderId}`;
@@ -160,7 +160,7 @@ export const AdminOrderHistory = () => {
               <p className="text-[13px] font-black">특정 주문 집중 조회 모드</p>
               <p className="text-[11px] font-bold opacity-70">입금 내역에서 선택한 주문(고유 ID: {focusedOrderId})을 확인하고 있습니다.</p>
             </div>
-            <button 
+            <button
               onClick={() => {
                 setFocusedOrderId(null);
                 setSearchParams({});
@@ -357,11 +357,10 @@ export const AdminOrderHistory = () => {
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`w-10 h-10 rounded-xl text-[14px] font-black transition-all ${
-                  page === p 
-                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                className={`w-10 h-10 rounded-xl text-[14px] font-black transition-all ${page === p
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
                   : 'text-gray-500 hover:bg-gray-50 border border-transparent hover:border-gray-100'
-                }`}
+                  }`}
               >
                 {p}
               </button>
@@ -376,7 +375,7 @@ export const AdminOrderHistory = () => {
           </button>
         </div>
         <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-          Showing {orders.length} of {totalCount} records
+          전체 {totalCount}개 중 {orders.length}개의 주문내역
         </p>
       </footer>
     </div>

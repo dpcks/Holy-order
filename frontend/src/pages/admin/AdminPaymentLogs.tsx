@@ -261,7 +261,7 @@ export const AdminPaymentLogs = () => {
                     <span className="text-[14px] font-black text-gray-400">{log.id}</span>
                   </td>
                   <td className="py-5">
-                    <Link 
+                    <Link
                       to={`/admin/history?order_id=${log.order_id}`}
                       className="text-[14px] font-black text-gray-900 underline decoration-gray-200 underline-offset-4 hover:text-primary hover:decoration-primary/30 transition-all"
                     >
@@ -277,8 +277,8 @@ export const AdminPaymentLogs = () => {
                   <td className="py-5">
                     {log.raw_data?.payment_method ? (
                       <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${log.raw_data.payment_method === 'CASH'
-                          ? 'bg-orange-50 text-orange-600 border-orange-100'
-                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                        ? 'bg-orange-50 text-orange-600 border-orange-100'
+                        : 'bg-blue-50 text-blue-600 border-blue-100'
                         }`}>
                         {log.raw_data.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
                         {log.raw_data.payment_method === 'CASH' ? '현금' : '계좌'}
@@ -328,11 +328,10 @@ export const AdminPaymentLogs = () => {
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`w-10 h-10 rounded-xl text-[14px] font-black transition-all ${
-                  page === p 
-                  ? 'bg-primary text-white shadow-md shadow-primary/20' 
+                className={`w-10 h-10 rounded-xl text-[14px] font-black transition-all ${page === p
+                  ? 'bg-primary text-white shadow-md shadow-primary/20'
                   : 'text-gray-500 hover:bg-gray-50 border border-transparent hover:border-gray-100'
-                }`}
+                  }`}
               >
                 {p}
               </button>
@@ -350,7 +349,7 @@ export const AdminPaymentLogs = () => {
         <div className="flex items-center gap-2">
           <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
           <p className="text-[12px] text-gray-400 font-bold tracking-tight">
-            전체 {totalCount}개 중 {totalCount > 0 ? (page - 1) * 20 + 1 : 0}-{Math.min(totalCount, page * 20)}번째 로그
+            전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * 20 + 1 : 0}-{Math.min(totalCount, page * 20)}번째 입금 승인 내역
           </p>
         </div>
       </footer>

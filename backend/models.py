@@ -37,7 +37,7 @@ class Category(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    menus = relationship("Menu", back_populates="category")
+    menus = relationship("Menu", back_populates="category", order_by="Menu.id")
 
 class Menu(Base):
     __tablename__ = "menus"
@@ -50,7 +50,7 @@ class Menu(Base):
     is_available = Column(Boolean, default=True) # 품절 관리용
     
     category = relationship("Category", back_populates="menus")
-    options = relationship("MenuOption", back_populates="menu")
+    options = relationship("MenuOption", back_populates="menu", order_by="MenuOption.id")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

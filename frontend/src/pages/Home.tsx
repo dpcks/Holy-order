@@ -142,43 +142,61 @@ export const Home = () => {
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => (
-  <div 
-    className="cursor-pointer group flex flex-col"
-    onClick={onClick}
-  >
-    <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-3">
-      {menu.image_url ? (
-        <img 
-          src={menu.image_url} 
-          alt={menu.name} 
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-        />
-      ) : (
-        <div className="w-full h-full bg-[#1A1818] flex items-center justify-center">
-          <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80" alt="coffee placeholder" className="w-full h-full object-cover opacity-80" />
-        </div>
-      )}
-      {(() => {
-        const createdDate = new Date(menu.created_at);
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - createdDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => {
+  const handleCardClick = () => {
+    if (!menu.is_available) {
+      alert('현재 품절된 메뉴입니다.');
+      return;
+    }
+    onClick();
+  };
+
+  return (
+    <div 
+      className={`group flex flex-col transition-opacity ${menu.is_available ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+      onClick={handleCardClick}
+    >
+      <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-3">
+        {menu.image_url ? (
+          <img 
+            src={menu.image_url} 
+            alt={menu.name} 
+            className={`w-full h-full object-cover transition-transform duration-300 ${menu.is_available ? 'group-hover:scale-105' : 'grayscale'}`} 
+          />
+        ) : (
+          <div className="w-full h-full bg-[#1A1818] flex items-center justify-center">
+            <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80" alt="coffee placeholder" className={`w-full h-full object-cover opacity-80 ${menu.is_available ? '' : 'grayscale'}`} />
+          </div>
+        )}
         
-        if (diffDays <= 8) {
-          return (
-            <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-              NEW
-            </div>
-          );
-        }
-        return null;
-      })()}
+        {/* 품절 오버레이 */}
+        {!menu.is_available && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
+            <span className="bg-white/90 text-gray-900 text-[12px] font-black px-4 py-1.5 rounded-full shadow-lg">품절</span>
+          </div>
+        )}
+
+        {menu.is_available && (() => {
+          const createdDate = new Date(menu.created_at);
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - createdDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          if (diffDays <= 8) {
+            return (
+              <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                NEW
+              </div>
+            );
+          }
+          return null;
+        })()}
+      </div>
+      <h3 className="font-bold text-gray-900 text-[15px] mb-0.5 leading-snug">{menu.name}</h3>
+      {menu.description && (
+        <p className="text-[11px] text-gray-400 line-clamp-1 mb-1 font-medium">{menu.description}</p>
+      )}
+      <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
     </div>
-    <h3 className="font-bold text-gray-900 text-[15px] mb-0.5 leading-snug">{menu.name}</h3>
-    {menu.description && (
-      <p className="text-[11px] text-gray-400 line-clamp-1 mb-1 font-medium">{menu.description}</p>
-    )}
-    <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
-  </div>
-);
+  );
+};

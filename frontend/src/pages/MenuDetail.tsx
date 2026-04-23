@@ -210,27 +210,40 @@ export const MenuDetail = () => {
       </main>
 
       {/* 하단 Sticky 주문 바 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-480px mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center justify-between mb-4">
-          <QuantitySelector
-            quantity={quantity}
-            onIncrease={() => setQuantity(q => q + 1)}
-            onDecrease={() => setQuantity(q => q - 1)}
-          />
-          <div className="text-right">
-            <p className="text-[11px] text-gray-500 font-medium mb-0.5">총 주문 금액</p>
-            <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-[500px] mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
+        {!menu.is_available ? (
+          <div className="flex flex-col gap-3">
+            <div className="bg-gray-100 text-gray-500 py-4 rounded-2xl text-center font-bold text-sm">
+              현재 품절된 메뉴입니다
+            </div>
+            <Button variant="secondary" className="w-full" onClick={() => navigate(-1)}>
+              다른 메뉴 보기
+            </Button>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <QuantitySelector
+                quantity={quantity}
+                onIncrease={() => setQuantity(q => q + 1)}
+                onDecrease={() => setQuantity(q => q - 1)}
+              />
+              <div className="text-right">
+                <p className="text-[11px] text-gray-500 font-medium mb-0.5">총 주문 금액</p>
+                <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+              </div>
+            </div>
 
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={() => handleAddToCart()}>
-            장바구니 담기
-          </Button>
-          <Button variant="primary" className="flex-[1.5]" onClick={handleOrderNow}>
-            바로 주문
-          </Button>
-        </div>
+            <div className="flex gap-3">
+              <Button variant="secondary" className="flex-1" onClick={() => handleAddToCart()}>
+                장바구니 담기
+              </Button>
+              <Button variant="primary" className="flex-[1.5]" onClick={handleOrderNow}>
+                바로 주문
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
