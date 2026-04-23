@@ -14,6 +14,15 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 # 주문 관리 (Order Management)
 # ────────────────────────────────────────
 
+# 상태 전이 규칙 정의 (State Machine)
+VALID_TRANSITIONS = {
+    schemas.OrderStatusEnum.PENDING: [schemas.OrderStatusEnum.PREPARING, schemas.OrderStatusEnum.CANCELLED],
+    schemas.OrderStatusEnum.PREPARING: [schemas.OrderStatusEnum.READY, schemas.OrderStatusEnum.CANCELLED],
+    schemas.OrderStatusEnum.READY: [schemas.OrderStatusEnum.COMPLETED],
+    schemas.OrderStatusEnum.COMPLETED: [],
+    schemas.OrderStatusEnum.CANCELLED: [],
+}
+
 @router.get("/orders/board", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
 def get_orders_board(db: Session = Depends(get_db)):
     """칸반 보드용: 오늘 PENDING/PREPARING/READY 주문 전체 조회"""
@@ -87,9 +96,24 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
     
+    current_status = order.status
+    next_status = status_update.status
+    
+    # 동일한 상태로 변경 시도 시 통과
+    if current_status == next_status.value:
+        return {"success": True, "data": {"status": order.status}, "message": "이미 해당 상태입니다."}
+        
+    # 상태 전이 검증 (Strict Mode)
+    allowed_next_statuses = VALID_TRANSITIONS.get(schemas.OrderStatusEnum(current_status), [])
+    if next_status not in allowed_next_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"[{current_status}] 상태에서 [{next_status.value}] 상태로 변경할 수 없습니다."
+        )
+
     # 입금 승인 시 (PENDING → PREPARING) PaymentLog 기록
     # 주문 상태 변경과 로그 생성을 단일 트랜잭션으로 처리하여 데이터 일관성 보장
-    if order.status == "PENDING" and status_update.status == schemas.OrderStatusEnum.PREPARING:
+    if current_status == schemas.OrderStatusEnum.PENDING.value and next_status == schemas.OrderStatusEnum.PREPARING:
         log = models.PaymentLog(
             order_id=order_id,
             log_type="APPROVED",
@@ -105,7 +129,7 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
         )
         db.add(log)
     
-    order.status = status_update.status.value
+    order.status = next_status.value
     db.commit()
     
     # 실시간 알림 전송 (JSON 구조화)
