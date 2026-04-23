@@ -17,6 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import asyncio
 from websocket import manager
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -30,8 +31,14 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # 클라이언트로부터 메시지를 받을 필요는 없지만 연결 유지를 위해 대기
-            await websocket.receive_text()
+            try:
+                # 30초 동안 클라이언트로부터 메시지가 없으면 타임아웃 발생
+                await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+            except asyncio.TimeoutError:
+                # 타임아웃 발생 시 서버에서 ping을 보내 연결 상태 확인 및 유지
+                await manager.send_personal_message({"type": "ping"}, websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
     except Exception:
         manager.disconnect(websocket)
 
