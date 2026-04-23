@@ -77,23 +77,3 @@ def get_order_status(order_id: int, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return schemas.StandardResponse(success=True, data=order, message="주문 상세 정보를 조회했습니다.")
-
-@router.post("/payments/bank-transfer")
-def bank_transfer_callback(payment: schemas.PaymentLogCreate, db: Session = Depends(get_db)):
-    order = db.query(models.Order).filter(models.Order.id == payment.order_id).first()
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-        
-    # 로그 남기기
-    log = models.PaymentLog(
-        order_id=payment.order_id,
-        log_type="REQUEST",
-        amount=payment.amount,
-        sender_name=payment.sender_name
-    )
-    db.add(log)
-    
-    # 상태 업데이트
-    order.status = schemas.OrderStatusEnum.PAID.value
-    db.commit()
-    return {"success": True, "data": None, "message": "Payment logged successfully"}
