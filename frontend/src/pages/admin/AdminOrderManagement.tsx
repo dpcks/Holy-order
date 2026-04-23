@@ -77,6 +77,7 @@ export const AdminOrderManagement = () => {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
+  const isUnmountingRef = useRef(false);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -148,7 +149,13 @@ export const AdminOrderManagement = () => {
     };
 
     ws.onclose = (event) => {
-      console.log(`❌ [WebSocket] 연결 종료 (Code: ${event.code}, Clean: ${event.wasClean}). 재연결 시도 중...`);
+      // 1. 실제로 페이지를 나가는 중이라면 재연결하지 않음
+      if (isUnmountingRef.current) {
+        setWsStatus('DISCONNECTED');
+        return;
+      }
+
+      console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}). 재연결 시도...`);
       setWsStatus('DISCONNECTED');
       
       // 1. REST Polling Fallback 시작 (WebSocket이 죽어도 30초마다 데이터 갱신)
@@ -173,13 +180,15 @@ export const AdminOrderManagement = () => {
 
   // 초기 로드 + WebSocket 생명주기 관리
   useEffect(() => {
+    isUnmountingRef.current = false;
     fetchOrders();
     connectWebSocket();
 
     // 페이지 가시성 변화 감지
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
-        console.log('📱 [Visibility] 화면 활성화 감지 - 즉시 재연결 시도');
+        console.log('📱 [Visibility] 화면 활성화 - 주문 현황 즉시 갱신');
+        fetchOrders();
         connectWebSocket();
       }
     };
@@ -187,6 +196,7 @@ export const AdminOrderManagement = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      isUnmountingRef.current = true;
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (wsRef.current) {
         wsRef.current.onclose = null;

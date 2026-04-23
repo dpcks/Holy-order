@@ -23,6 +23,7 @@ export const OrderStatus = () => {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
+  const isUnmountingRef = useRef(false);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -39,7 +40,6 @@ export const OrderStatus = () => {
         setOrder(orderRes.data);
         
         // 수령 완료 시 (COMPLETED) 로컬 스토리지의 활성 주문 목록에서 자동으로 제거
-        // 이를 통해 사용자가 홈 버튼을 누르지 않아도 홈 화면의 플로팅 버튼이 즉시 사라짐
         if (orderRes.data.status === 'COMPLETED') {
           const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
           const filteredOrders = orders.filter((o: ActiveOrder) => o.id !== id);
@@ -47,7 +47,6 @@ export const OrderStatus = () => {
           
           setActiveOrders(filteredOrders);
 
-          // [개선] 현재 보던 주문이 완료되었고, 다른 대기 중인 주문이 있다면 자동으로 이동
           if (filteredOrders.length > 0) {
             console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
             navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
@@ -62,7 +61,7 @@ export const OrderStatus = () => {
     } finally {
       if (showLoading) setLoading(false);
     }
-  }, [id]);
+  }, [id, navigate]);
 
   // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
   const connectWebSocket = useCallback(() => {
@@ -72,13 +71,10 @@ export const OrderStatus = () => {
       wsRef.current.close();
     }
 
-    const { hostname, protocol, port: windowPort } = window.location;
+    const { hostname, protocol } = window.location;
     const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // 개발 환경(localhost 또는 IP 접속)에서는 8000 포트 사용
     const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
     const wsPort = isLocal ? ':8000' : '';
-    
     const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
 
     setWsStatus('RECONNECTING');
@@ -107,12 +103,13 @@ export const OrderStatus = () => {
     };
 
     ws.onclose = (event) => {
-      if (event.wasClean) {
+      // 1. 실제로 페이지를 나가는 중이라면 재연결하지 않음
+      if (isUnmountingRef.current) {
         setWsStatus('DISCONNECTED');
         return;
       }
 
-      console.log('❌ [WebSocket] 연결 끊김. 추적 폴백 활성화...');
+      console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}). 추적 폴백 활성화...`);
       setWsStatus('DISCONNECTED');
       
       // 사용자용 페이지는 좀 더 빈번하게 폴링 (10초)
