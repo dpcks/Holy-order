@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
-import { ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, ArrowLeftRight } from 'lucide-react';
+import { ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, ArrowLeftRight, Calendar } from 'lucide-react';
 
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
@@ -7,6 +7,7 @@ const navItems = [
   { to: '/admin/payments', label: '입금 내역', icon: ArrowLeftRight },
   { to: '/admin/menus', label: '메뉴 관리', icon: UtensilsCrossed },
   { to: '/admin/reports', label: '매출 통계', icon: BarChart2 },
+  { to: '/admin/schedules', label: '봉사 스케줄', icon: Calendar },
 ];
 
 

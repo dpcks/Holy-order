@@ -429,3 +429,74 @@ def get_payment_logs(
     }
     
     return schemas.StandardResponse(success=True, data=data, message="입금 로그를 조회했습니다.")
+
+
+# ────────────────────────────────────────
+# 봉사 스케줄 (Volunteer Schedules)
+# ────────────────────────────────────────
+
+import calendar
+
+@router.get("/schedules", response_model=schemas.StandardResponse[List[schemas.VolunteerScheduleResponse]])
+def get_schedules(year: int, month: int, db: Session = Depends(get_db)):
+    """특정 월의 모든 주일(일요일) 및 봉사자 데이터 조회"""
+    # 1. 해당 월의 모든 일요일 날짜 계산
+    sundays = []
+    c = calendar.monthcalendar(year, month)
+    for week in c:
+        if week[calendar.SUNDAY] != 0:
+            sundays.append(date(year, month, week[calendar.SUNDAY]))
+            
+    # 2. DB에서 저장된 데이터 조회
+    existing_schedules = db.query(models.VolunteerSchedule).filter(
+        models.VolunteerSchedule.sunday_date.in_(sundays)
+    ).all()
+    
+    # 3. 데이터 매핑 (문자열 키 사용으로 안정성 확보)
+    schedule_dict = {str(s.sunday_date): s for s in existing_schedules}
+    
+    result = []
+    for sun in sundays:
+        sun_str = str(sun)
+        if sun_str in schedule_dict:
+            s = schedule_dict[sun_str]
+            result.append({
+                "id": s.id,
+                "sunday_date": s.sunday_date,
+                "volunteers": s.volunteers or {},
+                "memo": s.memo or ""
+            })
+        else:
+            # DB에 없으면 빈 데이터 반환 (딕셔너리 형태)
+            result.append({
+                "id": 0,
+                "sunday_date": sun,
+                "volunteers": {},
+                "memo": ""
+            })
+            
+    return schemas.StandardResponse(success=True, data=result, message="봉사 스케줄을 조회했습니다.")
+
+@router.post("/schedules", response_model=schemas.StandardResponse[schemas.VolunteerScheduleResponse])
+def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session = Depends(get_db)):
+    """특정 날짜의 봉사 스케줄 저장 또는 수정"""
+    existing = db.query(models.VolunteerSchedule).filter(
+        models.VolunteerSchedule.sunday_date == schedule_data.sunday_date
+    ).first()
+    
+    if existing:
+        existing.volunteers = schedule_data.volunteers
+        existing.memo = schedule_data.memo
+        db.commit()
+        db.refresh(existing)
+        return schemas.StandardResponse(success=True, data=existing, message="스케줄이 수정되었습니다.")
+    else:
+        new_schedule = models.VolunteerSchedule(
+            sunday_date=schedule_data.sunday_date,
+            volunteers=schedule_data.volunteers,
+            memo=schedule_data.memo
+        )
+        db.add(new_schedule)
+        db.commit()
+        db.refresh(new_schedule)
+        return schemas.StandardResponse(success=True, data=new_schedule, message="스케줄이 등록되었습니다.")

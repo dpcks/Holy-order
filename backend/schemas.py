@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict, field_validator, Field
 from typing import List, Optional, Generic, TypeVar, Any
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 import re
 
@@ -236,3 +236,16 @@ class ClosingReportResponse(BaseModel):
     total_orders: int
 
     model_config = ConfigDict(from_attributes=True)
+
+class VolunteerScheduleResponse(BaseModel):
+    id: int
+    sunday_date: date
+    volunteers: Optional[dict] = None
+    memo: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class VolunteerScheduleUpdate(BaseModel):
+    sunday_date: date
+    volunteers: Optional[dict] = None
+    memo: Optional[str] = None
