@@ -146,7 +146,9 @@ export const AdminMenuManagement = () => {
       
       // 서버 전송
       try {
-        await apiClient.patch('/admin/categories/reorder', newOrder.map(c => c.id));
+        await apiClient.patch('/admin/categories/reorder', { 
+          category_ids: newOrder.map(c => c.id) 
+        });
       } catch (err) {
         console.error('순서 변경 실패:', err);
         fetchMenus(); // 실패 시 원복

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_
 from typing import List
@@ -235,6 +235,15 @@ async def create_category(category_data: schemas.CategoryCreate, db: Session = D
     db.commit()
     return {"success": True, "data": None, "message": "카테고리가 추가되었습니다."}
 
+@router.patch("/categories/reorder")
+async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session = Depends(get_db)):
+    """카테고리 순서 일괄 변경"""
+    print(f"DEBUG: Reorder Request Data -> {data}") # 디버그 로그
+    for index, cat_id in enumerate(data.category_ids):
+        db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
+    db.commit()
+    return {"success": True, "message": "순서가 변경되었습니다."}
+
 @router.patch("/categories/{category_id}")
 async def update_category(category_id: int, category_data: schemas.CategoryUpdate, db: Session = Depends(get_db)):
     cat = db.query(models.Category).filter(models.Category.id == category_id).first()
@@ -259,13 +268,6 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"success": True, "data": None, "message": "카테고리가 삭제되었습니다."}
 
-@router.patch("/categories/reorder")
-async def reorder_categories(category_ids: List[int], db: Session = Depends(get_db)):
-    """카테고리 순서 일괄 변경"""
-    for index, cat_id in enumerate(category_ids):
-        db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
-    db.commit()
-    return {"success": True, "message": "순서가 변경되었습니다."}
 
 
 # ────────────────────────────────────────

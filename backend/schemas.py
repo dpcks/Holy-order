@@ -211,7 +211,9 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     display_order: Optional[int] = None
-    is_active: Optional[bool] = None
+
+class CategoryReorderRequest(BaseModel):
+    category_ids: List[int]
 
 # ===============================
 # Admin & Auth
