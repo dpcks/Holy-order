@@ -34,13 +34,12 @@ const OptionBadges = ({ text }: { text: string | null }) => {
         const isShot = trimmed.includes('샷 추가');
         const isTumblr = trimmed.includes('텀블러');
         return (
-          <span key={i} className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${
-            isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
-            isHot ? 'bg-red-100 text-red-600 border-red-200' :
-            isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-            isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
-            'bg-gray-100 text-gray-500 border-gray-200'
-          }`}>
+          <span key={i} className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
+              isHot ? 'bg-red-100 text-red-600 border-red-200' :
+                isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                  isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
+                    'bg-gray-100 text-gray-500 border-gray-200'
+            }`}>
             {trimmed}
           </span>
         );
@@ -63,6 +62,7 @@ export const AdminOrderHistory = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(initialOrderId);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -70,6 +70,7 @@ export const AdminOrderHistory = () => {
 
   // 필터 상태
   const [statusFilter, setStatusFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -114,8 +115,9 @@ export const AdminOrderHistory = () => {
       const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
       const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
 
-      let url = `/admin/orders/history?page=${page}&limit=20`;
+      let url = `/admin/orders/history?page=${page}&limit=${limit}`;
       if (statusFilter) url += `&status=${statusFilter}`;
+      if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
 
       // 특정 주문 ID로 조회 중일 때는 날짜 필터 무시
       if (focusedOrderId) {
@@ -137,7 +139,7 @@ export const AdminOrderHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, dateRange, statusFilter, searchQuery, focusedOrderId]);
+  }, [page, limit, dateRange, statusFilter, paymentMethodFilter, searchQuery, focusedOrderId]);
 
   useEffect(() => {
     fetchHistory();
@@ -157,6 +159,7 @@ export const AdminOrderHistory = () => {
   const handleResetFilters = () => {
     setDateRange([{ startDate: undefined, endDate: undefined, key: 'selection' }]);
     setStatusFilter('');
+    setPaymentMethodFilter('');
     setSearchQuery('');
     setFocusedOrderId(null);
     setSearchParams({});
@@ -188,7 +191,7 @@ export const AdminOrderHistory = () => {
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">주문 내역 히스토리</h1>
             <p className="text-[13px] text-gray-400 mt-1 font-medium">카페 전체 주문 이력을 조회하고 필터링할 수 있습니다.</p>
           </div>
-          {(dateRange[0].startDate || statusFilter) && (
+          {(dateRange[0].startDate || statusFilter || paymentMethodFilter || searchQuery) && (
             <button
               onClick={handleResetFilters}
               className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold text-primary bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
@@ -298,6 +301,28 @@ export const AdminOrderHistory = () => {
               ))}
             </select>
           </div>
+
+          {/* 결제수단 필터 */}
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => { setPaymentMethodFilter(''); setPage(1); }}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              전체
+            </button>
+            <button
+              onClick={() => { setPaymentMethodFilter('BANK_TRANSFER'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <Building2 size={13} /> 계좌
+            </button>
+            <button
+              onClick={() => { setPaymentMethodFilter('CASH'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <Wallet size={13} /> 현금
+            </button>
+          </div>
         </div>
       </header>
 
@@ -337,8 +362,8 @@ export const AdminOrderHistory = () => {
               </tr>
             ) : (
               orders.map((order) => (
-                <tr 
-                  key={order.id} 
+                <tr
+                  key={order.id}
                   onClick={() => handleOpenDetail(order)}
                   className="hover:bg-gray-50 transition-colors group cursor-pointer"
                 >
@@ -421,13 +446,25 @@ export const AdminOrderHistory = () => {
           <button
             disabled={page >= totalPages || loading}
             onClick={() => setPage(p => p + 1)}
+            className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all text-gray-600 shadow-sm"
           >
-            다음 <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
-        <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
-          전체 {totalCount}개 중 {orders.length}개의 주문내역
-        </p>
+        <div className="flex items-center gap-4">
+          <select
+            value={limit}
+            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            className="text-[12px] font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer"
+          >
+            <option value={20}>20개씩 보기</option>
+            <option value={50}>50개씩 보기</option>
+            <option value={100}>100개씩 보기</option>
+          </select>
+          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+            전체 {totalCount}개 중 {orders.length}개의 주문내역
+          </p>
+        </div>
       </footer>
 
       {/* 주문 상세 모달 */}
@@ -459,7 +496,7 @@ export const AdminOrderHistory = () => {
                   <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Customer Information</h4>
                   <div className="space-y-1">
                     <p className="text-2xl font-black text-gray-900 leading-tight">
-                      {selectedOrder.user_name_snapshot || '손님'} 
+                      {selectedOrder.user_name_snapshot || '손님'}
                       <span className="text-[13px] ml-2 font-bold text-gray-400">[{selectedOrder.user_duty_snapshot}]</span>
                     </p>
                     <p className="text-[15px] font-bold text-gray-500">{formatPhone(selectedOrder.user_phone_snapshot)}</p>

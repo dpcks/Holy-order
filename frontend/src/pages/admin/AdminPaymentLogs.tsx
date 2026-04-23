@@ -18,6 +18,7 @@ export const AdminPaymentLogs = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
 
   // 필터 상태
@@ -66,7 +67,7 @@ export const AdminPaymentLogs = () => {
       const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
       const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
 
-      let url = `/admin/payments/logs?page=${page}&limit=20`;
+      let url = `/admin/payments/logs?page=${page}&limit=${limit}`;
       if (sDate) url += `&start_date=${sDate}`;
       if (eDate) url += `&end_date=${eDate}`;
       if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
@@ -90,7 +91,7 @@ export const AdminPaymentLogs = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, dateRange, paymentMethodFilter, searchQuery]);
+  }, [page, limit, dateRange, paymentMethodFilter, searchQuery]);
 
   useEffect(() => {
     fetchLogs();
@@ -346,11 +347,22 @@ export const AdminPaymentLogs = () => {
             <ChevronRight size={18} />
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
-          <p className="text-[12px] text-gray-400 font-bold tracking-tight">
-            전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * 20 + 1 : 0}-{Math.min(totalCount, page * 20)}번째 입금 승인 내역
-          </p>
+        <div className="flex items-center gap-4">
+          <select
+            value={limit}
+            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            className="text-[12px] font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer"
+          >
+            <option value={20}>20개씩 보기</option>
+            <option value={50}>50개씩 보기</option>
+            <option value={100}>100개씩 보기</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
+            <p className="text-[12px] text-gray-400 font-bold tracking-tight">
+              전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * limit + 1 : 0}-{Math.min(totalCount, page * limit)}번째 입금 승인 내역
+            </p>
+          </div>
         </div>
       </footer>
     </div>

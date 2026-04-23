@@ -43,6 +43,7 @@ def get_orders_history(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     status: Optional[str] = None,
+    payment_method: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
@@ -68,6 +69,9 @@ def get_orders_history(
             
     if status:
         query = query.filter(models.Order.status == status)
+        
+    if payment_method:
+        query = query.filter(models.Order.payment_method == payment_method)
         
     total_count = query.count()
     offset = (page - 1) * limit
