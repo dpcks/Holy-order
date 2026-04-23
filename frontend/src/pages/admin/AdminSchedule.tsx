@@ -19,7 +19,7 @@ interface VolunteerSchedule {
   memo: string;
 }
 
-const ROLES = ['바리스타', '포스/결제', '안내/서빙'];
+// const ROLES = ['바리스타', '포스/결제', '안내/서빙'];
 
 export const AdminSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -75,14 +75,14 @@ export const AdminSchedule = () => {
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-  const handleVolunteerChange = (date: string, role: string, value: string) => {
+  const handleVolunteerChange = (date: string, value: string) => {
     setSchedules(prev => prev.map(s => {
       if (s.sunday_date === date) {
         return {
           ...s,
           volunteers: {
             ...s.volunteers,
-            [role]: value.split(',').map(name => name.trim()).filter(Boolean)
+            names: value // 문자열 그대로 저장
           }
         };
       }
@@ -105,21 +105,23 @@ export const AdminSchedule = () => {
 
     setSavingDate(dateStr);
     try {
+      // 저장 시에만 공백으로 구분하여 배열로 변환
+      const namesArray = typeof schedule.volunteers?.names === 'string' 
+        ? schedule.volunteers.names.split(/\s+/).filter(Boolean)
+        : schedule.volunteers?.names || [];
+
       const res = await apiClient.post<VolunteerSchedule, StandardResponse<VolunteerSchedule>>(
         '/admin/schedules',
         {
           sunday_date: schedule.sunday_date,
-          volunteers: schedule.volunteers,
+          volunteers: { ...schedule.volunteers, names: namesArray },
           memo: schedule.memo
         }
       );
       if (res.success) {
-        setMessage({ type: 'success', text: '스케줄이 저장되었습니다.' });
-        // 저장 성공 시 1.5초 후 달력으로 돌아가기 (사용자가 메시지를 읽을 시간 확보)
-        setTimeout(() => {
-          setMessage(null);
-          setSelectedDate(null);
-        }, 1500);
+        // 즉시 달력으로 돌아가기
+        setSelectedDate(null);
+        setMessage(null);
       }
     } catch (err) {
       setMessage({ type: 'error', text: '저장에 실패했습니다.' });
@@ -209,27 +211,16 @@ export const AdminSchedule = () => {
                           {format(day, 'd')}
                         </span>
 
-                        {isSun && (
-                          <div className="mt-4 space-y-2">
-                            {schedule && Object.entries(schedule.volunteers).some(([_, names]) => names.length > 0) ? (
-                              Object.entries(schedule.volunteers).map(([role, names]) => (
-                                names.length > 0 && (
-                                  <div key={role} className="flex items-center gap-2 group/role">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm" />
-                                    <p className="text-[10px] font-bold text-gray-500 truncate">
-                                      {role}: <span className="text-gray-900">{names.join(', ')}</span>
-                                    </p>
-                                  </div>
-                                )
-                              ))
-                            ) : (
-                              <div className="flex flex-col items-center justify-center py-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="w-8 h-8 bg-gray-50 rounded-lg flex items-center justify-center text-gray-300">
-                                  <UserPlus size={14} />
-                                </div>
-                                <span className="text-[9px] font-black text-gray-400 mt-2 uppercase">기입하기</span>
-                              </div>
-                            )}
+                        {isSun && schedule && (
+                          <div className="mt-4 flex flex-wrap gap-1">
+                            {(Array.isArray(schedule.volunteers?.names) 
+                              ? schedule.volunteers.names 
+                              : (schedule.volunteers?.names || '').split(/\s+/).filter(Boolean)
+                            ).map((name, idx) => (
+                              <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
+                                {name}
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -252,24 +243,25 @@ export const AdminSchedule = () => {
               <p className="text-gray-400 font-medium italic text-lg">해당 주일의 봉사자 명단을 작성해 주세요.</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {ROLES.map((role, idx) => (
-                <div key={role} className="bg-white p-8 rounded-[32px] shadow-xl shadow-black/[0.02] border border-white hover:shadow-black/[0.05] transition-all group">
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 mb-6 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
-                    <Users size={24} />
-                  </div>
-                  <label className="block text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3 ml-1">
-                    {role} 명단
-                  </label>
+            <div className="bg-white p-8 rounded-[32px] shadow-xl shadow-black/[0.02] border border-white mb-8">
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-[12px] font-black text-gray-400 uppercase tracking-widest">
+                  <Users size={14} className="text-primary" /> 주일 봉사자 명단
+                </label>
                   <textarea
-                    placeholder="이름 입력 (쉼표 구분)"
-                    value={(currentSelectedSchedule?.volunteers?.[role] || []).join(', ')}
-                    onChange={(e) => handleVolunteerChange(selectedDate, role, e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-[15px] font-bold text-gray-800 focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all outline-none h-32 resize-none"
+                    placeholder="봉사자 이름을 입력하세요 (띄어쓰기로 구분)"
+                    value={
+                      typeof currentSelectedSchedule?.volunteers?.names === 'string'
+                        ? currentSelectedSchedule.volunteers.names
+                        : (currentSelectedSchedule?.volunteers?.names || []).join(' ')
+                    }
+                    onChange={(e) => handleVolunteerChange(selectedDate, e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-[16px] font-bold text-gray-800 focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all outline-none h-40 resize-none"
                   />
-                  <p className="text-[10px] text-gray-300 mt-3 font-medium italic">이름 사이에 쉼표(,)를 넣어주세요.</p>
-                </div>
-              ))}
+                  <p className="text-[11px] text-gray-400 font-medium italic">
+                    이름과 이름 사이에 공백(띄어쓰기)을 넣어주세요.
+                  </p>
+              </div>
             </div>
 
             <div className="bg-white p-8 rounded-[32px] shadow-xl shadow-black/[0.02] border border-white mb-8">
