@@ -19,8 +19,7 @@ export type Duty =
   | '부목사' | '목사';
 
 /** 결제 수단 */
-export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'KAKAOPAY';
-
+export type PaymentMethod = 'BANK_TRANSFER' | 'CASH';
 
 // ==========================================
 // 메뉴 관련 (Menus)
@@ -72,7 +71,7 @@ export interface Order {
   user_phone_snapshot: string | null;
   request: string | null;
   total_price: number;
-  payment_method: string;
+  payment_method: PaymentMethod;
   created_at: string;
   items: OrderItem[];
 }
