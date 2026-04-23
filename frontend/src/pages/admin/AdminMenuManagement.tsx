@@ -93,6 +93,118 @@ const SortableCategoryItem = ({
   );
 };
 
+// 드래그 가능한 메뉴 카드 컴포넌트
+const SortableMenuCard = ({ 
+  menu, 
+  onDelete, 
+  onToggle, 
+  onEdit, 
+  isSaving,
+  isDraggable
+}: { 
+  menu: AdminMenu;
+  onDelete: (id: number) => void;
+  onToggle: (menu: AdminMenu) => void;
+  onEdit: (menu: AdminMenu) => void;
+  isSaving: boolean;
+  isDraggable: boolean;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: menu.id, disabled: !isDraggable });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  const optionTags = menu.options?.map(o => o.name).join(' / ') || '옵션 없음';
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all group ${isDragging ? 'shadow-2xl border-primary scale-[1.03] opacity-90 z-50' : menu.is_available ? 'border-gray-100' : 'border-dashed border-gray-300 opacity-60'}`}
+    >
+      {/* 이미지 */}
+      <div className="relative aspect-video bg-gray-100 overflow-hidden">
+        {menu.image_url ? (
+          <img src={menu.image_url} alt={menu.name} className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
+            <ImageIcon size={32} />
+            <span className="text-[10px] font-medium">이미지 없음</span>
+          </div>
+        )}
+        
+        {/* 드래그 핸들 (특정 카테고리 선택 시에만 노출) */}
+        {isDraggable && (
+          <div 
+            {...attributes} 
+            {...listeners} 
+            className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-lg text-gray-400 hover:text-primary cursor-grab active:cursor-grabbing shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <GripVertical size={16} />
+          </div>
+        )}
+
+        <div className="absolute top-2 left-2">
+          <span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
+            {menu.categoryName}
+          </span>
+        </div>
+        {!menu.is_available && (
+          <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center backdrop-blur-[1px]">
+            <span className="bg-gray-900 text-white text-[11px] font-bold px-4 py-1.5 rounded-full ring-2 ring-white/20">판매 중지</span>
+          </div>
+        )}
+      </div>
+
+      {/* 정보 */}
+      <div className="p-4">
+        <div className="flex justify-between items-start mb-1">
+          <h3 className="font-bold text-gray-900 text-[15px]">{menu.name}</h3>
+          <button 
+            onClick={() => onDelete(menu.id)}
+            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-lg"
+            title="메뉴 삭제"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+        <p className="text-primary font-black text-[15px] mb-1">₩{menu.price.toLocaleString()}</p>
+        <p className="text-[11px] text-gray-400 mb-4 line-clamp-1">{optionTags}</p>
+
+        {/* 판매 토글 */}
+        <div className="flex items-center justify-between mb-4 bg-gray-50 p-2 rounded-xl border border-gray-100">
+          <span className="text-[12px] text-gray-600 font-bold">판매 상태</span>
+          <button
+            onClick={() => onToggle(menu)}
+            disabled={isSaving}
+            className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${menu.is_available ? 'bg-green-500' : 'bg-gray-300'}`}
+          >
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${menu.is_available ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {/* 수정 버튼 */}
+        <button
+          onClick={() => onEdit(menu)}
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl transition-all shadow-sm"
+        >
+          <Pencil size={13} />정보 수정
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const AdminMenuManagement = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
@@ -155,6 +267,35 @@ export const AdminMenuManagement = () => {
       }
     }
   };
+
+  // 메뉴 드래그 종료 처리
+  const handleMenuDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    // 현재 표시 중인 메뉴 리스트에서 위치 변경
+    const oldIndex = displayedMenus.findIndex(m => m.id === active.id);
+    const newIndex = displayedMenus.findIndex(m => m.id === over.id);
+    
+    const newOrder = arrayMove(displayedMenus, oldIndex, newIndex);
+    
+    // UI 즉시 업데이트를 위해 categories 상태 구조에 맞게 반영
+    if (typeof activeCategory === 'number') {
+      setCategories(prev => prev.map(cat => 
+        cat.id === activeCategory ? { ...cat, menus: newOrder } : cat
+      ));
+    }
+
+    try {
+      await apiClient.patch('/admin/menus/reorder', { 
+        menu_ids: newOrder.map(m => m.id) 
+      });
+    } catch (err) {
+      console.error('메뉴 순서 변경 실패:', err);
+      fetchMenus();
+    }
+  };
+
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -459,71 +600,28 @@ export const AdminMenuManagement = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {displayedMenus.map(menu => {
-              const isSaving = savingId === menu.id;
-              const optionTags = menu.options?.map(o => o.name).join(' / ') || '옵션 없음';
-              return (
-                <div key={menu.id} className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all group ${menu.is_available ? 'border-gray-100' : 'border-dashed border-gray-300 opacity-60'}`}>
-                  {/* 이미지 */}
-                  <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                    {menu.image_url ? (
-                      <img src={menu.image_url} alt={menu.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-300 gap-2">
-                        <ImageIcon size={32} />
-                        <span className="text-[10px] font-medium">이미지 없음</span>
-                      </div>
-                    )}
-                    <div className="absolute top-2 left-2">
-                      <span className="bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-md shadow-sm">
-                        {menu.categoryName}
-                      </span>
-                    </div>
-                    {!menu.is_available && (
-                      <div className="absolute inset-0 bg-gray-900/40 flex items-center justify-center backdrop-blur-[1px]">
-                        <span className="bg-gray-900 text-white text-[11px] font-bold px-4 py-1.5 rounded-full ring-2 ring-white/20">판매 중지</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* 정보 */}
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-1">
-                      <h3 className="font-bold text-gray-900 text-[15px]">{menu.name}</h3>
-                      <button 
-                        onClick={() => handleDeleteMenu(menu.id)}
-                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-lg"
-                        title="메뉴 삭제"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <p className="text-primary font-black text-[15px] mb-1">₩{menu.price.toLocaleString()}</p>
-                    <p className="text-[11px] text-gray-400 mb-4 line-clamp-1">{optionTags}</p>
-
-                    {/* 판매 토글 */}
-                    <div className="flex items-center justify-between mb-4 bg-gray-50 p-2 rounded-xl border border-gray-100">
-                      <span className="text-[12px] text-gray-600 font-bold">판매 상태</span>
-                      <button
-                        onClick={() => handleToggleAvailability(menu)}
-                        disabled={isSaving}
-                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${menu.is_available ? 'bg-green-500' : 'bg-gray-300'}`}
-                      >
-                        <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${menu.is_available ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </div>
-
-                    {/* 수정 버튼 */}
-                    <button
-                      onClick={() => handleOpenEdit(menu)}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl transition-all shadow-sm"
-                    >
-                      <Pencil size={13} />정보 수정
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            <DndContext 
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleMenuDragEnd}
+            >
+              <SortableContext 
+                items={displayedMenus.map(m => m.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {displayedMenus.map(menu => (
+                  <SortableMenuCard 
+                    key={menu.id}
+                    menu={menu}
+                    isDraggable={activeCategory !== 'all'}
+                    isSaving={savingId === menu.id}
+                    onDelete={handleDeleteMenu}
+                    onToggle={handleToggleAvailability}
+                    onEdit={handleOpenEdit}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
         )}
       </div>

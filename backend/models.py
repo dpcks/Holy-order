@@ -37,7 +37,7 @@ class Category(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
-    menus = relationship("Menu", back_populates="category", order_by="Menu.id")
+    menus = relationship("Menu", back_populates="category", order_by="Menu.display_order")
 
 class Menu(Base):
     __tablename__ = "menus"
@@ -47,6 +47,8 @@ class Menu(Base):
     price = Column(Integer)
     description = Column(String, nullable=True)
     image_url = Column(String, nullable=True) # Railway Volume 저장 경로
+    display_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True) # 소프트 삭제용 (필요시)
     is_available = Column(Boolean, default=True) # 품절 관리용
     
     category = relationship("Category", back_populates="menus")

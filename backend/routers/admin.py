@@ -147,6 +147,14 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
 # 메뉴 관리 (Menu Management)
 # ────────────────────────────────────────
 
+@router.patch("/menus/reorder")
+async def reorder_menus(data: schemas.MenuReorderRequest, db: Session = Depends(get_db)):
+    """메뉴 순서 일괄 변경 (카테고리 내 정렬)"""
+    for index, menu_id in enumerate(data.menu_ids):
+        db.query(models.Menu).filter(models.Menu.id == menu_id).update({"display_order": index})
+    db.commit()
+    return {"success": True, "message": "순서가 변경되었습니다."}
+
 @router.patch("/menus/{menu_id}")
 async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db)):
     """메뉴 정보 수정 (이름, 가격, 설명, 카테고리, 판매여부, 이미지, 옵션)"""
@@ -243,6 +251,7 @@ async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session =
         db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
     db.commit()
     return {"success": True, "message": "순서가 변경되었습니다."}
+
 
 @router.patch("/categories/{category_id}")
 async def update_category(category_id: int, category_data: schemas.CategoryUpdate, db: Session = Depends(get_db)):

@@ -215,6 +215,9 @@ class CategoryUpdate(BaseModel):
 class CategoryReorderRequest(BaseModel):
     category_ids: List[int]
 
+class MenuReorderRequest(BaseModel):
+    menu_ids: List[int]
+
 # ===============================
 # Admin & Auth
 # ===============================
