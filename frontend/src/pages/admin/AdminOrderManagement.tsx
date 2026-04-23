@@ -200,15 +200,30 @@ export const AdminOrderManagement = () => {
   // 5초마다 실제 소켓 상태 강제 확인 (UI 동기화 보정용 - 별도 이펙트로 분리하여 재연결 루프 방지)
   useEffect(() => {
     const statusCheckInterval = setInterval(() => {
-      if (!wsRef.current) return;
-      const realReadyState = wsRef.current.readyState;
-      
       setWsStatus(prev => {
-        if (realReadyState === WebSocket.OPEN && prev !== 'CONNECTED') return 'CONNECTED';
-        if (realReadyState !== WebSocket.OPEN && realReadyState !== WebSocket.CONNECTING && prev === 'CONNECTED') {
+        // 1. 소켓 객체가 없거나 생성 전인 경우
+        if (!wsRef.current) {
+          return prev === 'CONNECTED' ? 'DISCONNECTED' : prev;
+        }
+
+        const realReadyState = wsRef.current.readyState;
+        
+        // 2. 실제 상태가 OPEN이면 무조건 CONNECTED
+        if (realReadyState === WebSocket.OPEN) {
+          return 'CONNECTED';
+        }
+        
+        // 3. 연결 시도 중(CONNECTING)일 때는 이전 상태를 유지하여 UI 깜빡임 방지
+        if (realReadyState === WebSocket.CONNECTING) {
+          return prev;
+        }
+
+        // 4. 그 외(CLOSING, CLOSED) 상태인데 UI가 CONNECTED라면 DISCONNECTED로 보정
+        if (prev === 'CONNECTED') {
           console.log('⚠️ [Sync] 소켓 끊김 감지 - 상태 업데이트');
           return 'DISCONNECTED';
         }
+
         return prev;
       });
     }, 5000);
