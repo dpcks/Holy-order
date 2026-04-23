@@ -95,6 +95,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     await manager.broadcast({
         "type": "ORDER_UPDATED",
         "order_id": new_order.id,
+        "status": new_order.status,
         "timestamp": datetime.now().isoformat()
     })
     

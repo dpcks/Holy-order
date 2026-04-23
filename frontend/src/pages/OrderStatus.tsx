@@ -97,7 +97,20 @@ export const OrderStatus = () => {
       try {
         const data = JSON.parse(event.data);
         if (data.type === 'ORDER_UPDATED') {
+          // 1. 현재 보고 있는 주문 정보 갱신
           fetchData(false);
+
+          // 2. 만약 다른 내 주문의 상태가 변경되었다면 해당 주문으로 자동 이동
+          // 현재 URL의 id와 메시지의 order_id가 다른 경우에만 이동
+          if (String(data.order_id) !== String(id)) {
+            const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+            const isMyOrder = orders.some((o: any) => String(o.id) === String(data.order_id));
+            
+            if (isMyOrder) {
+              console.log(`🚀 [Auto-Nav] 주문 #${data.order_id} 상태 변경 감지! 페이지를 이동합니다.`);
+              navigate(`/order/status/${data.order_id}`);
+            }
+          }
         }
       } catch (e) {
         console.error('Failed to parse WS message', e);
