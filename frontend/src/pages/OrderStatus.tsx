@@ -332,12 +332,18 @@ export const OrderStatus = () => {
 
         <div className="text-center py-2">
           <h3 className="text-[24px] font-black text-[#2D1616] mb-3 tracking-tight transition-all duration-500">
-            {isCompleted ? '수령이 완료되었습니다! ☺️' : isReady ? '메뉴가 준비되었습니다! 🎉' : isPreparing ? '맛있게 만들고 있어요! ☕️' : '입금을 기다리고 있어요 💳'}
+            {isCompleted ? '수령이 완료되었습니다! ☺️' : 
+             isReady ? '메뉴가 준비되었습니다! 🎉' : 
+             isPreparing ? '맛있게 만들고 있어요! ☕️' : 
+             (order?.payment_method === 'CASH' ? '카운터에서 결제해 주세요 💵' : '입금을 기다리고 있어요 💳')}
           </h3>
           <div className="inline-flex items-center gap-2.5 bg-white border border-gray-100 shadow-md px-6 py-3 rounded-full">
             <div className={`w-3 h-3 rounded-full animate-pulse ${isReady || isCompleted ? 'bg-green-500' : isPreparing ? 'bg-primary' : 'bg-orange-400'}`} />
             <span className="text-gray-800 font-black text-[15px] tracking-tight">
-              {isCompleted ? '이용해 주셔서 감사합니다' : isReady ? '픽업대에서 가져가세요' : isPreparing ? '잠시만 기다려 주세요' : '입금 확인 시 제조 시작'}
+              {isCompleted ? '이용해 주셔서 감사합니다' : 
+               isReady ? '픽업대에서 가져가세요' : 
+               isPreparing ? '잠시만 기다려 주세요' : 
+               (order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : '입금 확인 시 제조 시작')}
             </span>
           </div>
         </div>
