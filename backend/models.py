@@ -80,7 +80,7 @@ class Order(Base):
     request = Column(String, nullable=True) # 고객 요청사항
     total_price = Column(Integer)
     payment_method = Column(String) # BANK_TRANSFER, KAKAOPAY 등
-    status = Column(String, default="PENDING") # PENDING, PAID, PREPARING, READY, COMPLETED, CANCELLED
+    status = Column(String, default="PENDING") # PENDING, PREPARING, READY, COMPLETED, CANCELLED
     
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용

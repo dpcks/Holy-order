@@ -47,21 +47,20 @@ def test_create_order_happy_path(client, db_session):
     
     order_id = data["id"]
     
-    # 4. 결제(계좌이체) 처리 API 호출 검증
-    payment_payload = {
-        "order_id": order_id,
-        "amount": 4000,
-        "sender_name": "김성도"
+    # 4. 관리자 승인(입금확인) 처리 API 호출 검증
+    # 사용자가 버튼을 누르는 대신 관리자가 입금을 확인하고 상태를 '준비중'으로 변경하는 시나리오입니다.
+    status_payload = {
+        "status": "PREPARING"
     }
-    pay_response = client.post("/api/v1/payments/bank-transfer", json=payment_payload)
+    pay_response = client.patch(f"/api/v1/admin/orders/{order_id}/status", json=status_payload)
     assert pay_response.status_code == 200
     assert pay_response.json()["success"] is True
     
-    # 5. DB 검증: 주문 상태가 PAID로 변경되었는지 및 결제 로그가 남았는지
+    # 5. DB 검증: 주문 상태가 PREPARING으로 변경되었는지 및 결제 로그가 남았는지
     db_order = db_session.query(Order).filter(Order.id == order_id).first()
-    assert db_order.status == "PAID"
-    assert db_order.payment_log is not None
-    assert db_order.payment_log.amount == 4000
+    assert db_order.status == "PREPARING"
+    assert len(db_order.payment_logs) > 0 # PaymentLog가 정상적으로 생성되었는지 확인
+    assert db_order.payment_logs[0].amount == 4000
 
 def test_create_order_edge_case_invalid_menu(client, db_session):
     """

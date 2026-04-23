@@ -155,7 +155,6 @@ class OrderListResponse(BaseModel):
 
 class OrderStatusEnum(str, Enum):
     PENDING = "PENDING"
-    PAID = "PAID"
     PREPARING = "PREPARING"
     READY = "READY"
     COMPLETED = "COMPLETED"
