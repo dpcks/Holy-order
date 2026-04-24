@@ -242,7 +242,7 @@ export const AdminSchedule = () => {
             </div>
 
             {/* 날짜 그리드 */}
-            <div className={`flex-1 grid grid-cols-7 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
+            <div className={`flex-1 grid grid-cols-7 pb-4 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
               {calendarDays.map((day) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isSun = day.getDay() === 0;
