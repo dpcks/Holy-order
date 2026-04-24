@@ -445,12 +445,6 @@ export const AdminSchedule = () => {
                     )}
                     {savingDate === selectedDate ? '저장 중...' : '스케줄 저장하기'}
                   </button>
-                  <button
-                    onClick={() => setSelectedDate(null)}
-                    className="w-full py-4 rounded-2xl font-bold text-[14px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
-                  >
-                    닫기
-                  </button>
                 </div>
 
                 {message && (
