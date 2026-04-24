@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, 
   Landmark, Calendar, ChevronsLeft, ChevronsRight, Church 
@@ -15,11 +15,58 @@ const navItems = [
 ];
 
 export const AdminLayout = () => {
+  const location = useLocation();
+  const [hasNewOrder, setHasNewOrder] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
   // 초기 상태를 로컬 스토리지에서 불러옴
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem('adminSidebarCollapsed');
     return saved === 'true';
   });
+
+  // 경로가 '주문 관리'(/admin)이면 알림 초기화
+  useEffect(() => {
+    if (location.pathname === '/admin') {
+      setHasNewOrder(false);
+    }
+  }, [location.pathname]);
+
+  // WebSocket 연결 (새 주문 알림용)
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current) wsRef.current.close();
+
+    const { hostname, protocol } = window.location;
+    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const wsPort = isLocal ? ':8000' : '';
+    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'ORDER_UPDATED' && location.pathname !== '/admin') {
+          setHasNewOrder(true);
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    ws.onclose = () => {
+      setTimeout(connectWebSocket, 5000); // 5초 후 재연결
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    connectWebSocket();
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+    };
+  }, [connectWebSocket]);
 
   // 상태 변경 시 로컬 스토리지에 저장
   useEffect(() => {
@@ -29,7 +76,7 @@ export const AdminLayout = () => {
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-gray-100 overflow-hidden font-sans text-gray-900">
       {/* 사이드바 */}
       <aside 
         className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${
@@ -41,8 +88,11 @@ export const AdminLayout = () => {
           <div className="flex items-center justify-between gap-2">
             <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
               {isCollapsed ? (
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-in zoom-in duration-300">
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-in zoom-in duration-300 relative">
                   <Church size={24} />
+                  {hasNewOrder && (
+                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0F0A0A] animate-pulse" />
+                  )}
                 </div>
               ) : (
                 <h1 className="text-2xl font-black text-white tracking-tighter italic animate-in fade-in duration-500">
@@ -89,7 +139,7 @@ export const AdminLayout = () => {
               end={item.end}
               title={isCollapsed ? item.label : ''}
               className={({ isActive }) =>
-                `flex items-center rounded-xl text-[13px] font-semibold transition-all duration-200 group ${
+                `flex items-center rounded-xl text-[13px] font-semibold transition-all duration-200 group relative ${
                   isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2.5 gap-3'
                 } ${
                   isActive
@@ -99,7 +149,17 @@ export const AdminLayout = () => {
               }
             >
               <item.icon size={18} className={`shrink-0 transition-transform ${!isCollapsed && 'group-hover:scale-110'}`} />
-              {!isCollapsed && <span className="truncate animate-in slide-in-from-left-2 duration-300">{item.label}</span>}
+              {!isCollapsed && (
+                <div className="flex-1 flex items-center justify-between min-w-0">
+                  <span className="truncate animate-in slide-in-from-left-2 duration-300">{item.label}</span>
+                  {item.to === '/admin' && hasNewOrder && (
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-bounce shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                  )}
+                </div>
+              )}
+              {isCollapsed && item.to === '/admin' && hasNewOrder && (
+                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+              )}
             </NavLink>
           ))}
         </nav>
