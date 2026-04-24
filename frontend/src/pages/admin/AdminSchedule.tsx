@@ -230,65 +230,67 @@ export const AdminSchedule = () => {
 
       <main className="flex-1 flex overflow-hidden relative">
         {/* 왼쪽: 전체 달력 영역 */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-8 max-w-[1200px] mx-auto animate-in fade-in zoom-in duration-300">
-            <div className="bg-white rounded-[40px] shadow-2xl shadow-black/[0.03] border border-white overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-gray-50 bg-gray-50/30">
-                {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
-                  <div key={day} className={`py-6 text-center text-[13px] font-black tracking-widest ${idx === 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                    {day}
-                  </div>
-                ))}
-              </div>
+        <div className="flex-1 flex flex-col p-4 lg:p-8 overflow-hidden">
+          <div className="flex-1 bg-white rounded-[32px] shadow-2xl shadow-black/[0.03] border border-white overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+            {/* 요일 헤더 */}
+            <div className="grid grid-cols-7 border-b border-gray-50 bg-gray-50/30 shrink-0">
+              {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
+                <div key={day} className={`py-4 text-center text-[13px] font-black tracking-widest ${idx === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {day}
+                </div>
+              ))}
+            </div>
 
-              <div className="grid grid-cols-7">
-                {calendarDays.map((day) => {
-                  const dateStr = format(day, 'yyyy-MM-dd');
-                  const isSun = day.getDay() === 0;
-                  const isCurrentMonth = isSameMonth(day, currentDate);
-                  const schedule = getScheduleForDate(day);
-                  const isSelected = selectedDate === dateStr;
+            {/* 날짜 그리드 */}
+            <div className={`flex-1 grid grid-cols-7 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
+              {calendarDays.map((day) => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const isSun = day.getDay() === 0;
+                const isCurrentMonth = isSameMonth(day, currentDate);
+                const schedule = getScheduleForDate(day);
+                const isSelected = selectedDate === dateStr;
 
-                  return (
-                    <div
-                      key={dateStr}
-                      onClick={() => isSun && setSelectedDate(dateStr)}
-                      className={`min-h-[140px] p-5 border-r border-b border-gray-50 transition-all group relative ${
-                        !isCurrentMonth ? 'opacity-20' : ''
-                      } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
-                        isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : ''
-                      }`}
-                    >
-                      <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'} ${isSelected ? 'scale-125 inline-block transition-transform' : ''}`}>
-                        {format(day, 'd')}
-                      </span>
+                return (
+                  <div
+                    key={dateStr}
+                    onClick={() => isSun && setSelectedDate(dateStr)}
+                    className={`p-3 lg:p-4 border-r border-b border-gray-50 transition-all group relative flex flex-col h-full ${
+                      !isCurrentMonth ? 'opacity-20' : ''
+                    } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
+                      isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : ''
+                    }`}
+                  >
+                    <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'} ${isSelected ? 'scale-125 inline-block transition-transform' : ''}`}>
+                      {format(day, 'd')}
+                    </span>
 
-                      {isSun && (
-                        <div className="mt-4 flex flex-wrap gap-1">
-                          {schedule ? (
-                            <>
+                    {isSun && (
+                      <div className="mt-2 flex flex-col gap-1 overflow-y-auto custom-scrollbar no-scrollbar">
+                        {schedule ? (
+                          <>
+                            <div className="flex flex-wrap gap-1">
                               {(Array.isArray(schedule.volunteers?.names) ? schedule.volunteers.names : []).map((name: string, idx: number) => (
-                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
+                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md border border-primary/10">
                                   {name}
                                 </span>
                               ))}
-                              {schedule.memo && (
-                                <div className="w-full mt-1.5">
-                                  <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">
-                                    특이사항
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-[10px] font-bold text-gray-300 italic">미배정</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                            </div>
+                            {schedule.memo && (
+                              <div className="mt-1">
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter line-clamp-1">
+                                  {schedule.memo}
+                                </span>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="text-[10px] font-bold text-gray-200 italic">미배정</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
