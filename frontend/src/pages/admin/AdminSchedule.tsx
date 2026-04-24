@@ -179,8 +179,8 @@ export const AdminSchedule = () => {
       </header>
 
       <main className="flex-1 flex overflow-hidden relative">
-        {/* 왼쪽: 전체 달력 영역 */}
-        <div className={`flex-1 overflow-auto transition-all duration-500 ${selectedDate ? 'mr-0 lg:mr-[450px]' : ''}`}>
+        {/* 왼쪽: 전체 달력 영역 (고정 너비 유지) */}
+        <div className="flex-1 overflow-auto">
           <div className="p-8 max-w-[1200px] mx-auto animate-in fade-in zoom-in duration-300">
             <div className="bg-white rounded-[40px] shadow-2xl shadow-black/[0.03] border border-white overflow-hidden">
               <div className="grid grid-cols-7 border-b border-gray-50 bg-gray-50/30">
@@ -250,9 +250,17 @@ export const AdminSchedule = () => {
           </div>
         </div>
 
+        {/* 배경 오버레이 (클릭 시 닫기) */}
+        {selectedDate && (
+          <div 
+            className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-25 lg:absolute animate-in fade-in duration-300"
+            onClick={() => setSelectedDate(null)}
+          />
+        )}
+
         {/* 오른쪽: 입력 사이드바 (Drawer) */}
         <div 
-          className={`fixed lg:absolute top-0 right-0 h-full w-full lg:w-[450px] bg-white shadow-[-20px_0_50px_-10px_rgba(0,0,0,0.05)] border-l border-gray-100 z-30 transition-transform duration-500 ease-in-out flex flex-col ${
+          className={`fixed lg:absolute top-0 right-0 h-full w-full lg:w-[450px] bg-white shadow-[-30px_0_60px_-15px_rgba(0,0,0,0.1)] border-l border-gray-100 z-30 transition-transform duration-500 ease-in-out flex flex-col ${
             selectedDate ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
