@@ -517,22 +517,33 @@ def get_volunteers(db: Session = Depends(get_db)):
 @router.post("/volunteers", response_model=schemas.StandardResponse[schemas.VolunteerResponse])
 def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_db)):
     """새로운 봉사자 등록"""
+    # 이름 앞뒤 공백 제거
+    name = v_data.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="이름을 입력해 주세요.")
+
     # 중복 확인
-    existing = db.query(models.Volunteer).filter(models.Volunteer.name == v_data.name).first()
+    existing = db.query(models.Volunteer).filter(models.Volunteer.name == name).first()
     if existing:
-        raise HTTPException(status_code=400, detail="이미 등록된 이름입니다.")
+        raise HTTPException(status_code=400, detail=f"'{name}'님은 이미 등록되어 있습니다.")
         
-    new_v = models.Volunteer(name=v_data.name)
-    db.add(new_v)
-    db.commit()
-    db.refresh(new_v)
-    
-    # 안정적인 딕셔너리 형태로 반환
-    return schemas.StandardResponse(
-        success=True, 
-        data={"id": new_v.id, "name": new_v.name, "created_at": new_v.created_at}, 
-        message="봉사자가 등록되었습니다."
-    )
+    try:
+        new_v = models.Volunteer(name=name)
+        db.add(new_v)
+        db.commit()
+        db.refresh(new_v)
+        
+        return schemas.StandardResponse(
+            success=True, 
+            data={"id": new_v.id, "name": new_v.name, "created_at": new_v.created_at}, 
+            message="봉사자가 등록되었습니다."
+        )
+    except Exception as e:
+        db.rollback()
+        # SQLAlchemy IntegrityError 등 DB 에러 처리
+        if "unique constraint" in str(e).lower() or "duplicate key" in str(e).lower():
+            raise HTTPException(status_code=400, detail="이미 등록된 이름입니다.")
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 @router.delete("/volunteers/{v_id}")
 def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
