@@ -14,7 +14,7 @@ import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 import { 
   format, startOfMonth, endOfMonth, eachDayOfInterval, 
-  startOfWeek, endOfWeek, isSameMonth, 
+  startOfWeek, endOfWeek, isSameMonth, isSameDay,
   addMonths, subMonths 
 } from 'date-fns';
 
@@ -247,6 +247,7 @@ export const AdminSchedule = () => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isSun = day.getDay() === 0;
                 const isCurrentMonth = isSameMonth(day, currentDate);
+                const isToday = isSameDay(day, new Date());
                 const schedule = getScheduleForDate(day);
                 const isSelected = selectedDate === dateStr;
 
@@ -257,7 +258,8 @@ export const AdminSchedule = () => {
                     className={`p-3 lg:p-4 border-r border-b border-gray-50 transition-all group relative flex flex-col h-full ${
                       !isCurrentMonth ? 'opacity-20' : ''
                     } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
-                      isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : ''
+                      isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : 
+                      isToday ? 'bg-black/[0.02] ring-2 ring-inset ring-black/10' : ''
                     }`}
                   >
                     <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'}`}>
