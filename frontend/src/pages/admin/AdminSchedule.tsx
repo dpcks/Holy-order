@@ -225,17 +225,26 @@ export const AdminSchedule = () => {
                         {isSun && (
                           <div className="mt-4 flex flex-wrap gap-1">
                             {schedule ? (
-                              (() => {
-                                const names = schedule.volunteers?.names;
-                                return (Array.isArray(names) 
-                                  ? names 
-                                  : (typeof names === 'string' ? names.split(/\s+/).filter(Boolean) : [])
-                                ).map((name: string, idx: number) => (
-                                  <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                    {name}
-                                  </span>
-                                ));
-                              })()
+                              <>
+                                {(() => {
+                                  const names = schedule.volunteers?.names;
+                                  return (Array.isArray(names) 
+                                    ? names 
+                                    : (typeof names === 'string' ? names.split(/\s+/).filter(Boolean) : [])
+                                  ).map((name: string, idx: number) => (
+                                    <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
+                                      {name}
+                                    </span>
+                                  ));
+                                })()}
+                                {schedule.memo && (
+                                  <div className="w-full mt-1.5">
+                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">
+                                      특이사항
+                                    </span>
+                                  </div>
+                                )}
+                              </>
                             ) : (
                               <div className="text-[10px] font-bold text-gray-300 italic">미배정</div>
                             )}
