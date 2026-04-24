@@ -260,7 +260,7 @@ export const AdminSchedule = () => {
                       isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : ''
                     }`}
                   >
-                    <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'} ${isSelected ? 'scale-125 inline-block transition-transform' : ''}`}>
+                    <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'}`}>
                       {format(day, 'd')}
                     </span>
 
