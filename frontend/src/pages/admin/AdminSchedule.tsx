@@ -181,11 +181,8 @@ export const AdminSchedule = () => {
         }
       );
       if (res.success) {
-        setMessage({ type: 'success', text: '스케줄이 성공적으로 저장되었습니다.' });
-        setTimeout(() => {
-          setSelectedDate(null);
-          setMessage(null);
-        }, 1500);
+        setSelectedDate(null);
+        setMessage(null);
         fetchSchedules();
       }
     } catch (err) {
