@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { 
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, UserPlus, 
-  FileText, CheckCircle2, AlertCircle, Users, Clock, Info, X, ArrowLeft
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, 
+  FileText, CheckCircle2, AlertCircle, Users, Clock, ArrowLeft
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
@@ -15,7 +15,10 @@ import { ko } from 'date-fns/locale';
 interface VolunteerSchedule {
   id: number;
   sunday_date: string;
-  volunteers: Record<string, string[]>;
+  volunteers: {
+    names?: string | string[];
+    [key: string]: any;
+  };
   memo: string;
 }
 
@@ -76,39 +79,55 @@ export const AdminSchedule = () => {
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
   const handleVolunteerChange = (date: string, value: string) => {
-    setSchedules(prev => prev.map(s => {
-      if (s.sunday_date === date) {
-        return {
+    setSchedules(prev => {
+      const exists = prev.some(s => s.sunday_date === date);
+      if (exists) {
+        return prev.map(s => s.sunday_date === date ? {
           ...s,
           volunteers: {
             ...s.volunteers,
-            names: value // 문자열 그대로 저장
+            names: value
           }
-        };
+        } : s);
       }
-      return s;
-    }));
+      return [...prev, {
+        id: 0,
+        sunday_date: date,
+        volunteers: { names: value },
+        memo: ''
+      }];
+    });
   };
 
   const handleMemoChange = (date: string, value: string) => {
-    setSchedules(prev => prev.map(s => {
-      if (s.sunday_date === date) {
-        return { ...s, memo: value };
+    setSchedules(prev => {
+      const exists = prev.some(s => s.sunday_date === date);
+      if (exists) {
+        return prev.map(s => s.sunday_date === date ? { ...s, memo: value } : s);
       }
-      return s;
-    }));
+      return [...prev, {
+        id: 0,
+        sunday_date: date,
+        volunteers: {},
+        memo: value
+      }];
+    });
   };
 
   const handleSave = async (dateStr: string) => {
-    const schedule = schedules.find(s => s.sunday_date === dateStr);
-    if (!schedule) return;
+    const schedule = schedules.find(s => s.sunday_date === dateStr) || {
+      id: 0,
+      sunday_date: dateStr,
+      volunteers: {},
+      memo: ''
+    };
 
     setSavingDate(dateStr);
     try {
-      // 저장 시에만 공백으로 구분하여 배열로 변환
-      const namesArray = typeof schedule.volunteers?.names === 'string' 
-        ? schedule.volunteers.names.split(/\s+/).filter(Boolean)
-        : schedule.volunteers?.names || [];
+      const names = schedule.volunteers?.names;
+      const namesArray = typeof names === 'string' 
+        ? names.split(/\s+/).filter(Boolean)
+        : (Array.isArray(names) ? names : []);
 
       const res = await apiClient.post<VolunteerSchedule, StandardResponse<VolunteerSchedule>>(
         '/admin/schedules',
@@ -190,7 +209,7 @@ export const AdminSchedule = () => {
                     <p className="font-bold text-[13px] text-gray-400 uppercase tracking-widest">Loading Schedule...</p>
                   </div>
                 ) : (
-                  calendarDays.map((day, i) => {
+                  calendarDays.map((day) => {
                     const schedule = getScheduleForDate(day);
                     const isCurrentMonth = isSameMonth(day, currentDate);
                     const isSun = isSunday(day);
@@ -213,14 +232,17 @@ export const AdminSchedule = () => {
 
                         {isSun && schedule && (
                           <div className="mt-4 flex flex-wrap gap-1">
-                            {(Array.isArray(schedule.volunteers?.names) 
-                              ? schedule.volunteers.names 
-                              : (schedule.volunteers?.names || '').split(/\s+/).filter(Boolean)
-                            ).map((name, idx) => (
-                              <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                {name}
-                              </span>
-                            ))}
+                            {(() => {
+                              const names = schedule.volunteers?.names;
+                              return (Array.isArray(names) 
+                                ? names 
+                                : (typeof names === 'string' ? names.split(/\s+/).filter(Boolean) : [])
+                              ).map((name: string, idx: number) => (
+                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
+                                  {name}
+                                </span>
+                              ));
+                            })()}
                           </div>
                         )}
                       </div>
