@@ -277,8 +277,8 @@ export const AdminSchedule = () => {
                             </div>
                             {schedule.memo && (
                               <div className="mt-1">
-                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter line-clamp-1">
-                                  {schedule.memo}
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">
+                                  특이사항
                                 </span>
                               </div>
                             )}
