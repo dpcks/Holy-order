@@ -44,6 +44,7 @@ export const AdminSchedule = () => {
   const [masterVolunteers, setMasterVolunteers] = useState<Volunteer[]>([]);
   const [isEditingMaster, setIsEditingMaster] = useState(false);
   const [newVolunteerName, setNewVolunteerName] = useState('');
+  const [isAddingVolunteer, setIsAddingVolunteer] = useState(false);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
@@ -86,15 +87,19 @@ export const AdminSchedule = () => {
   }, [fetchSchedules, fetchMasterVolunteers]);
 
   const handleAddVolunteerMaster = async () => {
-    if (!newVolunteerName.trim()) return;
+    if (!newVolunteerName.trim() || isAddingVolunteer) return;
+    
+    setIsAddingVolunteer(true);
     try {
-      const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name: newVolunteerName });
+      const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name: newVolunteerName.trim() });
       if (res.success && res.data) {
         setMasterVolunteers(prev => [...prev, res.data]);
         setNewVolunteerName('');
       }
     } catch (err: any) {
       console.error('봉사자 추가 실패:', err);
+    } finally {
+      setIsAddingVolunteer(false);
     }
   };
 
@@ -350,14 +355,20 @@ export const AdminSchedule = () => {
                           value={newVolunteerName}
                           onChange={(e) => setNewVolunteerName(e.target.value)}
                           placeholder="새 봉사자 이름"
-                          className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-black transition-all"
+                          disabled={isAddingVolunteer}
+                          className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-black transition-all disabled:opacity-50"
                           onKeyDown={(e) => e.key === 'Enter' && handleAddVolunteerMaster()}
                         />
                         <button 
                           onClick={handleAddVolunteerMaster}
-                          className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all"
+                          disabled={isAddingVolunteer}
+                          className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center min-w-[60px]"
                         >
-                          추가
+                          {isAddingVolunteer ? (
+                            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            '추가'
+                          )}
                         </button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
