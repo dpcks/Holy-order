@@ -165,38 +165,27 @@ export const AdminSchedule = () => {
           </div>
         </div>
 
-        {!selectedDate && (
-          <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
-            <button onClick={handlePrevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-400">
-              <ChevronLeft size={18} />
-            </button>
-            <span className="text-[14px] font-black text-gray-900 px-4 min-w-[120px] text-center">
-              {format(currentDate, 'yyyy년 M월', { locale: ko })}
-            </span>
-            <button onClick={handleNextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-400">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
-
-        {selectedDate && (
-          <button 
-            onClick={() => setSelectedDate(null)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-black text-gray-500 hover:bg-gray-50 transition-all border border-transparent hover:border-gray-200"
-          >
-            <ArrowLeft size={16} /> 달력으로 돌아가기
+        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl border border-gray-100">
+          <button onClick={handlePrevMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-400">
+            <ChevronLeft size={18} />
           </button>
-        )}
+          <span className="text-[14px] font-black text-gray-900 px-4 min-w-[120px] text-center">
+            {format(currentDate, 'yyyy년 M월', { locale: ko })}
+          </span>
+          <button onClick={handleNextMonth} className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all text-gray-400">
+            <ChevronRight size={18} />
+          </button>
+        </div>
       </header>
 
-      <main className="flex-1 overflow-auto relative">
-        {!selectedDate ? (
-          /* 단계 1: 전체 달력 화면 */
+      <main className="flex-1 flex overflow-hidden relative">
+        {/* 왼쪽: 전체 달력 영역 */}
+        <div className={`flex-1 overflow-auto transition-all duration-500 ${selectedDate ? 'mr-0 lg:mr-[450px]' : ''}`}>
           <div className="p-8 max-w-[1200px] mx-auto animate-in fade-in zoom-in duration-300">
             <div className="bg-white rounded-[40px] shadow-2xl shadow-black/[0.03] border border-white overflow-hidden">
               <div className="grid grid-cols-7 border-b border-gray-50 bg-gray-50/30">
-                {['일', '월', '화', '수', '목', '금', '토'].map((day, i) => (
-                  <div key={day} className={`py-5 text-center text-[11px] font-black uppercase tracking-[0.3em] ${i === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
+                  <div key={day} className={`py-5 text-center text-[11px] font-black uppercase tracking-[0.3em] ${day === '일' ? 'text-red-500' : 'text-gray-400'}`}>
                     {day}
                   </div>
                 ))}
@@ -215,6 +204,7 @@ export const AdminSchedule = () => {
                     const isSun = isSunday(day);
                     const isToday = isSameDay(day, new Date());
                     const dateStr = format(day, 'yyyy-MM-dd');
+                    const isSelected = selectedDate === dateStr;
 
                     return (
                       <div 
@@ -222,7 +212,9 @@ export const AdminSchedule = () => {
                         onClick={() => isSun && setSelectedDate(dateStr)}
                         className={`min-h-[140px] p-5 border-r border-b border-gray-50 transition-all group relative ${
                           !isCurrentMonth ? 'opacity-20' : ''
-                        } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'}`}
+                        } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
+                          isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : ''
+                        }`}
                       >
                         <span className={`text-[15px] font-black ${
                           isSun ? 'text-red-500' : 'text-gray-900'
@@ -230,19 +222,23 @@ export const AdminSchedule = () => {
                           {format(day, 'd')}
                         </span>
 
-                        {isSun && schedule && (
+                        {isSun && (
                           <div className="mt-4 flex flex-wrap gap-1">
-                            {(() => {
-                              const names = schedule.volunteers?.names;
-                              return (Array.isArray(names) 
-                                ? names 
-                                : (typeof names === 'string' ? names.split(/\s+/).filter(Boolean) : [])
-                              ).map((name: string, idx: number) => (
-                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
-                                  {name}
-                                </span>
-                              ));
-                            })()}
+                            {schedule ? (
+                              (() => {
+                                const names = schedule.volunteers?.names;
+                                return (Array.isArray(names) 
+                                  ? names 
+                                  : (typeof names === 'string' ? names.split(/\s+/).filter(Boolean) : [])
+                                ).map((name: string, idx: number) => (
+                                  <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md">
+                                    {name}
+                                  </span>
+                                ));
+                              })()
+                            ) : (
+                              <div className="text-[10px] font-bold text-gray-300 italic">미배정</div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -252,24 +248,42 @@ export const AdminSchedule = () => {
               </div>
             </div>
           </div>
-        ) : (
-          /* 단계 2: 날짜 선택 시 그리드 형태의 입력 폼 */
-          <div className="p-8 max-w-[1000px] mx-auto animate-in fade-in slide-in-from-bottom-8 duration-500">
-            <div className="mb-10 text-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-500 rounded-full text-[11px] font-black uppercase tracking-widest mb-4">
-                <Clock size={12} /> Sunday Service Selection
-              </div>
-              <h2 className="text-5xl font-black text-gray-900 tracking-tighter mb-2">
-                {format(parseDate(selectedDate), 'M월 d일')} 주일 스케줄
-              </h2>
-              <p className="text-gray-400 font-medium italic text-lg">해당 주일의 봉사자 명단을 작성해 주세요.</p>
-            </div>
+        </div>
 
-            <div className="bg-white p-8 rounded-[32px] shadow-xl shadow-black/[0.02] border border-white mb-8">
-              <div className="space-y-3">
-                <label className="flex items-center gap-2 text-[12px] font-black text-gray-400 uppercase tracking-widest">
-                  <Users size={14} className="text-primary" /> 주일 봉사자 명단
-                </label>
+        {/* 오른쪽: 입력 사이드바 (Drawer) */}
+        <div 
+          className={`fixed lg:absolute top-0 right-0 h-full w-full lg:w-[450px] bg-white shadow-[-20px_0_50px_-10px_rgba(0,0,0,0.05)] border-l border-gray-100 z-30 transition-transform duration-500 ease-in-out flex flex-col ${
+            selectedDate ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          {selectedDate && (
+            <>
+              {/* 사이드바 헤더 */}
+              <div className="p-8 border-b border-gray-50 shrink-0">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-500 rounded-full text-[10px] font-black uppercase tracking-widest">
+                    <Clock size={12} /> Schedule Editor
+                  </div>
+                  <button 
+                    onClick={() => setSelectedDate(null)}
+                    className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-50 hover:text-gray-900 transition-all"
+                  >
+                    <ArrowLeft size={20} />
+                  </button>
+                </div>
+                <h2 className="text-3xl font-black text-gray-900 tracking-tighter">
+                  {format(parseDate(selectedDate), 'M월 d일')} 주일
+                </h2>
+                <p className="text-gray-400 font-medium italic mt-1">봉사자 명단을 업데이트 해주세요.</p>
+              </div>
+
+              {/* 사이드바 본문 (스크롤) */}
+              <div className="flex-1 overflow-auto p-8 space-y-8">
+                {/* 봉사자 섹션 */}
+                <div className="space-y-4">
+                  <label className="flex items-center gap-2 text-[12px] font-black text-gray-400 uppercase tracking-widest">
+                    <Users size={14} className="text-primary" /> 주일 봉사자 명단
+                  </label>
                   <textarea
                     placeholder="봉사자 이름을 입력하세요 (띄어쓰기로 구분)"
                     value={
@@ -278,62 +292,62 @@ export const AdminSchedule = () => {
                         : (currentSelectedSchedule?.volunteers?.names || []).join(' ')
                     }
                     onChange={(e) => handleVolunteerChange(selectedDate, e.target.value)}
-                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-[16px] font-bold text-gray-800 focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all outline-none h-40 resize-none"
+                    className="w-full bg-gray-50 border border-transparent rounded-2xl px-5 py-4 text-[15px] font-bold text-gray-800 focus:bg-white focus:border-gray-100 focus:ring-4 focus:ring-primary/5 transition-all outline-none h-40 resize-none"
                   />
-                  <p className="text-[11px] text-gray-400 font-medium italic">
-                    이름과 이름 사이에 공백(띄어쓰기)을 넣어주세요.
+                  <p className="text-[11px] text-gray-400 font-medium leading-relaxed">
+                    팁: 이름과 이름 사이에 공백(띄어쓰기)을 넣어주시면 달력에 개별 태그로 표시됩니다.
                   </p>
-              </div>
-            </div>
-
-            <div className="bg-white p-8 rounded-[32px] shadow-xl shadow-black/[0.02] border border-white mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-gray-400">
-                  <FileText size={20} />
                 </div>
-                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">
-                  특이사항 및 메모
-                </label>
-              </div>
-              <textarea
-                placeholder="해당 주일에 공유할 공지사항이나 전달 내용을 입력하세요."
-                value={currentSelectedSchedule?.memo || ''}
-                onChange={(e) => handleMemoChange(selectedDate, e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-6 py-5 text-[15px] font-bold text-gray-800 focus:bg-white focus:ring-4 focus:ring-primary/10 transition-all outline-none h-40 resize-none"
-              />
-            </div>
 
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setSelectedDate(null)}
-                className="px-8 py-5 rounded-[24px] font-black text-[15px] text-gray-500 hover:bg-gray-200 transition-all"
-              >
-                취소
-              </button>
-              <button
-                onClick={() => handleSave(selectedDate)}
-                disabled={savingDate === selectedDate}
-                className="flex-1 bg-[#1A0A0A] text-white py-5 rounded-[24px] font-black text-[17px] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-2xl shadow-black/20 active:scale-[0.98] disabled:opacity-50"
-              >
-                {savingDate === selectedDate ? (
-                  <div className="w-6 h-6 border-3 border-white/20 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Save size={20} />
+                {/* 메모 섹션 */}
+                <div className="space-y-4">
+                  <label className="flex items-center gap-2 text-[12px] font-black text-gray-400 uppercase tracking-widest">
+                    <FileText size={14} className="text-gray-400" /> 특이사항 및 메모
+                  </label>
+                  <textarea
+                    placeholder="전달 사항을 입력하세요."
+                    value={currentSelectedSchedule?.memo || ''}
+                    onChange={(e) => handleMemoChange(selectedDate, e.target.value)}
+                    className="w-full bg-gray-50 border border-transparent rounded-2xl px-5 py-4 text-[15px] font-bold text-gray-800 focus:bg-white focus:border-gray-100 focus:ring-4 focus:ring-primary/5 transition-all outline-none h-40 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* 사이드바 하단 (액션 버튼) */}
+              <div className="p-8 border-t border-gray-50 bg-gray-50/30 shrink-0">
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => handleSave(selectedDate)}
+                    disabled={savingDate === selectedDate}
+                    className="w-full bg-[#1A0A0A] text-white py-4 rounded-2xl font-black text-[15px] flex items-center justify-center gap-3 hover:bg-black transition-all shadow-xl shadow-black/10 active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {savingDate === selectedDate ? (
+                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Save size={18} />
+                    )}
+                    {savingDate === selectedDate ? '저장 중...' : '스케줄 저장하기'}
+                  </button>
+                  <button
+                    onClick={() => setSelectedDate(null)}
+                    className="w-full py-4 rounded-2xl font-bold text-[14px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+                  >
+                    닫기
+                  </button>
+                </div>
+
+                {message && (
+                  <div className={`mt-4 p-4 rounded-xl flex items-center justify-center gap-2 animate-in slide-in-from-top-2 ${
+                    message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                  }`}>
+                    {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                    <span className="text-[13px] font-bold">{message.text}</span>
+                  </div>
                 )}
-                {savingDate === selectedDate ? '저장 중...' : '스케줄 확정 및 저장'}
-              </button>
-            </div>
-
-            {message && (
-              <div className={`mt-6 p-5 rounded-2xl flex items-center justify-center gap-3 animate-in slide-in-from-top-2 ${
-                message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-              }`}>
-                {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                <span className="text-[15px] font-bold">{message.text}</span>
               </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </main>
     </div>
   );
