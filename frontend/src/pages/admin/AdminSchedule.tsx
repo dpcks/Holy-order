@@ -259,7 +259,7 @@ export const AdminSchedule = () => {
                       !isCurrentMonth ? 'opacity-20' : ''
                     } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
                       isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : 
-                      isToday ? 'bg-black/[0.02] ring-2 ring-inset ring-black/10' : ''
+                      isToday ? 'bg-emerald-50/50 ring-2 ring-inset ring-emerald-500' : ''
                     }`}
                   >
                     <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'}`}>
