@@ -438,42 +438,30 @@ def get_payment_logs(
 import calendar
 
 @router.get("/schedules", response_model=schemas.StandardResponse[List[schemas.VolunteerScheduleResponse]])
-def get_schedules(year: int, month: int, db: Session = Depends(get_db)):
-    """특정 월의 모든 주일(일요일) 및 봉사자 데이터 조회"""
-    # 1. 해당 월의 모든 일요일 날짜 계산
-    sundays = []
-    c = calendar.monthcalendar(year, month)
-    for week in c:
-        if week[calendar.SUNDAY] != 0:
-            sundays.append(date(year, month, week[calendar.SUNDAY]))
-            
-    # 2. DB에서 저장된 데이터 조회
-    existing_schedules = db.query(models.VolunteerSchedule).filter(
-        models.VolunteerSchedule.sunday_date.in_(sundays)
-    ).all()
+def get_schedules(
+    start_date: Optional[date] = None, 
+    end_date: Optional[date] = None, 
+    db: Session = Depends(get_db)
+):
+    """특정 기간 내의 모든 봉사 스케줄 조회"""
+    query = db.query(models.VolunteerSchedule)
     
-    # 3. 데이터 매핑 (문자열 키 사용으로 안정성 확보)
-    schedule_dict = {str(s.sunday_date): s for s in existing_schedules}
+    if start_date:
+        query = query.filter(models.VolunteerSchedule.sunday_date >= start_date)
+    if end_date:
+        query = query.filter(models.VolunteerSchedule.sunday_date <= end_date)
+        
+    schedules = query.order_by(models.VolunteerSchedule.sunday_date.asc()).all()
     
+    # 응답 데이터 가공
     result = []
-    for sun in sundays:
-        sun_str = str(sun)
-        if sun_str in schedule_dict:
-            s = schedule_dict[sun_str]
-            result.append({
-                "id": s.id,
-                "sunday_date": s.sunday_date,
-                "volunteers": s.volunteers or {},
-                "memo": s.memo or ""
-            })
-        else:
-            # DB에 없으면 빈 데이터 반환 (딕셔너리 형태)
-            result.append({
-                "id": 0,
-                "sunday_date": sun,
-                "volunteers": {},
-                "memo": ""
-            })
+    for s in schedules:
+        result.append({
+            "id": s.id,
+            "sunday_date": s.sunday_date,
+            "volunteers": s.volunteers or {},
+            "memo": s.memo or ""
+        })
             
     return schemas.StandardResponse(success=True, data=result, message="봉사 스케줄을 조회했습니다.")
 

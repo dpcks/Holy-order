@@ -56,11 +56,14 @@ export const AdminSchedule = () => {
   }, [currentDate]);
 
   const fetchSchedules = useCallback(async () => {
+    if (calendarDays.length === 0) return;
+    
     try {
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth() + 1;
+      const startDate = format(calendarDays[0], 'yyyy-MM-dd');
+      const endDate = format(calendarDays[calendarDays.length - 1], 'yyyy-MM-dd');
+      
       const res = await apiClient.get<VolunteerSchedule[], StandardResponse<VolunteerSchedule[]>>(
-        `/admin/schedules?year=${year}&month=${month}`
+        `/admin/schedules?start_date=${startDate}&end_date=${endDate}`
       );
       if (res.success && res.data) {
         setSchedules(res.data);
@@ -68,7 +71,7 @@ export const AdminSchedule = () => {
     } catch (err) {
       console.error('스케줄 조회 실패:', err);
     }
-  }, [currentDate]);
+  }, [calendarDays]);
 
   const fetchMasterVolunteers = useCallback(async () => {
     try {
