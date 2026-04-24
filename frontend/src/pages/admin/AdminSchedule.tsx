@@ -69,30 +69,32 @@ export const AdminSchedule = () => {
     }
   }, [currentDate]);
 
-  const fetchMasterVolunteers = async () => {
+  const fetchMasterVolunteers = useCallback(async () => {
     try {
       const res = await apiClient.get<Volunteer[], StandardResponse<Volunteer[]>>('/admin/volunteers');
-      if (res.success) setMasterVolunteers(res.data);
+      if (res.success && res.data) {
+        setMasterVolunteers(res.data);
+      }
     } catch (err) {
       console.error('봉사자 명단 조회 실패:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSchedules();
     fetchMasterVolunteers();
-  }, [fetchSchedules]);
+  }, [fetchSchedules, fetchMasterVolunteers]);
 
   const handleAddVolunteerMaster = async () => {
     if (!newVolunteerName.trim()) return;
     try {
       const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name: newVolunteerName });
-      if (res.success) {
-        setMasterVolunteers([...masterVolunteers, res.data]);
+      if (res.success && res.data) {
+        setMasterVolunteers(prev => [...prev, res.data]);
         setNewVolunteerName('');
       }
     } catch (err: any) {
-      alert(err.response?.data?.detail || '등록에 실패했습니다.');
+      console.error('봉사자 추가 실패:', err);
     }
   };
 
@@ -101,10 +103,10 @@ export const AdminSchedule = () => {
     try {
       const res = await apiClient.delete<null, StandardResponse<null>>(`/admin/volunteers/${id}`);
       if (res.success) {
-        setMasterVolunteers(masterVolunteers.filter(v => v.id !== id));
+        setMasterVolunteers(prev => prev.filter(v => v.id !== id));
       }
     } catch (err) {
-      alert('삭제에 실패했습니다.');
+      console.error('봉사자 삭제 실패:', err);
     }
   };
 
@@ -195,7 +197,7 @@ export const AdminSchedule = () => {
     : [];
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden">
+    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
       {/* 헤더 */}
       <header className="bg-white px-8 py-5 flex items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm">
         <div className="flex items-center gap-4">

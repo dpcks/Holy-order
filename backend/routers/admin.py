@@ -510,7 +510,9 @@ def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session 
 def get_volunteers(db: Session = Depends(get_db)):
     """전체 봉사자 마스터 명단 조회"""
     volunteers = db.query(models.Volunteer).order_by(models.Volunteer.name.asc()).all()
-    return schemas.StandardResponse(success=True, data=volunteers, message="봉사자 명단을 조회했습니다.")
+    # 명시적 변환으로 안정성 확보
+    data = [schemas.VolunteerResponse.model_validate(v) for v in volunteers]
+    return schemas.StandardResponse(success=True, data=data, message="봉사자 명단을 조회했습니다.")
 
 @router.post("/volunteers", response_model=schemas.StandardResponse[schemas.VolunteerResponse])
 def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_db)):
@@ -524,7 +526,13 @@ def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_
     db.add(new_v)
     db.commit()
     db.refresh(new_v)
-    return schemas.StandardResponse(success=True, data=new_v, message="봉사자가 등록되었습니다.")
+    
+    # 명시적 변환 후 반환
+    return schemas.StandardResponse(
+        success=True, 
+        data=schemas.VolunteerResponse.model_validate(new_v), 
+        message="봉사자가 등록되었습니다."
+    )
 
 @router.delete("/volunteers/{v_id}")
 def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
