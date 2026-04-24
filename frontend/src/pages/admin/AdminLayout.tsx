@@ -18,6 +18,16 @@ export const AdminLayout = () => {
   const location = useLocation();
   const [hasNewOrder, setHasNewOrder] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
+  const pathnameRef = useRef(location.pathname);
+  const isClosingRef = useRef(false);
+
+  // 경로 업데이트 시 Ref 동기화
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+    if (location.pathname === '/admin') {
+      setHasNewOrder(false);
+    }
+  }, [location.pathname]);
 
   // 초기 상태를 로컬 스토리지에서 불러옴
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -25,16 +35,12 @@ export const AdminLayout = () => {
     return saved === 'true';
   });
 
-  // 경로가 '주문 관리'(/admin)이면 알림 초기화
-  useEffect(() => {
-    if (location.pathname === '/admin') {
-      setHasNewOrder(false);
-    }
-  }, [location.pathname]);
-
   // WebSocket 연결 (새 주문 알림용)
   const connectWebSocket = useCallback(() => {
-    if (wsRef.current) wsRef.current.close();
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      isClosingRef.current = true;
+      wsRef.current.close();
+    }
 
     const { hostname, protocol } = window.location;
     const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
@@ -44,11 +50,12 @@ export const AdminLayout = () => {
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
+    isClosingRef.current = false;
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'ORDER_UPDATED' && location.pathname !== '/admin') {
+        if (data.type === 'ORDER_UPDATED' && pathnameRef.current !== '/admin') {
           setHasNewOrder(true);
         }
       } catch (e) {
@@ -57,13 +64,16 @@ export const AdminLayout = () => {
     };
 
     ws.onclose = () => {
-      setTimeout(connectWebSocket, 5000); // 5초 후 재연결
+      if (!isClosingRef.current) {
+        setTimeout(connectWebSocket, 5000); // 비정상 종료 시에만 5초 후 재연결
+      }
     };
-  }, [location.pathname]);
+  }, []); // 의존성 제거
 
   useEffect(() => {
     connectWebSocket();
     return () => {
+      isClosingRef.current = true;
       if (wsRef.current) wsRef.current.close();
     };
   }, [connectWebSocket]);
