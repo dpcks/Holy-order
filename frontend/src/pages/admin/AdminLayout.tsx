@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { 
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, 
-  ArrowLeftRight, Calendar, ChevronLeft, ChevronRight 
+  ArrowLeftRight, Calendar, ChevronsLeft, ChevronsRight, Church 
 } from 'lucide-react';
 
 const navItems = [
@@ -33,24 +33,47 @@ export const AdminLayout = () => {
       {/* 사이드바 */}
       <aside 
         className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${
-          isCollapsed ? 'w-[80px]' : 'w-[240px]'
+          isCollapsed ? 'w-[80px]' : 'w-[260px]'
         }`}
       >
-        {/* 토글 버튼 (플로팅) */}
-        <button 
-          onClick={toggleSidebar}
-          className="absolute -right-3 top-20 w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center shadow-lg z-30 hover:scale-110 transition-transform"
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-
         {/* 로고 영역 */}
-        <div className={`px-6 py-8 border-b border-white/5 overflow-hidden transition-all ${isCollapsed ? 'px-4 text-center' : ''}`}>
-          <h1 className={`font-black text-white tracking-tighter italic transition-all duration-300 ${isCollapsed ? 'text-xl' : 'text-2xl'}`}>
-            {isCollapsed ? 'H-O' : 'Holy-Order'}
-          </h1>
+        <div className={`px-6 py-8 border-b border-white/5 transition-all ${isCollapsed ? 'px-4' : ''}`}>
+          <div className="flex items-center justify-between gap-2">
+            <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
+              {isCollapsed ? (
+                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-in zoom-in duration-300">
+                  <Church size={24} />
+                </div>
+              ) : (
+                <h1 className="text-2xl font-black text-white tracking-tighter italic animate-in fade-in duration-500">
+                  Holy-Order
+                </h1>
+              )}
+            </div>
+            
+            {!isCollapsed && (
+              <button 
+                onClick={toggleSidebar}
+                className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:bg-white/10 hover:text-white transition-all animate-in slide-in-from-right-2"
+                title="사이드바 접기"
+              >
+                <ChevronsLeft size={20} />
+              </button>
+            )}
+          </div>
+
+          {isCollapsed && (
+            <button 
+              onClick={toggleSidebar}
+              className="mt-4 w-full h-8 flex items-center justify-center rounded-lg text-white/20 hover:bg-white/5 hover:text-white transition-all"
+              title="사이드바 펴기"
+            >
+              <ChevronsRight size={18} />
+            </button>
+          )}
+
           {!isCollapsed && (
-            <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-500">
+            <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-700">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <p className="text-[10px] text-white/30 font-bold tracking-widest uppercase">Management Portal</p>
             </div>
