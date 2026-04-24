@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, ArrowLeftRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, Landmark } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
 
@@ -127,7 +127,7 @@ export const AdminPaymentLogs = () => {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-              <ArrowLeftRight size={24} />
+              <Landmark size={24} />
             </div>
             <div>
               <h1 className="text-2xl font-black text-gray-900 tracking-tight">입금 승인 내역</h1>
