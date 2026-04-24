@@ -249,3 +249,13 @@ class VolunteerScheduleUpdate(BaseModel):
     sunday_date: date
     volunteers: Optional[dict] = None
     memo: Optional[str] = None
+
+class VolunteerCreate(BaseModel):
+    name: str
+
+class VolunteerResponse(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

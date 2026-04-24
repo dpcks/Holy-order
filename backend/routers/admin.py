@@ -500,3 +500,39 @@ def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session 
         db.commit()
         db.refresh(new_schedule)
         return schemas.StandardResponse(success=True, data=new_schedule, message="스케줄이 등록되었습니다.")
+
+
+# ────────────────────────────────────────
+# 봉사자 관리 (Volunteer Management)
+# ────────────────────────────────────────
+
+@router.get("/volunteers", response_model=schemas.StandardResponse[List[schemas.VolunteerResponse]])
+def get_volunteers(db: Session = Depends(get_db)):
+    """전체 봉사자 마스터 명단 조회"""
+    volunteers = db.query(models.Volunteer).order_by(models.Volunteer.name.asc()).all()
+    return schemas.StandardResponse(success=True, data=volunteers, message="봉사자 명단을 조회했습니다.")
+
+@router.post("/volunteers", response_model=schemas.StandardResponse[schemas.VolunteerResponse])
+def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_db)):
+    """새로운 봉사자 등록"""
+    # 중복 확인
+    existing = db.query(models.Volunteer).filter(models.Volunteer.name == v_data.name).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="이미 등록된 이름입니다.")
+        
+    new_v = models.Volunteer(name=v_data.name)
+    db.add(new_v)
+    db.commit()
+    db.refresh(new_v)
+    return schemas.StandardResponse(success=True, data=new_v, message="봉사자가 등록되었습니다.")
+
+@router.delete("/volunteers/{v_id}")
+def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
+    """봉사자 삭제"""
+    v = db.query(models.Volunteer).filter(models.Volunteer.id == v_id).first()
+    if not v:
+        raise HTTPException(status_code=404, detail="봉사자를 찾을 수 없습니다.")
+    
+    db.delete(v)
+    db.commit()
+    return schemas.StandardResponse(success=True, data=None, message="봉사자가 삭제되었습니다.")

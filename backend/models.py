@@ -167,7 +167,14 @@ class VolunteerSchedule(Base):
     __tablename__ = "volunteer_schedules"
     id = Column(Integer, primary_key=True, index=True)
     sunday_date = Column(Date, unique=True, index=True, nullable=False) # 주일 날짜 (일요일)
-    volunteers = Column(JSON, nullable=True) # {"바리스타": ["홍길동"], "포스": ["김철수"]} 형태
+    volunteers = Column(JSON, nullable=True) # {"names": ["홍길동", "김철수"]} 형태
     memo = Column(String, nullable=True) # 기타 전달사항
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class Volunteer(Base):
+    __tablename__ = "volunteers"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
