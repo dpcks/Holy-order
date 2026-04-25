@@ -91,9 +91,9 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
             message="잠깐 주문이 겹쳤어요. 다시 시도해주시면 바로 접수됩니다 🙏"
         )
     
-    # 실시간 알림 전송 (JSON 구조화)
+    # 실시간 알림 전송 (새 주문 전용 타입 NEW_ORDER 사용)
     await manager.broadcast({
-        "type": "ORDER_UPDATED",
+        "type": "NEW_ORDER",
         "order_id": new_order.id,
         "status": new_order.status,
         "timestamp": datetime.now().isoformat()

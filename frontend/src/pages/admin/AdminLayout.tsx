@@ -37,6 +37,41 @@ export const AdminLayout = () => {
     return saved === 'true';
   });
 
+  // 알림음 오디오 객체 싱글톤 관리
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // 오디오 객체 미리 생성
+    audioRef.current = new Audio('/mp3/order.mp3');
+    audioRef.current.load();
+
+    // iOS/아이패드 오디오 잠금 해제 함수
+    const unlockAudio = () => {
+      if (audioRef.current) {
+        // 무음으로 한 번 재생하여 브라우저의 오디오 차단을 해제
+        audioRef.current.play()
+          .then(() => {
+            audioRef.current?.pause();
+            if (audioRef.current) audioRef.current.currentTime = 0;
+            console.log('🔊 [Audio] 오디오 잠금 해제 성공');
+            window.removeEventListener('click', unlockAudio);
+            window.removeEventListener('touchstart', unlockAudio);
+          })
+          .catch(() => {
+            // 실패 시 다음 클릭을 위해 리스너 유지
+          });
+      }
+    };
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, []);
+
   // WebSocket 연결 (새 주문 알림용)
   const connectWebSocket = useCallback(() => {
     // 이미 연결 중이거나 열려 있으면 중복 연결 방지
@@ -64,11 +99,20 @@ export const AdminLayout = () => {
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.type === 'ORDER_UPDATED' && pathnameRef.current !== '/admin') {
-            setHasNewOrder(true);
+          // 1. 새 주문이 들어왔을 때만 소리 재생 및 배지 표시
+          if (data.type === 'NEW_ORDER') {
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0; // 재생 위치 초기화
+              audioRef.current.play().catch(e => console.warn('오디오 재생 실패:', e));
+            }
+
+            if (pathnameRef.current !== '/admin') {
+              setHasNewOrder(true);
+            }
           }
+          // 2. 단순 상태 변경(ORDER_UPDATED)은 소리 없이 데이터 동기화 등 필요시 활용
         } catch (e) {
-          // ping 등 JSON이 아닌 메시지 처리
+          // ping 등 처리
         }
       };
 

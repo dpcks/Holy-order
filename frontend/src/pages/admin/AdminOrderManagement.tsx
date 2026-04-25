@@ -149,8 +149,8 @@ export const AdminOrderManagement = () => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === 'ORDER_UPDATED') {
-          console.log('🔔 [WebSocket] 새 주문 업데이트 감지:', data);
+        if (data.type === 'NEW_ORDER' || data.type === 'ORDER_UPDATED') {
+          console.log(`🔔 [WebSocket] ${data.type} 감지:`, data);
           fetchOrders();
         }
       } catch (e) {
