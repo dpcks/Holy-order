@@ -360,14 +360,20 @@ def get_today_stats(db: Session = Depends(get_db)):
     )
     duty_breakdown = {r.user_duty_snapshot: r.cnt for r in duty_counts_raw}
 
-    # 시간대별 주문 현황
+    # 시간대별 주문 현황 (한국 시간 보정: UTC + 9)
+    # SQLite/PostgreSQL 호환을 위해 단순하게 시각(Hour) 추출 후 +9 처리하거나 AT TIME ZONE 사용
+    # 여기서는 SQLAlchemy의 func.extract를 사용하되 결과값에서 +9 보정 처리
     hourly_raw = (
         db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id))
         .filter(models.Order.order_date == today)
         .group_by(func.extract("hour", models.Order.created_at))
         .all()
     )
-    hourly_orders = {int(r.hour): r[1] for r in hourly_raw}
+    # 추출된 UTC 시간에 9를 더해 KST로 변환 (24시가 넘어가면 0시부터 다시 시작)
+    hourly_orders = {}
+    for r in hourly_raw:
+        kst_hour = (int(r.hour) + 9) % 24
+        hourly_orders[kst_hour] = r[1]
 
     # 결제 수단별 매출 현황 (입금대기/취소 제외)
     payment_raw = (

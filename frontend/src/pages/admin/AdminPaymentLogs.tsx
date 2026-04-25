@@ -8,7 +8,7 @@ import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../..
 import { DateRangePicker } from 'react-date-range';
 import type { Range, RangeKeyDict } from 'react-date-range';
 import { ko } from 'date-fns/locale';
-import { format, addDays, startOfYesterday, endOfYesterday, startOfMonth, endOfMonth } from 'date-fns';
+import { format, addDays, startOfYesterday, endOfYesterday, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from 'date-fns';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
@@ -55,8 +55,8 @@ export const AdminPaymentLogs = () => {
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
     {
-      startDate: undefined,
-      endDate: undefined,
+      startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
       key: 'selection'
     }
   ]);

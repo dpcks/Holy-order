@@ -51,24 +51,42 @@ const DonutChart = ({ data }: { data: { label: string; value: number; color: str
   );
 };
 
-// 시간대별 바 차트 (CSS)
+// 시간대별 바 차트 (CSS 기반 인터랙티브 차트)
 const HourlyChart = ({ data }: { data: Record<string, number> }) => {
-  const hours = Array.from({ length: 10 }, (_, i) => i + 9); // 9~18시
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const hours = Array.from({ length: 7 }, (_, i) => i + 9); // 9시~15시
   const max = Math.max(...Object.values(data), 1);
+
   return (
-    <div className="flex items-end gap-1 h-24 pt-2">
+    <div className="flex items-end gap-1.5 h-32 pt-10 px-2 relative">
       {hours.map(h => {
-        const count = data[String(h)] || 0;
+        const count = data[h] || 0;
         const height = (count / max) * 100;
+        const isSelected = selectedHour === h;
+
         return (
-          <div key={h} className="flex-1 flex flex-col items-center gap-1">
-            <div className="w-full flex items-end justify-center" style={{ height: '72px' }}>
+          <div key={h} className="flex-1 flex flex-col items-center gap-2 group relative">
+            {/* 말풍선 (선택 시 노출) */}
+            {(isSelected || (count > 0 && !selectedHour)) && (
+              <div className={`absolute -top-10 left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black rounded-lg shadow-xl z-10 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 duration-200 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 group-hover:scale-100'}`}>
+                {count}건
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45" />
+              </div>
+            )}
+
+            <div 
+              className="w-full flex items-end justify-center cursor-pointer" 
+              style={{ height: '80px' }}
+              onClick={() => setSelectedHour(isSelected ? null : h)}
+            >
               <div
-                className="w-full bg-primary/80 rounded-t-sm transition-all duration-700"
-                style={{ height: `${height}%`, minHeight: count > 0 ? '4px' : '0' }}
+                className={`w-full rounded-t-md transition-all duration-300 ${isSelected ? 'bg-primary shadow-[0_0_15px_rgba(255,75,75,0.4)]' : 'bg-primary/30 group-hover:bg-primary/50'}`}
+                style={{ height: `${height}%`, minHeight: count > 0 ? '6px' : '2px' }}
               />
             </div>
-            <span className="text-[9px] text-gray-400 font-medium">{h}</span>
+            <span className={`text-[10px] font-bold transition-colors ${isSelected ? 'text-primary' : 'text-gray-400'}`}>
+              {h}
+            </span>
           </div>
         );
       })}

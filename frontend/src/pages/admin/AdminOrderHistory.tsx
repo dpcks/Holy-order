@@ -8,7 +8,7 @@ import type { Order, StandardResponse, OrderListResponse } from '../../types';
 import { DateRangePicker } from 'react-date-range';
 import type { Range, RangeKeyDict } from 'react-date-range';
 import { ko } from 'date-fns/locale';
-import { format, addDays, startOfMonth, endOfMonth, startOfYesterday, endOfYesterday } from 'date-fns';
+import { format, addDays, startOfMonth, endOfMonth, startOfYesterday, endOfYesterday, startOfWeek, endOfWeek } from 'date-fns';
 import 'react-date-range/dist/styles.css'; // 기본 스타일
 import 'react-date-range/dist/theme/default.css'; // 테마 스타일
 
@@ -103,8 +103,8 @@ export const AdminOrderHistory = () => {
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
     {
-      startDate: undefined,
-      endDate: undefined,
+      startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
+      endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
       key: 'selection'
     }
   ]);
