@@ -15,6 +15,7 @@ import { AdminMenuManagement } from './pages/admin/AdminMenuManagement';
 import { AdminSalesReports } from './pages/admin/AdminSalesReports';
 import { AdminPaymentLogs } from './pages/admin/AdminPaymentLogs';
 import { AdminSchedule } from './pages/admin/AdminSchedule';
+import { AdminSettings } from './pages/admin/AdminSettings';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
             <Route path="menus" element={<AdminMenuManagement />} />
             <Route path="reports" element={<AdminSalesReports />} />
             <Route path="schedules" element={<AdminSchedule />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>
       </Router>

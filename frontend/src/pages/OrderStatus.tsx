@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft, Wallet } from 'lucide-react';
 import { apiClient } from '../api/client';
 import type { StandardResponse } from '../api/client';
-import type { Order, Setting, ActiveOrder } from '../types';
+import type { Order, SettingResponse, ActiveOrder } from '../types';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
@@ -33,7 +33,7 @@ export const OrderStatus = () => {
     try {
       const [orderRes, settingRes] = await Promise.all([
         id ? apiClient.get<Order, StandardResponse<Order>>(`/orders/status/${id}`) : Promise.resolve(null),
-        apiClient.get<Setting, StandardResponse<Setting>>('/settings'),
+        apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings'),
       ]);
       
       if (orderRes?.success) {

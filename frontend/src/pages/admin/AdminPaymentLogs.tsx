@@ -156,7 +156,7 @@ export const AdminPaymentLogs = () => {
             <Search size={18} className="text-gray-400" />
             <input
               type="text"
-              placeholder="주문번호, 입금자명 검색..."
+              placeholder="주문번호, 입금자명 검색"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);

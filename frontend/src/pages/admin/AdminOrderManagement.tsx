@@ -38,31 +38,30 @@ const formatPhone = (phone: string | null) => {
 // 옵션 텍스트 파싱 및 뱃지 렌더링 컴포넌트
 const OptionBadges = ({ text }: { text: string | null }) => {
   if (!text) return null;
-  
+
   // ' / ' 또는 ', '로 구분된 옵션들을 분리
   const options = text.split(/ \/ |, /);
-  
+
   return (
     <div className="flex flex-wrap gap-1 mt-1">
       {options.map((opt, i) => {
         const trimmed = opt.trim();
         if (!trimmed) return null;
-        
+
         const isIce = trimmed.toUpperCase() === 'ICE';
         const isHot = trimmed.toUpperCase() === 'HOT';
         const isShot = trimmed.includes('샷 추가');
         const isTumblr = trimmed.includes('텀블러');
-        
+
         return (
-          <span 
-            key={i} 
-            className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${
-              isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
-              isHot ? 'bg-red-100 text-red-600 border-red-200' :
-              isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-              isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
-              'bg-gray-100 text-gray-500 border-gray-200'
-            }`}
+          <span
+            key={i}
+            className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
+                isHot ? 'bg-red-100 text-red-600 border-red-200' :
+                  isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                    isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
+                      'bg-gray-100 text-gray-500 border-gray-200'
+              }`}
           >
             {trimmed}
           </span>
@@ -83,7 +82,7 @@ export const AdminOrderManagement = () => {
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
   const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -124,11 +123,11 @@ export const AdminOrderManagement = () => {
     // 로컬 개발 환경(8000포트)과 운영 환경을 모두 고려
     const { hostname, protocol } = window.location;
     const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    
+
     // 개발 환경(localhost 또는 IP 접속)에서는 8000 포트 사용
     const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
     const wsPort = isLocal ? ':8000' : '';
-    
+
     const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
 
     setWsStatus('RECONNECTING');
@@ -139,7 +138,7 @@ export const AdminOrderManagement = () => {
       console.log('✅ [WebSocket] 연결 성공');
       setWsStatus('CONNECTED');
       retryCountRef.current = 0;
-      
+
       // 연결 성공 시 REST 폴링 중단
       if (pollingTimerRef.current) {
         clearInterval(pollingTimerRef.current);
@@ -168,7 +167,7 @@ export const AdminOrderManagement = () => {
 
       console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}). 재연결 시도...`);
       setWsStatus('DISCONNECTED');
-      
+
       // 1. REST Polling Fallback 시작 (WebSocket이 죽어도 30초마다 데이터 갱신)
       if (!pollingTimerRef.current) {
         console.log('🔄 [Fallback] REST Polling 활성화 (30s)');
@@ -236,12 +235,12 @@ export const AdminOrderManagement = () => {
         }
 
         const realReadyState = wsRef.current.readyState;
-        
+
         // 2. 실제 상태가 OPEN이면 무조건 CONNECTED
         if (realReadyState === WebSocket.OPEN) {
           return 'CONNECTED';
         }
-        
+
         // 3. 연결 시도 중(CONNECTING)일 때는 이전 상태를 유지하여 UI 깜빡임 방지
         if (realReadyState === WebSocket.CONNECTING) {
           return prev;
@@ -293,11 +292,10 @@ export const AdminOrderManagement = () => {
             <div className="flex items-center gap-2 xl:gap-3 mb-0.5 xl:mb-1">
               <h1 className="text-xl xl:text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
-                <span className={`w-1.5 h-1.5 rounded-full ${
-                  wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
-                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
-                  'bg-red-400'
-                }`}></span>
+                <span className={`w-1.5 h-1.5 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
+                    wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
+                      'bg-red-400'
+                  }`}></span>
                 <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">
                   {wsStatus === 'CONNECTED' ? '실시간' : wsStatus === 'RECONNECTING' ? '재연결중' : '오프라인'}
                 </span>
@@ -360,20 +358,17 @@ export const AdminOrderManagement = () => {
                               <span className="text-2xl xl:text-3xl font-black text-[#1A0A0A] tracking-tighter">
                                 #{order.order_number}
                               </span>
-                              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border ${
-                                order.payment_method === 'CASH' 
-                                  ? 'bg-orange-50 text-orange-600 border-orange-100' 
+                              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border ${order.payment_method === 'CASH'
+                                  ? 'bg-orange-50 text-orange-600 border-orange-100'
                                   : 'bg-blue-50 text-blue-600 border-blue-100'
-                              }`}>
+                                }`}>
                                 {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
                                 {order.payment_method === 'CASH' ? '현금' : '계좌'}
                               </div>
                             </div>
-                            <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${
-                              order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
-                            } ${
-                              Math.floor((now - new Date(order.created_at).getTime()) / 60000) >= 10 ? 'text-red-600 animate-pulse bg-red-50' : ''
-                            }`}>
+                            <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
+                              } ${Math.floor((now - new Date(order.created_at).getTime()) / 60000) >= 10 ? 'text-red-600 animate-pulse bg-red-50' : ''
+                              }`}>
                               {getElapsed(order.created_at, now)}
                             </span>
                           </div>
@@ -479,18 +474,16 @@ export const AdminOrderManagement = () => {
             <p className="text-xl xl:text-2xl font-black">{stats.total_orders}<span className="text-[10px] xl:text-xs font-bold text-white/40 ml-1">Total</span></p>
           </div>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-          wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
-        }`}>
-          <div className={`w-2 h-2 rounded-full ${
-            wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
-            wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
-            'bg-red-500'
-          }`} />
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
+          }`}>
+          <div className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
+              wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
+                'bg-red-500'
+            }`} />
           <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">
-            {wsStatus === 'CONNECTED' ? 'Real-time Connected' : 
-             wsStatus === 'RECONNECTING' ? 'Attempting to Reconnect...' : 
-             'Disconnected (Auto-Polling Active)'}
+            {wsStatus === 'CONNECTED' ? 'Real-time Connected' :
+              wsStatus === 'RECONNECTING' ? 'Attempting to Reconnect...' :
+                'Disconnected (Auto-Polling Active)'}
           </span>
         </div>
       </footer>

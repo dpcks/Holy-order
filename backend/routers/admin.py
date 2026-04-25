@@ -558,3 +558,40 @@ def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
     db.delete(v)
     db.commit()
     return schemas.StandardResponse(success=True, data=None, message="봉사자가 삭제되었습니다.")
+# ────────────────────────────────────────
+# 시스템 설정 (System Settings)
+# ────────────────────────────────────────
+
+@router.get("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
+def get_admin_settings(db: Session = Depends(get_db)):
+    """관리자용 시스템 설정 조회"""
+    setting = db.query(models.Setting).first()
+    if not setting:
+        # 설정이 없으면 기본값으로 생성
+        setting = models.Setting(
+            is_open=True,
+            bank_name="카카오뱅크",
+            account_number="3333-01-1234567",
+            account_holder="홀리오더"
+        )
+        db.add(setting)
+        db.commit()
+        db.refresh(setting)
+    return schemas.StandardResponse(success=True, data=setting, message="설정을 조회했습니다.")
+
+@router.put("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
+def update_admin_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db)):
+    """관리자용 시스템 설정 수정 (영업 토글 등)"""
+    setting = db.query(models.Setting).first()
+    if not setting:
+        setting = models.Setting()
+        db.add(setting)
+    
+    # 전달된 데이터로 필드 업데이트
+    update_dict = update_data.model_dump(exclude_unset=True)
+    for key, value in update_dict.items():
+        setattr(setting, key, value)
+    
+    db.commit()
+    db.refresh(setting)
+    return schemas.StandardResponse(success=True, data=setting, message="설정이 저장되었습니다.")

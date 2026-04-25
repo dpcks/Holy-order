@@ -81,7 +81,7 @@ export interface Order {
 // 설정 및 통계 (Settings & Stats)
 // ==========================================
 
-export interface Setting {
+export interface SettingResponse {
   bank_name: string | null;
   account_number: string | null;
   account_holder: string | null;
@@ -90,6 +90,8 @@ export interface Setting {
   open_time: string | null;
   close_time: string | null;
 }
+
+export type SettingUpdate = Partial<SettingResponse>;
 
 /** 관리자 대시보드 요약 통계 */
 export interface DashboardStats {

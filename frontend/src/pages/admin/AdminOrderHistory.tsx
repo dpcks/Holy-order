@@ -35,10 +35,10 @@ const OptionBadges = ({ text }: { text: string | null }) => {
         const isTumblr = trimmed.includes('텀블러');
         return (
           <span key={i} className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
-              isHot ? 'bg-red-100 text-red-600 border-red-200' :
-                isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-                  isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
-                    'bg-gray-100 text-gray-500 border-gray-200'
+            isHot ? 'bg-red-100 text-red-600 border-red-200' :
+              isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
+                  'bg-gray-100 text-gray-500 border-gray-200'
             }`}>
             {trimmed}
           </span>

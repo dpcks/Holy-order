@@ -12,14 +12,22 @@ export const Home = () => {
   const [activeOrders, setActiveOrders] = useState<{ id: string, orderNumber: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [shopSettings, setShopSettings] = useState<{ is_open: boolean, notice?: string } | null>(null);
 
   useEffect(() => {
     // 진행 중인 주문들 확인
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
 
-    const fetchMenus = async () => {
+    const fetchData = async () => {
       try {
+        // 1. 영업 설정 정보 가져오기
+        const settingsRes = await apiClient.get<any, StandardResponse<any>>('/settings');
+        if (settingsRes.success) {
+          setShopSettings(settingsRes.data);
+        }
+
+        // 2. 메뉴 정보 가져오기 (영업 중일 때만 의미가 있지만 일단 가져옴)
         const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
         if (response.success && response.data) {
           setCategories(response.data);
@@ -28,15 +36,70 @@ export const Home = () => {
           }
         }
       } catch (error) {
-        console.error('Failed to fetch menus', error);
+        console.error('Failed to fetch data', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchMenus();
+    fetchData();
   }, []);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
+
+  // 영업 종료 화면 렌더링
+  if (!loading && shopSettings && !shopSettings.is_open) {
+    return (
+      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-black font-sans relative overflow-hidden">
+        {/* 영업 종료 이미지 (배경) */}
+        <div className="absolute inset-0">
+          <img
+            src="/img/closed.jpg"
+            alt="Closed"
+            className="w-full h-full object-cover opacity-60 scale-105 blur-[2px]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+        </div>
+
+        {/* 안내 문구 영역 */}
+        <div className="relative flex-1 flex flex-col items-center justify-end pb-24 px-8 text-center">
+          <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 border border-white/20 animate-bounce">
+            <Coffee className="text-white" size={40} />
+          </div>
+
+          <h1 className="text-4xl font-black text-white tracking-tighter mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            지금은 영업 시간이<br />아닙니다
+          </h1>
+
+          <div className="w-12 h-1 bg-primary rounded-full mb-8" />
+
+          <p className="text-lg font-bold text-white/80 leading-relaxed break-keep mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
+            {shopSettings.notice || "더 맛있는 커피를 위해 준비 중입니다.\n영업 시간에 다시 방문해 주세요!"}
+          </p>
+
+          <div className="px-6 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
+            <p className="text-[12px] font-black text-primary uppercase tracking-[0.2em]">다음주에 만나요~~~</p>
+          </div>
+        </div>
+
+        {/* 하단 푸터 (진행 중인 주문이 있다면 표시) */}
+        {activeOrders.length > 0 && (
+          <div className="relative p-6 border-t border-white/10 bg-black/50 backdrop-blur-2xl">
+            <button
+              onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
+              className="w-full bg-primary text-white py-4 px-6 rounded-2xl shadow-xl flex items-center justify-between"
+            >
+              <span className="font-black text-sm text-white">진행 중인 주문 확인하기</span>
+              <div className="flex gap-1">
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse delay-75"></span>
+                <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse delay-150"></span>
+              </div>
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   // 검색 결과 필터링 (전체 카테고리 대상)
   const filteredMenus = categories.flatMap(cat => cat.menus).filter(menu =>
