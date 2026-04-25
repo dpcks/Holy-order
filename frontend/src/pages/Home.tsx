@@ -9,7 +9,7 @@ export const Home = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
-  const [activeOrders, setActiveOrders] = useState<{id: string, orderNumber: number}[]>([]);
+  const [activeOrders, setActiveOrders] = useState<{ id: string, orderNumber: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -39,7 +39,7 @@ export const Home = () => {
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
   // 검색 결과 필터링 (전체 카테고리 대상)
-  const filteredMenus = categories.flatMap(cat => cat.menus).filter(menu => 
+  const filteredMenus = categories.flatMap(cat => cat.menus).filter(menu =>
     menu.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -54,7 +54,7 @@ export const Home = () => {
             <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg">
               <MapPin size={16} className="text-primary" />
               <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
-              <ChevronDown size={16} className="text-gray-500" />
+              {/* <ChevronDown size={16} className="text-gray-500" /> */}
             </button>
           </div>
 
@@ -64,9 +64,8 @@ export const Home = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategoryId(cat.id)}
-                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${
-                  activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
-                }`}
+                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
+                  }`}
               >
                 {cat.name}
                 {activeCategoryId === cat.id && (
@@ -112,7 +111,7 @@ export const Home = () => {
       {/* 실시간 주문 추적 플로팅 버튼 */}
       {activeOrders.length > 0 && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
-          <button 
+          <button
             onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
             className="w-full bg-[#1A0A0A] text-white py-4 px-6 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all"
           >
@@ -152,23 +151,23 @@ const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => {
   };
 
   return (
-    <div 
+    <div
       className={`group flex flex-col transition-opacity ${menu.is_available ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
       onClick={handleCardClick}
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-3">
         {menu.image_url ? (
-          <img 
-            src={menu.image_url} 
-            alt={menu.name} 
-            className={`w-full h-full object-cover transition-transform duration-300 ${menu.is_available ? 'group-hover:scale-105' : 'grayscale'}`} 
+          <img
+            src={menu.image_url}
+            alt={menu.name}
+            className={`w-full h-full object-cover transition-transform duration-300 ${menu.is_available ? 'group-hover:scale-105' : 'grayscale'}`}
           />
         ) : (
           <div className="w-full h-full bg-[#1A1818] flex items-center justify-center">
             <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80" alt="coffee placeholder" className={`w-full h-full object-cover opacity-80 ${menu.is_available ? '' : 'grayscale'}`} />
           </div>
         )}
-        
+
         {/* 품절 오버레이 */}
         {!menu.is_available && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]">
@@ -181,7 +180,7 @@ const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => {
           const now = new Date();
           const diffTime = Math.abs(now.getTime() - createdDate.getTime());
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
+
           if (diffDays <= 8) {
             return (
               <div className="absolute top-2 left-2 bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">

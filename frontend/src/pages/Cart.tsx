@@ -84,7 +84,7 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="홍길동"
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
             />
           </div>
 
@@ -96,7 +96,7 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="01012345678"
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
             />
           </div>
 
@@ -107,7 +107,7 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
               <select
                 value={duty}
                 onChange={(e) => setDuty(e.target.value as Duty)}
-                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+                className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
               >
                 {DUTY_OPTIONS.map((d) => (
                   <option key={d} value={d}>{d}</option>
@@ -142,7 +142,6 @@ export const Cart = () => {
   const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart();
 
   const [requests, setRequests] = useState('');
-  const [saveRequest, setSaveRequest] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -316,15 +315,8 @@ export const Cart = () => {
               value={requests}
               onChange={(e) => setRequests(e.target.value)}
               placeholder="매장에 전달할 메시지를 입력해 주세요."
-              className="w-full bg-[#F3F4F6] rounded-xl p-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none h-20"
+              className="w-full bg-[#F3F4F6] rounded-xl p-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none h-20"
             />
-            <label className="flex items-center gap-2 mt-3 cursor-pointer">
-              <div className={`w-5 h-5 rounded flex items-center justify-center border ${saveRequest ? 'bg-primary border-primary' : 'border-gray-300'}`}>
-                {saveRequest && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
-              </div>
-              <span className="text-[13px] text-gray-700 font-medium">다음에도 사용</span>
-              <input type="checkbox" className="hidden" checked={saveRequest} onChange={(e) => setSaveRequest(e.target.checked)} />
-            </label>
           </section>
 
           {/* 결제수단 */}

@@ -286,12 +286,12 @@ export const AdminOrderManagement = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F9FAFB]">
-      <header className="bg-white border-b border-gray-200 px-8 py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
+    <div className="flex flex-col h-full bg-[#F9FAFB] overflow-hidden">
+      <header className="bg-white border-b border-gray-200 px-6 xl:px-8 py-3 xl:py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-6">
           <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
+            <div className="flex items-center gap-2 xl:gap-3 mb-0.5 xl:mb-1">
+              <h1 className="text-xl xl:text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                 <span className={`w-1.5 h-1.5 rounded-full ${
                   wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
@@ -323,12 +323,12 @@ export const AdminOrderManagement = () => {
         </div>
       </header>
 
-      <div className="flex-1 overflow-x-auto p-8">
-        <div className="flex gap-8 h-full min-w-[1100px]">
+      <div className="flex-1 overflow-x-auto p-4 xl:p-8">
+        <div className="flex gap-4 xl:gap-8 h-full min-w-0">
           {COLUMNS.map((col) => {
             const colOrders = orders.filter(o => o.status === col.status);
             return (
-              <div key={col.status} className="flex-1 flex flex-col min-w-[340px]">
+              <div key={col.status} className="flex-1 flex flex-col min-w-[280px] max-w-[480px]">
                 <div className="flex items-center justify-between mb-6 px-1">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
@@ -352,12 +352,12 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-3xl p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500 relative"
+                          className="bg-white rounded-3xl p-4 xl:p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500 relative"
                         >
                           {/* 헤더: 주문번호 & 결제수단 & 경과시간 */}
                           <div className="flex items-center justify-between mb-5">
                             <div className="flex items-center gap-3">
-                              <span className="text-3xl font-black text-[#1A0A0A] tracking-tighter">
+                              <span className="text-2xl xl:text-3xl font-black text-[#1A0A0A] tracking-tighter">
                                 #{order.order_number}
                               </span>
                               <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border ${
@@ -462,21 +462,21 @@ export const AdminOrderManagement = () => {
 
 
 
-      <footer className="bg-[#1A0A0A] px-10 py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
-        <div className="flex items-center gap-12">
+      <footer className="bg-[#1A0A0A] px-6 xl:px-10 py-3 xl:py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
+        <div className="flex items-center gap-6 xl:gap-12">
           <div>
-            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>
-            <p className="text-2xl font-black">{orders.length}<span className="text-xs font-bold text-white/40 ml-1">Orders</span></p>
+            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>
+            <p className="text-xl xl:text-2xl font-black">{orders.length}<span className="text-[10px] xl:text-xs font-bold text-white/40 ml-1">Orders</span></p>
           </div>
-          <div className="w-[1px] h-10 bg-white/10" />
+          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
           <div>
-            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
-            <p className="text-2xl font-black">₩{stats.total_sales.toLocaleString()}</p>
+            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
+            <p className="text-xl xl:text-2xl font-black">₩{stats.total_sales.toLocaleString()}</p>
           </div>
-          <div className="w-[1px] h-10 bg-white/10" />
+          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
           <div>
-            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Orders</p>
-            <p className="text-2xl font-black">{stats.total_orders}<span className="text-xs font-bold text-white/40 ml-1">Total</span></p>
+            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Orders</p>
+            <p className="text-xl xl:text-2xl font-black">{stats.total_orders}<span className="text-[10px] xl:text-xs font-bold text-white/40 ml-1">Total</span></p>
           </div>
         </div>
         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${

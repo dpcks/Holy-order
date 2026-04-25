@@ -185,8 +185,8 @@ export const AdminOrderHistory = () => {
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* 헤더 */}
-      <header className="px-8 py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
-        <div className="flex items-center justify-between mb-6">
+      <header className="px-4 xl:px-8 py-4 xl:py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
+        <div className="flex items-center justify-between mb-4 xl:mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">주문 내역 히스토리</h1>
             <p className="text-[13px] text-gray-400 mt-1 font-medium">카페 전체 주문 이력을 조회하고 필터링할 수 있습니다.</p>
@@ -327,17 +327,17 @@ export const AdminOrderHistory = () => {
       </header>
 
       {/* 테이블 영역 */}
-      <div className="flex-1 overflow-auto px-8 py-6">
+      <div className="flex-1 overflow-auto px-4 xl:px-8 py-4 xl:py-6">
         <table className="w-full border-separate border-spacing-0">
           <thead>
-            <tr className="text-left text-[12px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
-              <th className="pb-4 pl-4 font-black">주문번호</th>
+            <tr className="text-left text-[11px] xl:text-[12px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">
+              <th className="pb-4 pl-4 font-black">#</th>
               <th className="pb-4">고객 정보</th>
               <th className="pb-4">주문 내역</th>
-              <th className="pb-4">결제 금액</th>
-              <th className="pb-4">결제수단</th>
+              <th className="pb-4">금액</th>
+              <th className="pb-4 hidden md:table-cell">결제수단</th>
               <th className="pb-4">상태</th>
-              <th className="pb-4 pr-4">주문 시간</th>
+              <th className="pb-4 pr-4 hidden lg:table-cell">시간</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -367,46 +367,45 @@ export const AdminOrderHistory = () => {
                   onClick={() => handleOpenDetail(order)}
                   className="hover:bg-gray-50 transition-colors group cursor-pointer"
                 >
-                  <td className="py-5 pl-4 font-black text-[#1A0A0A] text-[16px]">#{order.order_number}</td>
-                  <td className="py-5">
+                  <td className="py-4 pl-4 font-black text-[#1A0A0A] text-[15px] xl:text-[16px]">#{order.order_number}</td>
+                  <td className="py-4">
                     <div className="flex flex-col">
-                      <span className="text-[14px] font-bold text-gray-800">{order.user_name_snapshot || '손님'}</span>
-                      <span className="text-[11px] text-gray-400 font-semibold tracking-tight">{order.user_duty_snapshot}</span>
+                      <span className="text-[13px] xl:text-[14px] font-bold text-gray-800 truncate max-w-[80px] xl:max-w-none">{order.user_name_snapshot || '손님'}</span>
+                      <span className="text-[10px] text-gray-400 font-semibold tracking-tight">{order.user_duty_snapshot}</span>
                     </div>
                   </td>
-                  <td className="py-5">
-                    <div className="flex flex-col gap-0.5 max-w-[320px]">
-                      <span className="text-[13px] font-bold text-gray-700 truncate">
+                  <td className="py-4">
+                    <div className="flex flex-col gap-0.5 max-w-[150px] xl:max-w-[320px]">
+                      <span className="text-[12px] xl:text-[13px] font-bold text-gray-700 truncate">
                         {order.items.map(i => `${i.menu_name_snapshot} ${i.quantity}개`).join(', ')}
                       </span>
                       {order.items[0]?.options_text && (
-                        <span className="text-[11px] text-gray-400 truncate italic font-medium">
+                        <span className="text-[10px] text-gray-400 truncate italic font-medium">
                           {order.items.map(i => i.options_text).filter(Boolean).join(' / ')}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="py-5">
-                    <span className="text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
+                  <td className="py-4">
+                    <span className="text-[14px] xl:text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
                   </td>
-                  <td className="py-5">
-                    <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] font-black border ${order.payment_method === 'CASH'
+                  <td className="py-4 hidden md:table-cell">
+                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${order.payment_method === 'CASH'
                       ? 'bg-orange-50 text-orange-600 border-orange-100'
                       : 'bg-blue-50 text-blue-600 border-blue-100'
                       }`}>
-                      {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
                       {order.payment_method === 'CASH' ? '현금' : '계좌'}
                     </div>
                   </td>
-                  <td className="py-5">
-                    <span className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black tracking-tight ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-400'}`}>
+                  <td className="py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black tracking-tight ${STATUS_LABELS[order.status]?.color || 'bg-gray-100 text-gray-400'}`}>
                       {STATUS_LABELS[order.status]?.label || order.status}
                     </span>
                   </td>
-                  <td className="py-5 pr-4">
-                    <span className="text-[12px] text-gray-500 font-medium">
+                  <td className="py-4 pr-4 hidden lg:table-cell">
+                    <span className="text-[11px] text-gray-500 font-medium">
                       {new Date(order.created_at).toLocaleString('ko-KR', {
-                        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+                        month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
                   </td>

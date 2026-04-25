@@ -19,7 +19,8 @@ export const AdminLayout = () => {
   const [hasNewOrder, setHasNewOrder] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const pathnameRef = useRef(location.pathname);
-  const isClosingRef = useRef(false);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isClosingManualRef = useRef(false);
 
   // 경로 업데이트 시 Ref 동기화
   useEffect(() => {
@@ -37,9 +38,15 @@ export const AdminLayout = () => {
 
   // WebSocket 연결 (새 주문 알림용)
   const connectWebSocket = useCallback(() => {
-    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-      isClosingRef.current = true;
-      wsRef.current.close();
+    // 이미 연결 중이거나 열려 있으면 중복 연결 방지
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
+    // 기존 타이머 제거
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
     }
 
     const { hostname, protocol } = window.location;
@@ -48,33 +55,52 @@ export const AdminLayout = () => {
     const wsPort = isLocal ? ':8000' : '';
     const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-    isClosingRef.current = false;
+    try {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+      isClosingManualRef.current = false;
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'ORDER_UPDATED' && pathnameRef.current !== '/admin') {
-          setHasNewOrder(true);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'ORDER_UPDATED' && pathnameRef.current !== '/admin') {
+            setHasNewOrder(true);
+          }
+        } catch (e) {
+          // ping 등 JSON이 아닌 메시지 처리
         }
-      } catch (e) {
-        console.error('Failed to parse WS message', e);
-      }
-    };
+      };
 
-    ws.onclose = () => {
-      if (!isClosingRef.current) {
-        setTimeout(connectWebSocket, 5000); // 비정상 종료 시에만 5초 후 재연결
-      }
-    };
-  }, []); // 의존성 제거
+      ws.onclose = (event) => {
+        // 수동 종료가 아니고 비정상 종료된 경우에만 재연결
+        if (!isClosingManualRef.current && event.code !== 1000) {
+          if (!reconnectTimeoutRef.current) {
+            reconnectTimeoutRef.current = setTimeout(() => {
+              reconnectTimeoutRef.current = null;
+              connectWebSocket();
+            }, 5000);
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    } catch (error) {
+      console.error('WebSocket creation failed', error);
+    }
+  }, []);
 
   useEffect(() => {
     connectWebSocket();
     return () => {
-      isClosingRef.current = true;
-      if (wsRef.current) wsRef.current.close();
+      isClosingManualRef.current = true;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
   }, [connectWebSocket]);
 
@@ -86,7 +112,7 @@ export const AdminLayout = () => {
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   return (
-    <div className="flex h-screen bg-gray-100 overflow-hidden font-sans text-gray-900">
+    <div className="flex h-[100dvh] bg-gray-100 overflow-hidden font-sans text-gray-900">
       {/* 사이드바 */}
       <aside 
         className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${
@@ -195,7 +221,7 @@ export const AdminLayout = () => {
       </aside>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 overflow-auto bg-gray-50">
+      <main className="flex-1 overflow-hidden bg-gray-50 flex flex-col">
         <Outlet />
       </main>
     </div>
