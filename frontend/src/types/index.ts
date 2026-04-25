@@ -107,6 +107,7 @@ export interface ReportStats {
   top_menus: { name: string; count: number; revenue: number }[];
   duty_breakdown: Record<string, number>;
   hourly_orders: Record<string, number>;
+  payment_method_sales: Record<string, number>;
 }
 
 

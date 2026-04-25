@@ -113,8 +113,8 @@ export const AdminSalesReports = () => {
   if (loading) return <div className="flex h-full items-center justify-center"><div className="animate-spin h-8 w-8 rounded-full border-b-2 border-primary" /></div>;
   if (!stats) return <div className="flex h-full items-center justify-center text-gray-400">통계를 불러올 수 없습니다.</div>;
 
-  const bankTransferTotal = Math.round(stats.total_sales * 0.7);
-  const kakaoTotal = stats.total_sales - bankTransferTotal;
+  const bankTransferTotal = stats.payment_method_sales?.BANK_TRANSFER || 0;
+  const cashTotal = stats.payment_method_sales?.CASH || 0;
   const dutyData = groupDuty(stats.duty_breakdown);
 
   return (
@@ -162,7 +162,7 @@ export const AdminSalesReports = () => {
           <div className="flex flex-col gap-4">
             {[
               { label: '계좌이체', amount: bankTransferTotal, total: stats.total_sales, color: 'bg-[#1A0A0A]' },
-              { label: '카카오페이', amount: kakaoTotal, total: stats.total_sales, color: 'bg-primary' },
+              { label: '현금', amount: cashTotal, total: stats.total_sales, color: 'bg-orange-500' },
             ].map((item, i) => {
               const pct = stats.total_sales > 0 ? Math.round((item.amount / stats.total_sales) * 100) : 0;
               return (

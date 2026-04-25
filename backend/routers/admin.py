@@ -370,6 +370,15 @@ def get_today_stats(db: Session = Depends(get_db)):
     )
     hourly_orders = {int(r.hour): r[1] for r in hourly_raw}
 
+    # 결제 수단별 매출 현황 (입금대기/취소 제외)
+    payment_raw = (
+        db.query(models.Order.payment_method, func.sum(models.Order.total_price))
+        .filter(models.Order.order_date == today, models.Order.status.notin_(["PENDING", "CANCELLED"]))
+        .group_by(models.Order.payment_method)
+        .all()
+    )
+    payment_method_sales = {r[0]: int(r[1]) for r in payment_raw}
+
     return {
         "success": True,
         "data": {
@@ -379,7 +388,8 @@ def get_today_stats(db: Session = Depends(get_db)):
             "status_counts": status_counts,
             "top_menus": top_menus,
             "duty_breakdown": duty_breakdown,
-            "hourly_orders": hourly_orders
+            "hourly_orders": hourly_orders,
+            "payment_method_sales": payment_method_sales
         },
         "message": "통계 데이터를 조회했습니다."
     }
