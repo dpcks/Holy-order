@@ -344,7 +344,6 @@ def get_today_stats(db: Session = Depends(get_db)):
         )
         .group_by(models.OrderItem.menu_name_snapshot)
         .order_by(func.sum(models.OrderItem.quantity).desc())
-        .limit(5)
         .all()
     )
     top_menus = [

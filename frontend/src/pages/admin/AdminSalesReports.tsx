@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TrendingUp, ShoppingBag, Star, BarChart2, Download } from 'lucide-react';
+import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { ReportStats, StandardResponse } from '../../types';
 
@@ -76,25 +76,38 @@ const HourlyChart = ({ data }: { data: Record<string, number> }) => {
   );
 };
 
-// 직분 그룹 매핑 (간소화)
+// 직분별 고정 색상 맵 (아이덴티티에 맞춘 색상 구성)
+const DUTY_COLORS: Record<string, string> = {
+  '목사': '#1A0A0A',
+  '부목사': '#2D1616',
+  '강도사': '#451A1A',
+  '전도사': '#5C2424',
+  '사모': '#753131',
+  '장로': '#FF4B4B',
+  '권사': '#FF6B6B',
+  '안수집사': '#FF8B8B',
+  '집사': '#FFAAAA',
+  '청년': '#3B82F6',
+  '학생': '#60A5FA',
+  '성도': '#94A3B8'
+};
+
 const groupDuty = (duty_breakdown: Record<string, number>) => {
-  const groups: Record<string, number> = { '성도/학생': 0, '직분자': 0, '사역자': 0 };
-  for (const [duty, count] of Object.entries(duty_breakdown)) {
-    if (['성도', '학생', '청년'].includes(duty)) groups['성도/학생'] += count;
-    else if (['집사', '안수집사', '권사', '장로'].includes(duty)) groups['직분자'] += count;
-    else groups['사역자'] += count;
-  }
-  return [
-    { label: '성도/학생', value: groups['성도/학생'], color: '#2D1616' },
-    { label: '직분자', value: groups['직분자'], color: '#FF4B4B' },
-    { label: '사역자', value: groups['사역자'], color: '#94a3b8' },
-  ].filter(d => d.value > 0);
+  return Object.entries(duty_breakdown)
+    .map(([label, value]) => ({
+      label,
+      value,
+      color: DUTY_COLORS[label] || '#CBD5E1'
+    }))
+    .filter(d => d.value > 0)
+    .sort((a, b) => b.value - a.value); // 이용 빈도가 높은 순으로 정렬
 };
 
 export const AdminSalesReports = () => {
   const [stats, setStats] = useState<ReportStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'일간' | '주간' | '월간'>('일간');
+  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -143,15 +156,24 @@ export const AdminSalesReports = () => {
             { icon: TrendingUp, label: '총 매출액', value: `₩${stats.total_sales.toLocaleString()}`, sub: '취소 제외', color: 'text-gray-900' },
             { icon: ShoppingBag, label: '총 주문 건수', value: `${stats.total_orders}건`, sub: '오늘 접수 기준', color: 'text-gray-900' },
             { icon: BarChart2, label: '객단가', value: `₩${stats.avg_order_value.toLocaleString()}`, sub: '평균 주문 금액', color: 'text-gray-900' },
-            { icon: Star, label: '최고 인기 메뉴', value: stats.top_menu || '-', sub: '오늘 판매 1위', color: 'text-white', bg: 'bg-primary' },
+            { icon: Star, label: '최고 인기 메뉴', value: stats.top_menus?.[0]?.name || '-', sub: '오늘 판매 1위', color: 'text-white', bg: 'bg-primary' },
           ].map((card, i) => (
-            <div key={i} className={`rounded-2xl p-5 shadow-sm border border-gray-100 ${card.bg || 'bg-white'}`}>
+            <div 
+              key={i} 
+              onClick={card.label === '최고 인기 메뉴' ? () => setIsMenuModalOpen(true) : undefined}
+              className={`rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-200 ${card.bg || 'bg-white'} ${card.label === '최고 인기 메뉴' ? 'cursor-pointer hover:scale-[1.02] hover:shadow-md' : ''}`}
+            >
               <div className="flex items-center gap-2 mb-3">
                 <card.icon size={16} className={card.bg ? 'text-white/70' : 'text-gray-400'} />
                 <span className={`text-[11px] font-semibold ${card.bg ? 'text-white/70' : 'text-gray-400'}`}>{card.label}</span>
               </div>
-              <p className={`text-xl font-black mb-0.5 ${card.color}`}>{card.value}</p>
-              <p className={`text-[11px] font-medium ${card.bg ? 'text-white/60' : 'text-gray-400'}`}>{card.sub}</p>
+              <div className="flex items-end justify-between gap-2">
+                <div>
+                  <p className={`text-xl font-black mb-0.5 ${card.color}`}>{card.value}</p>
+                  <p className={`text-[11px] font-medium ${card.bg ? 'text-white/60' : 'text-gray-400'}`}>{card.sub}</p>
+                </div>
+                {card.label === '최고 인기 메뉴' && <ChevronRight size={20} className="text-white/50 mb-1" />}
+              </div>
             </div>
           ))}
         </div>
@@ -188,27 +210,101 @@ export const AdminSalesReports = () => {
         <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-bold text-gray-900 text-[14px]">인기 메뉴 TOP 5</h2>
+            <button 
+              onClick={() => setIsMenuModalOpen(true)}
+              className="text-[11px] font-bold text-primary hover:underline flex items-center gap-0.5"
+            >
+              전체보기 <ChevronRight size={12} />
+            </button>
           </div>
           {stats.top_menus.length === 0 ? (
             <p className="text-gray-400 text-sm text-center py-4">아직 주문 데이터가 없습니다.</p>
           ) : (
             <div className="flex flex-col gap-3">
-              {stats.top_menus.map((menu, i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-100 shrink-0">
-                    <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=80&q=80" alt="" className="w-full h-full object-cover opacity-80" />
+              {stats.top_menus.slice(0, 5).map((menu, i) => (
+                <div key={i} className="flex items-center gap-3 group">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-gray-50 shrink-0 flex items-center justify-center text-[11px] font-black text-gray-400 group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    {i + 1}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-bold text-gray-900 truncate">{menu.name}</p>
-                    <p className="text-[11px] text-gray-400">누적 {menu.count}건</p>
+                    <p className="text-[11px] text-gray-400">판매 {menu.count}건</p>
                   </div>
-                  <span className="text-[13px] font-bold text-gray-900">₩{menu.revenue.toLocaleString()}</span>
+                  <span className="text-[13px] font-black text-gray-900">₩{menu.revenue.toLocaleString()}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
+        {/* 메뉴별 상세 통계 모달 */}
+        {isMenuModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMenuModalOpen(false)} />
+            <div className="relative bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-300">
+              <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 tracking-tight">메뉴별 주문 통계</h3>
+                  <p className="text-[13px] text-gray-500 font-bold mt-1 uppercase tracking-wider">Daily Menu Performance</p>
+                </div>
+                <button 
+                  onClick={() => setIsMenuModalOpen(false)}
+                  className="p-3 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                >
+                  <X size={28} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <table className="w-full">
+                  <thead className="sticky top-0 bg-white z-10">
+                    <tr className="text-left border-b-2 border-gray-100">
+                      <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest">순위</th>
+                      <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest">메뉴명</th>
+                      <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right">수량</th>
+                      <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right">매출액</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {stats.top_menus.map((m, i) => (
+                      <tr key={i} className="group hover:bg-gray-50 transition-all">
+                        <td className="py-5">
+                          <span className={`w-6 h-6 flex items-center justify-center rounded-md text-[11px] font-black ${i < 3 ? 'bg-black text-white' : 'text-gray-400'}`}>
+                            {i + 1}
+                          </span>
+                        </td>
+                        <td className="py-5">
+                          <p className="text-[15px] font-black text-gray-900">{m.name}</p>
+                        </td>
+                        <td className="py-5 text-right">
+                          <span className="px-2.5 py-1 bg-primary/5 text-primary rounded-lg text-[13px] font-black">
+                            {m.count.toLocaleString()}건
+                          </span>
+                        </td>
+                        <td className="py-5 text-right text-[15px] font-bold text-gray-900">
+                          ₩{m.revenue.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="p-8 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+                <div>
+                  <p className="text-[12px] text-gray-400 font-bold uppercase tracking-tight">Total Variety</p>
+                  <p className="text-[15px] font-black text-gray-900">총 {stats.top_menus.length}종 메뉴 판매됨</p>
+                </div>
+                <button 
+                  onClick={() => setIsMenuModalOpen(false)}
+                  className="px-8 py-3 bg-black text-white rounded-2xl text-[14px] font-black hover:bg-gray-800 transition-all active:scale-95 shadow-lg shadow-black/10"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {/* 직분별 이용 현황 */}
         <div className="col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="font-bold text-gray-900 text-[14px] mb-4">직분별 이용 현황</h2>
