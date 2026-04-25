@@ -19,7 +19,7 @@ export const AdminLayout = () => {
   const [hasNewOrder, setHasNewOrder] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const pathnameRef = useRef(location.pathname);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isClosingManualRef = useRef(false);
 
   // 경로 업데이트 시 Ref 동기화
@@ -108,6 +108,20 @@ export const AdminLayout = () => {
   useEffect(() => {
     localStorage.setItem('adminSidebarCollapsed', String(isCollapsed));
   }, [isCollapsed]);
+  
+  // 화면 너비에 따른 사이드바 자동 접힘 로직
+  useEffect(() => {
+    const handleResize = () => {
+      // 1024px 미만(iPad Pro 이하)에서는 자동으로 사이드바를 접음
+      if (window.innerWidth < 1024) {
+        setIsCollapsed(true);
+      }
+    };
+    
+    handleResize(); // 초기 로드 시 실행
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 

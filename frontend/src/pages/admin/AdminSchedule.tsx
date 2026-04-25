@@ -204,14 +204,14 @@ export const AdminSchedule = () => {
   return (
     <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
       {/* 헤더 */}
-      <header className="bg-white px-8 py-5 flex items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm">
+      <header className="bg-white px-6 xl:px-8 py-3 xl:py-5 flex items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-black/10">
-            <CalendarIcon className="text-white" size={24} />
+          <div className="w-10 h-10 xl:w-12 xl:h-12 bg-black rounded-xl xl:rounded-2xl flex items-center justify-center shadow-lg shadow-black/10">
+            <CalendarIcon className="text-white" size={20} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">봉사 스케줄 관리</h1>
-            <p className="text-[13px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Sunday Service Volunteers</p>
+            <h1 className="text-xl xl:text-2xl font-black text-gray-900 tracking-tight">봉사 스케줄 관리</h1>
+            <p className="text-[11px] xl:text-[13px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Sunday Service Volunteers</p>
           </div>
         </div>
 
@@ -230,19 +230,19 @@ export const AdminSchedule = () => {
 
       <main className="flex-1 flex overflow-hidden relative">
         {/* 왼쪽: 전체 달력 영역 */}
-        <div className="flex-1 flex flex-col p-4 lg:p-8 overflow-hidden">
-          <div className="flex-1 bg-white rounded-[32px] shadow-2xl shadow-black/[0.03] border border-white overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
+        <div className="flex-1 flex flex-col p-4 xl:p-8 overflow-hidden">
+          <div className="flex-1 bg-white rounded-3xl shadow-2xl shadow-black/[0.03] border border-white overflow-hidden flex flex-col animate-in fade-in zoom-in duration-300">
             {/* 요일 헤더 */}
             <div className="grid grid-cols-7 border-b border-gray-50 bg-gray-50/30 shrink-0">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
-                <div key={day} className={`py-4 text-center text-[13px] font-black tracking-widest ${idx === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                <div key={day} className={`py-2 xl:py-4 text-center text-[12px] xl:text-[13px] font-black tracking-widest ${idx === 0 ? 'text-red-500' : 'text-gray-400'}`}>
                   {day}
                 </div>
               ))}
             </div>
 
             {/* 날짜 그리드 */}
-            <div className={`flex-1 grid grid-cols-7 pb-4 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
+            <div className={`flex-1 grid grid-cols-7 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
               {calendarDays.map((day) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isSun = day.getDay() === 0;
@@ -267,18 +267,18 @@ export const AdminSchedule = () => {
                     </span>
 
                     {isSun && (
-                      <div className="mt-2 flex flex-col gap-1 overflow-y-auto custom-scrollbar no-scrollbar">
+                      <div className="mt-1 flex flex-col gap-0.5 overflow-y-auto custom-scrollbar no-scrollbar">
                         {schedule ? (
                           <>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-0.5">
                               {(Array.isArray(schedule.volunteers?.names) ? schedule.volunteers.names : []).map((name: string, idx: number) => (
-                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1.5 py-0.5 rounded-md border border-primary/10">
+                                <span key={idx} className="text-[10px] font-bold text-primary bg-primary/5 px-1 py-0 rounded-md border border-primary/10">
                                   {name}
                                 </span>
                               ))}
                             </div>
                             {schedule.memo && (
-                              <div className="mt-1">
+                              <div className="mt-0.5">
                                 <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-tighter">
                                   특이사항
                                 </span>

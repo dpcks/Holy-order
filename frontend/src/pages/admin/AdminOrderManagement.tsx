@@ -328,7 +328,7 @@ export const AdminOrderManagement = () => {
           {COLUMNS.map((col) => {
             const colOrders = orders.filter(o => o.status === col.status);
             return (
-              <div key={col.status} className="flex-1 flex flex-col min-w-[280px] max-w-[480px]">
+              <div key={col.status} className="flex-1 flex flex-col min-w-[260px] max-w-[480px]">
                 <div className="flex items-center justify-between mb-6 px-1">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
