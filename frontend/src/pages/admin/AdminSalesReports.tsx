@@ -175,7 +175,7 @@ export const AdminSalesReports = () => {
           <p className="text-[11px] font-semibold text-primary tracking-widest uppercase mb-1">Reporting Center</p>
           <h1 className="text-2xl font-bold text-gray-900">정산 및 매출 통계</h1>
         </div>
-        <div className="flex flex-col gap-2 items-end">
+        <div className="flex flex-col gap-2.5 items-end">
           <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
             {(['일간', '주간', '월간'] as const).map(p => (
               <button key={p} onClick={() => setPeriod(p)}
@@ -184,23 +184,36 @@ export const AdminSalesReports = () => {
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
-            <CalendarIcon size={14} className="text-gray-500" />
-            {period === '일간' ? (
-              <input 
-                type="date" 
-                value={selectedDate} 
-                onChange={(e) => setSelectedDate(e.target.value)} 
-                className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
-              />
-            ) : (
-              <input 
-                type="month" 
-                value={selectedDate.substring(0, 7)} 
-                onChange={(e) => setSelectedDate(`${e.target.value}-01`)} 
-                className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
-              />
-            )}
+          
+          <div className="flex items-center gap-2">
+            {/* 상단 버튼 그룹 */}
+            <div className="flex gap-1.5 mr-1">
+              <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+                <Download size={14} />CSV
+              </button>
+              <button className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+                <BarChart2 size={14} />마감 리포트
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
+              <CalendarIcon size={14} className="text-gray-500" />
+              {period === '일간' ? (
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => setSelectedDate(e.target.value)} 
+                  className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
+                />
+              ) : (
+                <input 
+                  type="month" 
+                  value={selectedDate.substring(0, 7)} 
+                  onChange={(e) => setSelectedDate(`${e.target.value}-01`)} 
+                  className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
+                />
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -401,15 +414,8 @@ export const AdminSalesReports = () => {
           </>
         ) : null}
 
-        {/* 하단 버튼 */}
-        <div className="col-span-3 flex justify-end gap-3 pb-2 mt-4">
-          <button className="flex items-center gap-2 text-[13px] font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-4 py-2.5 rounded-xl transition-colors shadow-sm">
-            <Download size={15} />CSV 내보내기
-          </button>
-          <button className="flex items-center gap-2 text-[13px] font-semibold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-4 py-2.5 rounded-xl transition-colors shadow-sm">
-            <BarChart2 size={15} />마감 리포트 생성
-          </button>
-        </div>
+        {/* 하단 여백용 */}
+        <div className="col-span-3 h-4" />
       </div>
     </div>
   );
