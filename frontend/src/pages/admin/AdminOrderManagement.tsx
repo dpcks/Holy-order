@@ -90,6 +90,7 @@ export const AdminOrderManagement = () => {
   const isUnmountingRef = useRef(false);
 
   const fetchOrders = useCallback(async () => {
+    setLoading(true);
     try {
       const [boardRes, statsRes] = await Promise.all([
         apiClient.get<Order[], StandardResponse<Order[]>>('/admin/orders/board'),
