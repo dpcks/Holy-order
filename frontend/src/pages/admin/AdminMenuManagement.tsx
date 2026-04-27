@@ -18,6 +18,7 @@ import {
   useSortable
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { apiClient } from '../../api/client';
 import type { Category, Menu, StandardResponse } from '../../types';
 
@@ -62,16 +63,16 @@ const SortableCategoryItem = ({
   } = useSortable({ id: cat.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 60 : 'auto',
+    transform: CSS.Translate.toString(transform), // Use Translate for smoother performance
+    transition: isDragging ? 'none' : transition,
+    zIndex: isDragging ? 100 : 'auto',
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 bg-white p-3 rounded-2xl border transition-all ${isDragging ? 'shadow-xl border-primary scale-[1.02] opacity-90 z-50' : (cat.is_active ? 'border-gray-100 shadow-sm' : 'border-dashed border-gray-200 opacity-50 bg-gray-50')}`}
+      className={`flex items-center gap-3 bg-white p-3 rounded-2xl border ${isDragging ? 'shadow-xl border-primary scale-[1.02] opacity-90 z-50' : `transition-all ${cat.is_active ? 'border-gray-100 shadow-sm' : 'border-dashed border-gray-200 opacity-50 bg-gray-50'}`}`}
     >
       <div
         {...attributes}
@@ -869,6 +870,7 @@ export const AdminMenuManagement = () => {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
+                modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
               >
                 <SortableContext
                   items={categories.map(c => c.id)}
