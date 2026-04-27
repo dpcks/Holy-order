@@ -438,7 +438,7 @@ export const AdminMenuManagement = () => {
       name: '',
       price: '',
       description: '',
-      category_id: categories[0]?.id || 0,
+      category_id: activeCategory !== 'all' ? activeCategory : (categories[0]?.id || 0),
       image_url: '',
       options: []
     });

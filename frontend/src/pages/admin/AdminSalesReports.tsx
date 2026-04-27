@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { ReportStats, StandardResponse } from '../../types';
@@ -55,7 +55,7 @@ const DonutChart = ({ data }: { data: { label: string; value: number; color: str
 // 동적 트렌드 바 차트 (일간, 주간, 월간 지원)
 const TrendChart = ({ data, periodType }: { data: Record<string, { count: number, revenue: number }>, periodType: '일간' | '주간' | '월간' }) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  
+
   let keys: string[] = [];
   if (periodType === '일간') {
     keys = Array.from({ length: 7 }, (_, i) => String(i + 9));
@@ -88,8 +88,8 @@ const TrendChart = ({ data, periodType }: { data: Record<string, { count: number
               </div>
             )}
 
-            <div 
-              className="w-full flex items-end justify-center cursor-pointer" 
+            <div
+              className="w-full flex items-end justify-center cursor-pointer"
               style={{ height: '80px' }}
               onClick={() => setSelectedKey(isSelected ? null : k)}
             >
@@ -155,10 +155,10 @@ export const AdminSalesReports = () => {
   const handleDownloadReport = async () => {
     if (!reportRef.current) return;
     try {
-      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: '#ffffff' });
+      const dataUrl = await toPng(reportRef.current, { backgroundColor: '#ffffff', pixelRatio: 2 });
       const link = document.createElement('a');
       link.download = `마감리포트_${selectedDate}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = dataUrl;
       link.click();
     } catch (e) {
       console.error('리포트 저장 실패:', e);
@@ -203,14 +203,14 @@ export const AdminSalesReports = () => {
               </button>
             ))}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* 상단 버튼 그룹 */}
             <div className="flex gap-1.5 mr-1">
               <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
                 <Download size={14} />CSV
               </button>
-              <button 
+              <button
                 onClick={() => setIsReportModalOpen(true)}
                 className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
               >
@@ -221,17 +221,17 @@ export const AdminSalesReports = () => {
             <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
               <CalendarIcon size={14} className="text-gray-500" />
               {period === '일간' ? (
-                <input 
-                  type="date" 
-                  value={selectedDate} 
-                  onChange={(e) => setSelectedDate(e.target.value)} 
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                   className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
                 />
               ) : (
-                <input 
-                  type="month" 
-                  value={selectedDate.substring(0, 7)} 
-                  onChange={(e) => setSelectedDate(`${e.target.value}-01`)} 
+                <input
+                  type="month"
+                  value={selectedDate.substring(0, 7)}
+                  onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
                   className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
                 />
               )}
@@ -246,7 +246,7 @@ export const AdminSalesReports = () => {
             <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-primary" />
           </div>
         )}
-        
+
         {!stats && !loading ? (
           <div className="col-span-3 flex items-center justify-center text-gray-400 py-20">통계를 불러올 수 없습니다.</div>
         ) : stats ? (
@@ -259,8 +259,8 @@ export const AdminSalesReports = () => {
                 { icon: BarChart2, label: '객단가', value: `₩${stats.avg_order_value.toLocaleString()}`, sub: '평균 주문 금액', color: 'text-gray-900' },
                 { icon: Star, label: '최고 인기 메뉴', value: stats.top_menus?.[0]?.name || '-', sub: '해당 기간 1위', color: 'text-white', bg: 'bg-primary' },
               ].map((card, i) => (
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   onClick={card.label === '최고 인기 메뉴' ? () => setIsMenuModalOpen(true) : undefined}
                   className={`rounded-2xl p-5 shadow-sm border border-gray-100 transition-all duration-200 ${card.bg || 'bg-white'} ${card.label === '최고 인기 메뉴' ? 'cursor-pointer hover:scale-[1.02] hover:shadow-md' : ''}`}
                 >
@@ -309,18 +309,18 @@ export const AdminSalesReports = () => {
               <div className="shrink-0 mb-4">
                 <TrendChart data={stats.trend_data || {}} periodType={period} />
               </div>
-              
+
               {/* 상세 요약 그리드 */}
               <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2 overflow-x-auto scrollbar-hide">
                 {Object.entries(stats.trend_data || {})
                   .filter(([_, d]) => d.count > 0 || period === '주간') // 주간은 비어있어도 구조 파악을 위해 보여줌
                   .map(([k, d]) => (
-                  <div key={k} className="bg-gray-50 rounded-xl p-3 border border-gray-100/50 min-w-[80px] shrink-0 flex flex-col items-center text-center">
-                    <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '일간' ? `${k}시` : k}</p>
-                    <p className="text-[14px] font-black text-gray-900 leading-tight mb-0.5">{d.count}건</p>
-                    <p className="text-[10px] font-bold text-primary">₩{d.revenue.toLocaleString()}</p>
-                  </div>
-                ))}
+                    <div key={k} className="bg-gray-50 rounded-xl p-3 border border-gray-100/50 min-w-[80px] shrink-0 flex flex-col items-center text-center">
+                      <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '일간' ? `${k}시` : k}</p>
+                      <p className="text-[14px] font-black text-gray-900 leading-tight mb-0.5">{d.count}건</p>
+                      <p className="text-[10px] font-bold text-primary">₩{d.revenue.toLocaleString()}</p>
+                    </div>
+                  ))}
               </div>
             </div>
 
@@ -328,7 +328,7 @@ export const AdminSalesReports = () => {
             <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-bold text-gray-900 text-[14px]">인기 메뉴 TOP 5</h2>
-                <button 
+                <button
                   onClick={() => setIsMenuModalOpen(true)}
                   className="text-[11px] font-bold text-primary hover:underline flex items-center gap-0.5"
                 >
@@ -365,14 +365,14 @@ export const AdminSalesReports = () => {
                       <h3 className="text-2xl font-black text-gray-900 tracking-tight">메뉴별 통계 순위</h3>
                       <p className="text-[13px] text-gray-500 font-bold mt-1 uppercase tracking-wider">Menu Performance</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setIsMenuModalOpen(false)}
                       className="p-3 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                     >
                       <X size={28} />
                     </button>
                   </div>
-                  
+
                   <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
                     <table className="w-full">
                       <thead className="sticky top-0 z-10">
@@ -407,13 +407,13 @@ export const AdminSalesReports = () => {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <div className="p-8 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
                     <div>
                       <p className="text-[12px] text-gray-400 font-bold uppercase tracking-tight">Total Variety</p>
                       <p className="text-[15px] font-black text-gray-900">총 {stats.top_menus.length}종 메뉴 판매됨</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setIsMenuModalOpen(false)}
                       className="px-8 py-3 bg-black text-white rounded-2xl text-[14px] font-black hover:bg-gray-800 transition-all active:scale-95 shadow-lg shadow-black/10"
                     >
@@ -423,7 +423,7 @@ export const AdminSalesReports = () => {
                 </div>
               </div>
             )}
-            
+
             {/* 마감 리포트 생성 모달 */}
             {isReportModalOpen && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -434,20 +434,20 @@ export const AdminSalesReports = () => {
                       <h3 className="text-xl font-black text-gray-900 tracking-tight">마감 리포트</h3>
                       <p className="text-[11px] text-gray-500 font-bold mt-0.5 uppercase tracking-wider">Closing Report</p>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setIsReportModalOpen(false)}
                       className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
                     >
                       <X size={24} />
                     </button>
                   </div>
-                  
+
                   {/* 캡처 대상 영역 */}
                   <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-100 p-5">
                     <div ref={reportRef} className="bg-white p-6 rounded-2xl shadow-sm">
                       <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-200">
                         <h2 className="text-lg font-black text-gray-900 mb-1">Holy-Order 마감 보고서</h2>
-                        <p className="text-xs font-bold text-gray-500">보고 기준: {selectedDate} ({period})</p>
+                        <p className="text-xs font-bold text-gray-500">마감 기준: {selectedDate} ({period})</p>
                       </div>
 
                       <div className="space-y-5">
@@ -477,8 +477,8 @@ export const AdminSalesReports = () => {
                             <span className="text-[13px] font-bold text-gray-700">실제 현금 보유액</span>
                             <div className="flex items-center gap-1">
                               <span className="text-[13px] font-bold text-gray-900">₩</span>
-                              <input 
-                                type="number" 
+                              <input
+                                type="number"
                                 placeholder="0"
                                 value={reportActualCash}
                                 onChange={e => setReportActualCash(e.target.value)}
@@ -487,12 +487,12 @@ export const AdminSalesReports = () => {
                             </div>
                           </div>
                         </div>
-                        
+
                         <div className="pt-5 border-t border-gray-100">
                           <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Top Menus</p>
                           {stats.top_menus.slice(0, 3).map((m, i) => (
                             <div key={i} className="flex justify-between items-center mb-1">
-                              <span className="text-[13px] font-semibold text-gray-600 truncate mr-2">{i+1}. {m.name}</span>
+                              <span className="text-[13px] font-semibold text-gray-600 truncate mr-2">{i + 1}. {m.name}</span>
                               <span className="text-[13px] font-bold text-gray-900 shrink-0">{m.count}건</span>
                             </div>
                           ))}
@@ -500,8 +500,8 @@ export const AdminSalesReports = () => {
 
                         <div className="pt-5 border-t border-gray-100">
                           <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Memo</p>
-                          <textarea 
-                            placeholder="특이사항을 입력하세요..."
+                          <textarea
+                            // placeholder="특이사항을 입력하세요..."
                             value={reportMemo}
                             onChange={e => setReportMemo(e.target.value)}
                             className="w-full bg-gray-50 border border-gray-100 rounded-lg p-3 text-[13px] resize-none focus:outline-none focus:bg-white focus:border-gray-300 transition-colors placeholder:text-gray-400"
@@ -513,7 +513,7 @@ export const AdminSalesReports = () => {
                   </div>
 
                   <div className="p-5 bg-white border-t border-gray-100 shrink-0">
-                    <button 
+                    <button
                       onClick={handleDownloadReport}
                       className="w-full py-3.5 bg-[#1A0A0A] text-white rounded-xl text-[14px] font-black hover:bg-[#2D1616] transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
