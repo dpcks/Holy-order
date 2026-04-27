@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import html2canvas from 'html2canvas';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { ReportStats, StandardResponse } from '../../types';
@@ -146,6 +147,24 @@ export const AdminSalesReports = () => {
     return localISOTime;
   });
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportActualCash, setReportActualCash] = useState('');
+  const [reportMemo, setReportMemo] = useState('');
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadReport = async () => {
+    if (!reportRef.current) return;
+    try {
+      const canvas = await html2canvas(reportRef.current, { scale: 2, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = `마감리포트_${selectedDate}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch (e) {
+      console.error('리포트 저장 실패:', e);
+      alert('이미지 저장에 실패했습니다.');
+    }
+  };
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -191,7 +210,10 @@ export const AdminSalesReports = () => {
               <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
                 <Download size={14} />CSV
               </button>
-              <button className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+              <button 
+                onClick={() => setIsReportModalOpen(true)}
+                className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
                 <BarChart2 size={14} />마감 리포트
               </button>
             </div>
@@ -402,6 +424,106 @@ export const AdminSalesReports = () => {
               </div>
             )}
             
+            {/* 마감 리포트 생성 모달 */}
+            {isReportModalOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsReportModalOpen(false)} />
+                <div className="relative bg-white w-full max-w-sm rounded-[24px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in duration-300">
+                  <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 tracking-tight">마감 리포트</h3>
+                      <p className="text-[11px] text-gray-500 font-bold mt-0.5 uppercase tracking-wider">Closing Report</p>
+                    </div>
+                    <button 
+                      onClick={() => setIsReportModalOpen(false)}
+                      className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  
+                  {/* 캡처 대상 영역 */}
+                  <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-100 p-5">
+                    <div ref={reportRef} className="bg-white p-6 rounded-2xl shadow-sm">
+                      <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-200">
+                        <h2 className="text-lg font-black text-gray-900 mb-1">Holy-Order 마감 보고서</h2>
+                        <p className="text-xs font-bold text-gray-500">보고 기준: {selectedDate} ({period})</p>
+                      </div>
+
+                      <div className="space-y-5">
+                        <div>
+                          <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Overview</p>
+                          <div className="flex justify-between items-end mb-1">
+                            <span className="text-sm font-bold text-gray-700">총 주문 건수</span>
+                            <span className="text-base font-black text-gray-900">{stats.total_orders}건</span>
+                          </div>
+                          <div className="flex justify-between items-end">
+                            <span className="text-sm font-bold text-gray-700">총 매출액</span>
+                            <span className="text-xl font-black text-gray-900">₩{stats.total_sales.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-5 border-t border-gray-100">
+                          <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Payment</p>
+                          <div className="flex justify-between mb-1.5">
+                            <span className="text-[13px] font-semibold text-gray-600">계좌이체</span>
+                            <span className="text-[13px] font-bold text-gray-900">₩{bankTransferTotal.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between mb-1.5">
+                            <span className="text-[13px] font-semibold text-gray-600">현금 (시스템 상)</span>
+                            <span className="text-[13px] font-bold text-gray-900">₩{cashTotal.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg mt-2 border border-gray-100">
+                            <span className="text-[13px] font-bold text-gray-700">실제 현금 보유액</span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[13px] font-bold text-gray-900">₩</span>
+                              <input 
+                                type="number" 
+                                placeholder="0"
+                                value={reportActualCash}
+                                onChange={e => setReportActualCash(e.target.value)}
+                                className="w-20 text-right bg-white border border-gray-200 rounded px-1.5 py-1 text-[13px] font-bold focus:outline-none focus:border-primary placeholder:text-gray-300"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="pt-5 border-t border-gray-100">
+                          <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Top Menus</p>
+                          {stats.top_menus.slice(0, 3).map((m, i) => (
+                            <div key={i} className="flex justify-between items-center mb-1">
+                              <span className="text-[13px] font-semibold text-gray-600 truncate mr-2">{i+1}. {m.name}</span>
+                              <span className="text-[13px] font-bold text-gray-900 shrink-0">{m.count}건</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="pt-5 border-t border-gray-100">
+                          <p className="text-[11px] font-black text-primary mb-2 tracking-widest uppercase">Memo</p>
+                          <textarea 
+                            placeholder="특이사항을 입력하세요..."
+                            value={reportMemo}
+                            onChange={e => setReportMemo(e.target.value)}
+                            className="w-full bg-gray-50 border border-gray-100 rounded-lg p-3 text-[13px] resize-none focus:outline-none focus:bg-white focus:border-gray-300 transition-colors placeholder:text-gray-400"
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 bg-white border-t border-gray-100 shrink-0">
+                    <button 
+                      onClick={handleDownloadReport}
+                      className="w-full py-3.5 bg-[#1A0A0A] text-white rounded-xl text-[14px] font-black hover:bg-[#2D1616] transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <Download size={18} /> 이미지로 저장하기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* 직분별 이용 현황 */}
             <div className="col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-900 text-[14px] mb-4">직분별 이용 현황</h2>
