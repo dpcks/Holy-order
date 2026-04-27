@@ -268,8 +268,17 @@ async def update_category(category_id: int, category_data: schemas.CategoryUpdat
     cat = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
+        
+    # 카테고리가 '활성' -> '비활성'으로 변경되는지 확인
+    is_deactivating = getattr(cat, 'is_active', True) and category_data.is_active is False
+    
     for field, value in category_data.model_dump(exclude_none=True).items():
         setattr(cat, field, value)
+        
+    # 비활성화되는 경우 하위 모든 메뉴를 품절(is_available=False) 처리
+    if is_deactivating:
+        db.query(models.Menu).filter(models.Menu.category_id == category_id).update({"is_available": False})
+        
     db.commit()
     return {"success": True, "data": None, "message": "카테고리가 수정되었습니다."}
 
