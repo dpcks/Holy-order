@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RefreshCw, CheckCircle, MessageSquare, Phone, MoreVertical, Coffee, Wallet, Building2, X } from 'lucide-react';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';

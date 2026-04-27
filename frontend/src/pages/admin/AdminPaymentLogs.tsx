@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, Landmark } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Calendar, X, Building2, Wallet, Landmark } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
 

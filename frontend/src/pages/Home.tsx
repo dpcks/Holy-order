@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
+import { Toast } from '../components/ui/Toast';
+import type { ToastType } from '../components/ui/Toast';
 import type { Category, StandardResponse, Menu } from '../types';
 
 export const Home = () => {
@@ -14,35 +16,97 @@ export const Home = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [shopSettings, setShopSettings] = useState<{ is_open: boolean, notice?: string } | null>(null);
 
+  // 토스트 상태
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
+
+  // WebSocket 상태 관리
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
+
+  const fetchData = useCallback(async () => {
+    try {
+      // 1. 영업 설정 정보 가져오기
+      const settingsRes = await apiClient.get<any, StandardResponse<any>>('/settings');
+      if (settingsRes.success) {
+        setShopSettings(settingsRes.data);
+      }
+
+      // 2. 메뉴 정보 가져오기
+      const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
+      if (response.success && response.data) {
+        setCategories(response.data);
+        if (response.data.length > 0 && activeCategoryId === null) {
+          setActiveCategoryId(response.data[0].id);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch data', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeCategoryId]);
+
+  // WebSocket 연결 함수
+  const connectWebSocket = useCallback(() => {
+    if (wsRef.current) wsRef.current.close();
+
+    const { hostname, protocol } = window.location;
+    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+    const wsPort = isLocal ? ':8000' : '';
+    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log('✅ [WebSocket] 실시간 메뉴 업데이트 연결 성공');
+      retryCountRef.current = 0;
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        // 메뉴 관련 업데이트가 있으면 데이터를 다시 불러옴
+        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED'].includes(data.type)) {
+          console.log('🔔 [WebSocket] 메뉴 정보 변경 감지, 리로드 중...');
+          fetchData();
+        }
+      } catch (e) {
+        console.error('Failed to parse WS message', e);
+      }
+    };
+
+    ws.onclose = () => {
+      // 연결 끊기면 지수 백오프로 재연결 시도
+      const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
+      reconnectTimerRef.current = setTimeout(() => {
+        retryCountRef.current += 1;
+        connectWebSocket();
+      }, delay);
+    };
+
+    ws.onerror = () => ws.close();
+  }, [fetchData]);
+
   useEffect(() => {
     // 진행 중인 주문들 확인
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
 
-    const fetchData = async () => {
-      try {
-        // 1. 영업 설정 정보 가져오기
-        const settingsRes = await apiClient.get<any, StandardResponse<any>>('/settings');
-        if (settingsRes.success) {
-          setShopSettings(settingsRes.data);
-        }
-
-        // 2. 메뉴 정보 가져오기 (영업 중일 때만 의미가 있지만 일단 가져옴)
-        const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
-        if (response.success && response.data) {
-          setCategories(response.data);
-          if (response.data.length > 0) {
-            setActiveCategoryId(response.data[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch data', error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
-  }, []);
+    connectWebSocket();
+
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    };
+  }, [fetchData, connectWebSocket]);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
@@ -117,7 +181,6 @@ export const Home = () => {
             <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg">
               <MapPin size={16} className="text-primary" />
               <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
-              {/* <ChevronDown size={16} className="text-gray-500" /> */}
             </button>
           </div>
 
@@ -149,7 +212,12 @@ export const Home = () => {
             ) : (
               <div className="grid grid-cols-2 gap-4 gap-y-8">
                 {activeCategory?.menus.map((menu) => (
-                  <MenuCard key={menu.id} menu={menu} onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} />
+                  <MenuCard 
+                    key={menu.id} 
+                    menu={menu} 
+                    onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} 
+                    onShowToast={showToast}
+                  />
                 ))}
               </div>
             )}
@@ -164,7 +232,12 @@ export const Home = () => {
           ) : (
             <div className="grid grid-cols-2 gap-4 gap-y-8">
               {filteredMenus.map((menu) => (
-                <MenuCard key={menu.id} menu={menu} onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} />
+                <MenuCard 
+                  key={menu.id} 
+                  menu={menu} 
+                  onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} 
+                  onShowToast={showToast}
+                />
               ))}
             </div>
           )}
@@ -199,15 +272,23 @@ export const Home = () => {
           </button>
         </div>
       )}
+
+      {/* 토스트 알림 */}
+      <Toast 
+        message={toast?.message || ''} 
+        type={toast?.type} 
+        isVisible={!!toast} 
+        onClose={() => setToast(null)} 
+      />
     </div>
   );
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, onClick }: { menu: Menu, onClick: () => void }) => {
+const MenuCard = ({ menu, onClick, onShowToast }: { menu: Menu, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
   const handleCardClick = () => {
     if (!menu.is_available) {
-      alert('현재 품절된 메뉴입니다.');
+      onShowToast(`'${menu.name}' 메뉴는 현재 품절입니다.`, 'error');
       return;
     }
     onClick();

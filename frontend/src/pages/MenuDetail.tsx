@@ -4,6 +4,8 @@ import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { useCart } from '../context/CartContext';
+import { Toast } from '../components/ui/Toast';
+import type { ToastType } from '../components/ui/Toast';
 import type { Menu, MenuOption } from '../types';
 
 // ICE/HOT 옵션인지 판별하는 상수 - 백엔드 name 값 기준
@@ -19,6 +21,13 @@ export const MenuDetail = () => {
   const { addItem } = useCart();
   
   const [quantity, setQuantity] = useState(1);
+
+  // 토스트 상태
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
   
   // ────────────────────────────────────────────────────────────────
   // [동적 매핑] 백엔드에서 받은 options 배열을 name 기준으로 그룹화
@@ -62,6 +71,12 @@ export const MenuDetail = () => {
   const totalPrice = unitPrice * quantity;
 
   const handleAddToCart = (shouldNavigate = true) => {
+    // 혹시 모를 품절 재확인 (state가 stale할 경우 대비)
+    if (!menu.is_available) {
+      showToast('현재 품절된 메뉴입니다.', 'error');
+      return;
+    }
+
     // 선택된 옵션들을 '/' 구분자로 이어붙여 텍스트 요약 생성
     const optionsTextParts: string[] = [];
     if (selectedTemp) optionsTextParts.push(selectedTemp.name);
@@ -82,12 +97,18 @@ export const MenuDetail = () => {
 
     if (shouldNavigate) {
       navigate(-1);
+    } else {
+      showToast('장바구니에 담겼습니다.', 'success');
     }
   };
 
   const handleOrderNow = () => {
+    if (!menu.is_available) {
+      showToast('현재 품절된 메뉴입니다.', 'error');
+      return;
+    }
     handleAddToCart(false); // 바로 주문 시에는 뒤로 가지 않고
-    navigate('/cart'); // 장바구니(주문하기) 화면으로 이동
+    setTimeout(() => navigate('/cart'), 500); // 토스트를 보여주기 위해 약간의 지연
   };
 
   return (
@@ -245,6 +266,14 @@ export const MenuDetail = () => {
           </>
         )}
       </div>
+
+      {/* 토스트 알림 */}
+      <Toast 
+        message={toast?.message || ''} 
+        type={toast?.type} 
+        isVisible={!!toast} 
+        onClose={() => setToast(null)} 
+      />
     </div>
   );
 };

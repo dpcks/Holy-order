@@ -4,6 +4,8 @@ import { X, Building2, MessageSquare, ChevronDown, Wallet } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
+import { Toast } from '../components/ui/Toast';
+import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
 import type { Duty, StandardResponse, PaymentMethod } from '../types';
 
@@ -146,6 +148,13 @@ export const Cart = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
 
+  // 토스트 상태
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
+
   const discount = 0;
   const finalPrice = totalPrice - discount;
 
@@ -197,7 +206,7 @@ export const Cart = () => {
           state: { orderNumber: response.data.order_number, total: finalPrice } 
         });
       } else {
-        alert(response.message || '주문에 실패했습니다.');
+        showToast(response.message || '주문에 실패했습니다.', 'error');
       }
     } catch (error: any) {
       const detail = error.response?.data?.detail;
@@ -205,7 +214,7 @@ export const Cart = () => {
         ? detail.map((d: any) => d.msg).join(', ')
         : detail || '주문 처리 중 오류가 발생했습니다.';
       console.error('Order submission failed:', error.response?.data ?? error);
-      alert(message);
+      showToast(message, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -389,6 +398,14 @@ export const Cart = () => {
             {isSubmitting ? '처리 중...' : `${finalPrice.toLocaleString()}원 주문하기`}
           </Button>
         </div>
+
+        {/* 토스트 알림 */}
+        <Toast 
+          message={toast?.message || ''} 
+          type={toast?.type} 
+          isVisible={!!toast} 
+          onClose={() => setToast(null)} 
+        />
       </div>
     </>
   );
