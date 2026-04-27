@@ -338,14 +338,14 @@ export const AdminSalesReports = () => {
                     </button>
                   </div>
                   
-                  <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                  <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
                     <table className="w-full">
-                      <thead className="sticky top-0 bg-white z-10">
-                        <tr className="text-left border-b-2 border-gray-100">
-                          <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest">순위</th>
-                          <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest">메뉴명</th>
-                          <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right">수량</th>
-                          <th className="pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right">매출액</th>
+                      <thead className="sticky top-0 z-10">
+                        <tr className="text-left border-b-2 border-gray-100 bg-white">
+                          <th className="pt-6 pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest bg-white">순위</th>
+                          <th className="pt-6 pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest bg-white">메뉴명</th>
+                          <th className="pt-6 pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right bg-white">수량</th>
+                          <th className="pt-6 pb-4 text-[12px] font-black text-gray-400 uppercase tracking-widest text-right bg-white">매출액</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
