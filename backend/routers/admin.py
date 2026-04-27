@@ -299,17 +299,45 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
 # 통계 (Statistics)
 # ────────────────────────────────────────
 
-@router.get("/stats/today")
-def get_today_stats(db: Session = Depends(get_db)):
-    """오늘의 매출/주문 통계 집계"""
-    today = models.get_seoul_time().date()
+@router.get("/stats")
+def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_db)):
+    """기간별(일간, 주간, 월간) 매출/주문 통계 집계"""
+    import calendar
+    from datetime import datetime
+    
+    target_date = models.get_seoul_time().date()
+    if date:
+        try:
+            target_date = datetime.strptime(date, "%Y-%m-%d").date()
+        except ValueError:
+            pass
 
-    # 오늘 전체 주문
-    all_orders = db.query(models.Order).filter(models.Order.order_date == today).all()
+    if type == "monthly":
+        start_date = target_date.replace(month=1, day=1)
+        end_date = target_date.replace(month=12, day=31)
+    elif type == "weekly":
+        start_date = target_date.replace(day=1)
+        _, last_day = calendar.monthrange(target_date.year, target_date.month)
+        end_date = target_date.replace(day=last_day)
+    else: # daily
+        start_date = target_date
+        end_date = target_date
+
+    # 대상 기간 전체 주문 (취소 제외)
+    revenue_orders = db.query(models.Order).filter(
+        models.Order.order_date >= start_date,
+        models.Order.order_date <= end_date,
+        models.Order.status.notin_(["PENDING", "CANCELLED"])
+    ).all()
+    
+    # 대상 기간 전체 주문 (PENDING 포함, CANCELLED 제외) - 카운트용
+    all_orders = db.query(models.Order).filter(
+        models.Order.order_date >= start_date,
+        models.Order.order_date <= end_date,
+        models.Order.status.notin_(["CANCELLED"])
+    ).all()
 
     total_orders = len(all_orders)
-    # 매출: 취소 제외한 금액 합산
-    revenue_orders = [o for o in all_orders if o.status not in ["PENDING", "CANCELLED"]]
     total_sales = sum(o.total_price for o in revenue_orders)
     avg_order_value = round(total_sales / len(revenue_orders)) if revenue_orders else 0
 
@@ -318,7 +346,7 @@ def get_today_stats(db: Session = Depends(get_db)):
     for o in all_orders:
         status_counts[o.status] = status_counts.get(o.status, 0) + 1
 
-    # 인기 메뉴 TOP 5 (order_items 기반)
+    # 인기 메뉴 TOP 5
     top_menus_raw = (
         db.query(
             models.OrderItem.menu_name_snapshot,
@@ -327,11 +355,13 @@ def get_today_stats(db: Session = Depends(get_db)):
         )
         .join(models.Order, models.Order.id == models.OrderItem.order_id)
         .filter(
-            models.Order.order_date == today,
+            models.Order.order_date >= start_date,
+            models.Order.order_date <= end_date,
             models.Order.status.notin_(["CANCELLED"])
         )
         .group_by(models.OrderItem.menu_name_snapshot)
         .order_by(func.sum(models.OrderItem.quantity).desc())
+        .limit(10)
         .all()
     )
     top_menus = [
@@ -342,31 +372,61 @@ def get_today_stats(db: Session = Depends(get_db)):
     # 직분별 이용 현황
     duty_counts_raw = (
         db.query(models.Order.user_duty_snapshot, func.count(models.Order.id).label("cnt"))
-        .filter(models.Order.order_date == today, models.Order.status.notin_(["CANCELLED"]))
+        .filter(
+            models.Order.order_date >= start_date,
+            models.Order.order_date <= end_date,
+            models.Order.status.notin_(["CANCELLED"])
+        )
         .group_by(models.Order.user_duty_snapshot)
         .all()
     )
     duty_breakdown = {r.user_duty_snapshot: r.cnt for r in duty_counts_raw}
 
-    # 시간대별 주문 현황 (한국 시간 보정: UTC + 9)
-    # SQLite/PostgreSQL 호환을 위해 단순하게 시각(Hour) 추출 후 +9 처리하거나 AT TIME ZONE 사용
-    # 여기서는 SQLAlchemy의 func.extract를 사용하되 결과값에서 +9 보정 처리
-    hourly_raw = (
-        db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id))
-        .filter(models.Order.order_date == today)
-        .group_by(func.extract("hour", models.Order.created_at))
-        .all()
-    )
-    # 추출된 UTC 시간에 9를 더해 KST로 변환 (24시가 넘어가면 0시부터 다시 시작)
-    hourly_orders = {}
-    for r in hourly_raw:
-        kst_hour = (int(r.hour) + 9) % 24
-        hourly_orders[kst_hour] = r[1]
+    # 트렌드 데이터(trend_data) 가공
+    trend_data = {}
+    if type == "monthly":
+        # 월별 통계 (1월, 2월...)
+        for i in range(1, 13):
+            trend_data[f"{i}월"] = 0
+        for o in all_orders:
+            month_key = f"{o.order_date.month}월"
+            trend_data[month_key] = trend_data.get(month_key, 0) + 1
+            
+    elif type == "weekly":
+        # 주차별 통계 (1주차, 2주차...)
+        # 해당 월의 몇 번째 주인지 계산
+        for i in range(1, 6):
+            trend_data[f"{i}주차"] = 0
+            
+        for o in all_orders:
+            # 단순 계산: (일 - 1) // 7 + 1
+            week_num = (o.order_date.day - 1) // 7 + 1
+            week_key = f"{week_num}주차"
+            trend_data[week_key] = trend_data.get(week_key, 0) + 1
+            
+    else: # daily
+        # 시간대별 통계 (09, 10...)
+        for i in range(9, 16): # 9시 ~ 15시 기본 세팅
+            trend_data[str(i)] = 0
+            
+        hourly_raw = (
+            db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id))
+            .filter(models.Order.order_date == target_date)
+            .group_by(func.extract("hour", models.Order.created_at))
+            .all()
+        )
+        for r in hourly_raw:
+            kst_hour = (int(r.hour) + 9) % 24
+            trend_data[str(kst_hour)] = trend_data.get(str(kst_hour), 0) + r[1]
 
-    # 결제 수단별 매출 현황 (입금대기/취소 제외)
+    # 결제 수단별 매출 현황
     payment_raw = (
         db.query(models.Order.payment_method, func.sum(models.Order.total_price))
-        .filter(models.Order.order_date == today, models.Order.status.notin_(["PENDING", "CANCELLED"]))
+        .filter(
+            models.Order.order_date >= start_date,
+            models.Order.order_date <= end_date,
+            models.Order.status.notin_(["PENDING", "CANCELLED"])
+        )
         .group_by(models.Order.payment_method)
         .all()
     )
@@ -381,7 +441,7 @@ def get_today_stats(db: Session = Depends(get_db)):
             "status_counts": status_counts,
             "top_menus": top_menus,
             "duty_breakdown": duty_breakdown,
-            "hourly_orders": hourly_orders,
+            "trend_data": trend_data, # hourly_orders -> trend_data 변경
             "payment_method_sales": payment_method_sales
         },
         "message": "통계 데이터를 조회했습니다."
