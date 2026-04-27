@@ -93,7 +93,7 @@ export const AdminOrderManagement = () => {
     try {
       const [boardRes, statsRes] = await Promise.all([
         apiClient.get<Order[], StandardResponse<Order[]>>('/admin/orders/board'),
-        apiClient.get<DashboardStats, StandardResponse<DashboardStats>>('/admin/stats/today')
+        apiClient.get<DashboardStats, StandardResponse<DashboardStats>>('/admin/stats')
       ]);
 
       if (boardRes.success && boardRes.data) {
