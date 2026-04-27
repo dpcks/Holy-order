@@ -243,17 +243,21 @@ class ClosingReportResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class VolunteerData(BaseModel):
+    """봉사자 명단 데이터 구조 (JSON)"""
+    names: List[str] = []
+
 class VolunteerScheduleResponse(BaseModel):
     id: int
     sunday_date: date
-    volunteers: Optional[dict] = None
+    volunteers: Optional[VolunteerData] = None
     memo: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 
 class VolunteerScheduleUpdate(BaseModel):
     sunday_date: date
-    volunteers: Optional[dict] = None
+    volunteers: Optional[VolunteerData] = None
     memo: Optional[str] = None
 
 class VolunteerCreate(BaseModel):
