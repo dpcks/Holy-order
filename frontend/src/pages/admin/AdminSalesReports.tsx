@@ -52,7 +52,7 @@ const DonutChart = ({ data }: { data: { label: string; value: number; color: str
 };
 
 // 동적 트렌드 바 차트 (일간, 주간, 월간 지원)
-const TrendChart = ({ data, periodType }: { data: Record<string, number>, periodType: '일간' | '주간' | '월간' }) => {
+const TrendChart = ({ data, periodType }: { data: Record<string, { count: number, revenue: number }>, periodType: '일간' | '주간' | '월간' }) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   
   let keys: string[] = [];
@@ -64,12 +64,14 @@ const TrendChart = ({ data, periodType }: { data: Record<string, number>, period
     keys = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
   }
 
-  const max = Math.max(...Object.values(data), 1);
+  const counts = Object.values(data).map(d => d?.count || 0);
+  const max = Math.max(...counts, 1);
 
   return (
     <div className="flex items-end gap-1.5 h-32 pt-10 px-2 relative">
       {keys.map(k => {
-        const count = data[k] || 0;
+        const count = data[k]?.count || 0;
+        const revenue = data[k]?.revenue || 0;
         const height = (count / max) * 100;
         const isSelected = selectedKey === k;
         const displayLabel = periodType === '일간' ? `${k}시` : k;
@@ -78,8 +80,9 @@ const TrendChart = ({ data, periodType }: { data: Record<string, number>, period
           <div key={k} className="flex-1 flex flex-col items-center gap-2 group relative">
             {/* 말풍선 (선택 시 노출) */}
             {(isSelected || (count > 0 && !selectedKey)) && (
-              <div className={`absolute -top-10 left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] font-black rounded-lg shadow-xl z-10 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 duration-200 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 group-hover:scale-100'}`}>
-                {count}건
+              <div className={`absolute -top-12 left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-black text-white text-[11px] rounded-lg shadow-xl z-10 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col items-center gap-0.5 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 group-hover:scale-100'}`}>
+                <span className="font-black leading-none">{count}건</span>
+                <span className="text-[9px] text-white/70 font-bold leading-none">{revenue.toLocaleString()}원</span>
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-black rotate-45" />
               </div>
             )}
@@ -264,11 +267,26 @@ export const AdminSalesReports = () => {
             </div>
 
             {/* 트렌드 현황 */}
-            <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-              <h2 className="font-bold text-gray-900 text-[14px] mb-4">
+            <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
+              <h2 className="font-bold text-gray-900 text-[14px] mb-4 shrink-0">
                 {period === '일간' ? '시간대별 주문 현황' : period === '주간' ? '주차별 주문 추이' : '월별 주문 추이'}
               </h2>
-              <TrendChart data={stats.trend_data || {}} periodType={period} />
+              <div className="shrink-0 mb-4">
+                <TrendChart data={stats.trend_data || {}} periodType={period} />
+              </div>
+              
+              {/* 상세 요약 그리드 */}
+              <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2 overflow-x-auto scrollbar-hide">
+                {Object.entries(stats.trend_data || {})
+                  .filter(([_, d]) => d.count > 0 || period === '주간') // 주간은 비어있어도 구조 파악을 위해 보여줌
+                  .map(([k, d]) => (
+                  <div key={k} className="bg-gray-50 rounded-xl p-3 border border-gray-100/50 min-w-[80px] shrink-0 flex flex-col items-center text-center">
+                    <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '일간' ? `${k}시` : k}</p>
+                    <p className="text-[14px] font-black text-gray-900 leading-tight mb-0.5">{d.count}건</p>
+                    <p className="text-[10px] font-bold text-primary">₩{d.revenue.toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* 인기 메뉴 TOP 5 */}

@@ -112,7 +112,7 @@ export interface ReportStats {
   status_counts: Record<string, number>;
   top_menus: { name: string; count: number; revenue: number }[];
   duty_breakdown: Record<string, number>;
-  trend_data: Record<string, number>;
+  trend_data: Record<string, { count: number, revenue: number }>;
   payment_method_sales: Record<string, number>;
 }
 

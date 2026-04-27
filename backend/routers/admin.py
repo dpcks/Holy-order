@@ -387,37 +387,51 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     if type == "monthly":
         # 월별 통계 (1월, 2월...)
         for i in range(1, 13):
-            trend_data[f"{i}월"] = 0
+            trend_data[f"{i}월"] = {"count": 0, "revenue": 0}
         for o in all_orders:
             month_key = f"{o.order_date.month}월"
-            trend_data[month_key] = trend_data.get(month_key, 0) + 1
+            trend_data[month_key]["count"] += 1
+            if o.status not in ["PENDING", "CANCELLED"]:
+                trend_data[month_key]["revenue"] += o.total_price
             
     elif type == "weekly":
         # 주차별 통계 (1주차, 2주차...)
-        # 해당 월의 몇 번째 주인지 계산
         for i in range(1, 6):
-            trend_data[f"{i}주차"] = 0
+            trend_data[f"{i}주차"] = {"count": 0, "revenue": 0}
             
         for o in all_orders:
-            # 단순 계산: (일 - 1) // 7 + 1
             week_num = (o.order_date.day - 1) // 7 + 1
             week_key = f"{week_num}주차"
-            trend_data[week_key] = trend_data.get(week_key, 0) + 1
+            trend_data[week_key]["count"] += 1
+            if o.status not in ["PENDING", "CANCELLED"]:
+                trend_data[week_key]["revenue"] += o.total_price
             
     else: # daily
         # 시간대별 통계 (09, 10...)
-        for i in range(9, 16): # 9시 ~ 15시 기본 세팅
-            trend_data[str(i)] = 0
+        for i in range(9, 16):
+            trend_data[str(i)] = {"count": 0, "revenue": 0}
             
         hourly_raw = (
-            db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id))
-            .filter(models.Order.order_date == target_date)
+            db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id).label("cnt"), func.sum(models.Order.total_price).label("rev"))
+            .filter(models.Order.order_date == target_date, models.Order.status.notin_(["CANCELLED"]))
             .group_by(func.extract("hour", models.Order.created_at))
             .all()
         )
         for r in hourly_raw:
             kst_hour = (int(r.hour) + 9) % 24
-            trend_data[str(kst_hour)] = trend_data.get(str(kst_hour), 0) + r[1]
+            # PENDING도 count에는 포함되지만 revenue는 어떻게 할 것인가?
+            # 위 쿼리는 취소된 것만 빼고 전부 합침. PENDING 매출을 제외하려면 파이썬에서 계산하는게 안전함.
+            pass
+            
+        # 파이썬에서 집계 (안전함)
+        for o in all_orders:
+            kst_hour = (o.created_at.hour + 9) % 24
+            hour_str = str(kst_hour)
+            if hour_str not in trend_data:
+                trend_data[hour_str] = {"count": 0, "revenue": 0}
+            trend_data[hour_str]["count"] += 1
+            if o.status not in ["PENDING", "CANCELLED"]:
+                trend_data[hour_str]["revenue"] += o.total_price
 
     # 결제 수단별 매출 현황
     payment_raw = (
