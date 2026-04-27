@@ -287,24 +287,6 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
 # 설정 관리 (Settings)
 # ────────────────────────────────────────
 
-@router.get("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def get_settings(db: Session = Depends(get_db)):
-    setting = db.query(models.Setting).first()
-    if not setting:
-        return schemas.StandardResponse(success=False, data=None, message="설정이 없습니다.")
-    return schemas.StandardResponse(success=True, data=setting, message="설정을 불러왔습니다.")
-
-
-@router.patch("/settings")
-def update_settings(setting_update: schemas.SettingUpdate, db: Session = Depends(get_db)):
-    setting = db.query(models.Setting).first()
-    if not setting:
-        setting = models.Setting()
-        db.add(setting)
-    for field, value in setting_update.model_dump(exclude_none=True).items():
-        setattr(setting, field, value)
-    db.commit()
-    return {"success": True, "data": None, "message": "설정이 저장되었습니다."}
 
 
 # ────────────────────────────────────────
@@ -563,11 +545,11 @@ def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
 # ────────────────────────────────────────
 
 @router.get("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def get_admin_settings(db: Session = Depends(get_db)):
-    """관리자용 시스템 설정 조회"""
+def get_settings(db: Session = Depends(get_db)):
+    """시스템 설정 조회 (없으면 기본값으로 생성)"""
     setting = db.query(models.Setting).first()
     if not setting:
-        # 설정이 없으면 기본값으로 생성
+        # 기본값으로 생성
         setting = models.Setting(
             is_open=True,
             bank_name="카카오뱅크",
@@ -580,18 +562,17 @@ def get_admin_settings(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=setting, message="설정을 조회했습니다.")
 
 @router.put("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def update_admin_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db)):
-    """관리자용 시스템 설정 수정 (영업 토글 등)"""
+def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db)):
+    """시스템 설정 업데이트"""
     setting = db.query(models.Setting).first()
     if not setting:
         setting = models.Setting()
         db.add(setting)
-    
-    # 전달된 데이터로 필드 업데이트
+
     update_dict = update_data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
         setattr(setting, key, value)
-    
+
     db.commit()
     db.refresh(setting)
     return schemas.StandardResponse(success=True, data=setting, message="설정이 저장되었습니다.")

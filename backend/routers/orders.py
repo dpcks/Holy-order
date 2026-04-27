@@ -29,6 +29,13 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         if not menu:
             raise HTTPException(status_code=400, detail=f"존재하지 않는 메뉴(ID: {item.menu_id})가 포함되어 있습니다.")
         
+        # ✅ 백엔드에서도 품절 여부를 한 번 더 체크 (품절 시 주문 차단)
+        if not menu.is_available:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"'{menu.name}' 메뉴는 현재 품절입니다. 장바구니에서 제거 후 다시 시도해주세요."
+            )
+        
         item_total = menu.price * item.quantity
         calculated_total += item_total
         

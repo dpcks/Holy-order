@@ -2,15 +2,14 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft, Wallet } from 'lucide-react';
 import { apiClient } from '../api/client';
-import type { StandardResponse } from '../api/client';
-import type { Order, SettingResponse, ActiveOrder } from '../types';
+import type { Order, SettingResponse, ActiveOrder, StandardResponse } from '../types';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
-  const [setting, setSetting] = useState<Setting | null>(null);
+  const [setting, setSetting] = useState<SettingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
