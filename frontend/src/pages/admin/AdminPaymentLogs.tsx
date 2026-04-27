@@ -34,7 +34,7 @@ export const AdminPaymentLogs = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isMobile = windowWidth < 1024;
+  const isMobile = windowWidth < 1280; // 아이패드 프로 포함을 위해 상향
 
   const getPageNumbers = () => {
     const pages = [];
@@ -197,8 +197,8 @@ export const AdminPaymentLogs = () => {
                     ranges={dateRange}
                     onChange={handleDateSelect}
                     locale={ko}
-                    months={isMobile ? 1 : 2}
-                    direction={isMobile ? 'vertical' : 'horizontal'}
+                    months={windowWidth < 1024 ? 1 : 2}
+                    direction={windowWidth < 640 ? 'vertical' : 'horizontal'}
                     rangeColors={['#2D1616']}
                     showDateDisplay={false}
                     staticRanges={[

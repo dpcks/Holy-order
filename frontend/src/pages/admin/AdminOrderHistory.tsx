@@ -98,7 +98,7 @@ export const AdminOrderHistory = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isMobile = windowWidth < 1024;
+  const isMobile = windowWidth < 1280; // 아이패드 프로 등 대형 태블릿 포함을 위해 임계값 상향
 
   // react-date-range 상태
   const [dateRange, setDateRange] = useState<Range[]>([
@@ -266,8 +266,8 @@ export const AdminOrderHistory = () => {
                     locale={ko}
                     ranges={dateRange}
                     onChange={handleDateSelect}
-                    months={isMobile ? 1 : 2}
-                    direction={isMobile ? 'vertical' : 'horizontal'}
+                    months={windowWidth < 1024 ? 1 : 2}
+                    direction={windowWidth < 640 ? 'vertical' : 'horizontal'}
                     rangeColors={['#FF4B4B']}
                     staticRanges={[
                       { label: '오늘', range: () => ({ startDate: new Date(), endDate: new Date() }) },
