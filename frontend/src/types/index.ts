@@ -38,6 +38,8 @@ export interface Menu {
   description: string | null;
   image_url: string | null;
   is_available: boolean;
+  display_order: number;
+  is_active: boolean;
   options: MenuOption[];
   created_at: string;
 }
@@ -45,6 +47,8 @@ export interface Menu {
 export interface Category {
   id: number;
   name: string;
+  display_order: number;
+  is_active: boolean;
   menus: Menu[];
 }
 

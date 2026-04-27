@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Search, Plus, Pencil, X, Check, Trash2, Image as ImageIcon, GripVertical } from 'lucide-react';
-import { 
-  DndContext, 
+import { Search, Plus, Pencil, X, Check, Trash2, Image as ImageIcon, GripVertical, EyeOff } from 'lucide-react';
+import {
+  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -22,11 +22,11 @@ import type { Category, Menu, StandardResponse } from '../../types';
 
 
 interface MenuOptionForm { name: string; extra_price: number; }
-interface EditForm { 
-  name: string; 
-  price: string; 
-  description: string; 
-  category_id: number; 
+interface EditForm {
+  name: string;
+  price: string;
+  description: string;
+  category_id: number;
   image_url: string;
   options: MenuOptionForm[];
 }
@@ -38,16 +38,18 @@ interface AdminMenu extends Menu {
 }
 
 // 드래그 가능한 카테고리 아이템 컴포넌트
-const SortableCategoryItem = ({ 
-  cat, 
-  index, 
-  onRename, 
-  onDelete 
-}: { 
-  cat: Category; 
-  index: number; 
+const SortableCategoryItem = ({
+  cat,
+  index,
+  onRename,
+  onDelete,
+  onToggleActive
+}: {
+  cat: Category;
+  index: number;
   onRename: (id: number, name: string) => void;
   onDelete: (id: number) => void;
+  onToggleActive: (id: number, currentStatus: boolean) => void;
 }) => {
   const {
     attributes,
@@ -65,43 +67,56 @@ const SortableCategoryItem = ({
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 bg-white p-3 rounded-2xl border transition-all ${isDragging ? 'shadow-xl border-primary scale-[1.02] opacity-90 z-50' : 'border-gray-100 shadow-sm'}`}
+      className={`flex items-center gap-3 bg-white p-3 rounded-2xl border transition-all ${isDragging ? 'shadow-xl border-primary scale-[1.02] opacity-90 z-50' : (cat.is_active ? 'border-gray-100 shadow-sm' : 'border-dashed border-gray-200 opacity-50 bg-gray-50')}`}
     >
-      <div 
-        {...attributes} 
-        {...listeners} 
+      <div
+        {...attributes}
+        {...listeners}
         className="cursor-grab active:cursor-grabbing p-1 text-gray-300 hover:text-gray-500 transition-colors"
       >
         <GripVertical size={18} />
       </div>
       <span className="text-gray-300 font-black text-[14px] w-4">{index + 1}</span>
-      <input 
+      <input
         defaultValue={cat.name}
         onBlur={(e) => onRename(cat.id, e.target.value)}
-        className="flex-1 bg-transparent font-bold text-gray-700 outline-none"
+        className={`flex-1 min-w-0 bg-transparent font-bold outline-none text-sm ${cat.is_active ? 'text-gray-700' : 'text-gray-400'}`}
       />
-      <button 
-        onClick={() => onDelete(cat.id)}
-        className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
-      >
-        <Trash2 size={14} />
-      </button>
+      <div className="flex items-center gap-2 shrink-0 ml-auto">
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleActive(cat.id, cat.is_active);
+          }}
+          className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none cursor-pointer pointer-events-auto ${cat.is_active ? 'bg-blue-500' : 'bg-gray-300'}`}
+        >
+          <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${cat.is_active ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
+        </button>
+        <button
+          onClick={() => onDelete(cat.id)}
+          className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
     </div>
   );
 };
 
 // 드래그 가능한 메뉴 카드 컴포넌트
-const SortableMenuCard = ({ 
-  menu, 
-  onDelete, 
-  onToggle, 
-  onEdit, 
+const SortableMenuCard = ({
+  menu,
+  onDelete,
+  onToggle,
+  onEdit,
   isSaving,
   isDraggable
-}: { 
+}: {
   menu: AdminMenu;
   onDelete: (id: number) => void;
   onToggle: (menu: AdminMenu) => void;
@@ -127,8 +142,8 @@ const SortableMenuCard = ({
   const optionTags = menu.options?.map(o => o.name).join(' / ') || '옵션 없음';
 
   return (
-    <div 
-      ref={setNodeRef} 
+    <div
+      ref={setNodeRef}
       style={style}
       className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all group ${isDragging ? 'shadow-2xl border-primary scale-[1.03] opacity-90 z-50' : menu.is_available ? 'border-gray-100' : 'border-dashed border-gray-300 opacity-60'}`}
     >
@@ -142,12 +157,12 @@ const SortableMenuCard = ({
             <span className="text-[10px] font-medium">이미지 없음</span>
           </div>
         )}
-        
+
         {/* 드래그 핸들 (특정 카테고리 선택 시에만 노출) */}
         {isDraggable && (
-          <div 
-            {...attributes} 
-            {...listeners} 
+          <div
+            {...attributes}
+            {...listeners}
             className="absolute top-2 right-2 p-2 bg-white/80 backdrop-blur-sm rounded-lg text-gray-400 hover:text-primary cursor-grab active:cursor-grabbing shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <GripVertical size={16} />
@@ -170,7 +185,7 @@ const SortableMenuCard = ({
       <div className="p-4">
         <div className="flex justify-between items-start mb-1">
           <h3 className="font-bold text-gray-900 text-[15px]">{menu.name}</h3>
-          <button 
+          <button
             onClick={() => onDelete(menu.id)}
             className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-lg"
             title="메뉴 삭제"
@@ -210,22 +225,30 @@ export const AdminMenuManagement = () => {
   const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  
+
   // 모달 상태
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<AdminMenu | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  
+
   // 폼 상태
-  const [editForm, setEditForm] = useState<EditForm>({ 
-    name: '', price: '', description: '', category_id: 0, image_url: '', options: [] 
+  const [editForm, setEditForm] = useState<EditForm>({
+    name: '', price: '', description: '', category_id: 0, image_url: '', options: []
   });
   const [savingId, setSavingId] = useState<number | 'new' | null>(null);
+
+  // 토스트 알림 상태
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
   const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -246,20 +269,20 @@ export const AdminMenuManagement = () => {
   // 드래그 종료 처리
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
-    
+
     if (over && active.id !== over.id) {
       const oldIndex = categories.findIndex((c) => c.id === active.id);
       const newIndex = categories.findIndex((c) => c.id === over.id);
-      
+
       const newOrder = arrayMove(categories, oldIndex, newIndex);
-      
+
       // 즉시 UI 반영 (Optimistic Update)
       setCategories(newOrder);
-      
+
       // 서버 전송
       try {
-        await apiClient.patch('/admin/categories/reorder', { 
-          category_ids: newOrder.map(c => c.id) 
+        await apiClient.patch('/admin/categories/reorder', {
+          category_ids: newOrder.map(c => c.id)
         });
       } catch (err) {
         console.error('순서 변경 실패:', err);
@@ -276,19 +299,19 @@ export const AdminMenuManagement = () => {
     // 현재 표시 중인 메뉴 리스트에서 위치 변경
     const oldIndex = displayedMenus.findIndex(m => m.id === active.id);
     const newIndex = displayedMenus.findIndex(m => m.id === over.id);
-    
+
     const newOrder = arrayMove(displayedMenus, oldIndex, newIndex);
-    
+
     // UI 즉시 업데이트를 위해 categories 상태 구조에 맞게 반영
     if (typeof activeCategory === 'number') {
-      setCategories(prev => prev.map(cat => 
+      setCategories(prev => prev.map(cat =>
         cat.id === activeCategory ? { ...cat, menus: newOrder } : cat
       ));
     }
 
     try {
-      await apiClient.patch('/admin/menus/reorder', { 
-        menu_ids: newOrder.map(m => m.id) 
+      await apiClient.patch('/admin/menus/reorder', {
+        menu_ids: newOrder.map(m => m.id)
       });
     } catch (err) {
       console.error('메뉴 순서 변경 실패:', err);
@@ -299,7 +322,7 @@ export const AdminMenuManagement = () => {
 
   const fetchMenus = useCallback(async () => {
     try {
-      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
+      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/admin/categories');
       if (res.success && res.data) {
         setCategories(res.data);
       }
@@ -358,7 +381,7 @@ export const AdminMenuManagement = () => {
 
       console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}). 메뉴 폴백 활성화...`);
       setWsStatus('DISCONNECTED');
-      
+
       if (!pollingTimerRef.current) {
         pollingTimerRef.current = setInterval(fetchMenus, 30000);
       }
@@ -398,10 +421,10 @@ export const AdminMenuManagement = () => {
     };
   }, [fetchMenus, connectWebSocket]);
 
-  const allMenus: AdminMenu[] = categories.flatMap(c => 
+  const allMenus: AdminMenu[] = categories.flatMap(c =>
     c.menus.map(m => ({ ...m, categoryName: c.name, categoryId: c.id }))
   );
-  
+
   const displayedMenus = allMenus.filter(m => {
     const matchCat = activeCategory === 'all' || m.categoryId === activeCategory;
     const matchSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -425,10 +448,10 @@ export const AdminMenuManagement = () => {
   // 메뉴 수정 모달 열기
   const handleOpenEdit = (menu: AdminMenu) => {
     setEditingMenu(menu);
-    setEditForm({ 
-      name: menu.name, 
-      price: String(menu.price), 
-      description: menu.description || '', 
+    setEditForm({
+      name: menu.name,
+      price: String(menu.price),
+      description: menu.description || '',
       category_id: menu.categoryId,
       image_url: menu.image_url || '',
       options: menu.options?.map(o => ({ name: o.name, extra_price: o.extra_price })) || []
@@ -481,7 +504,7 @@ export const AdminMenuManagement = () => {
       } else {
         await apiClient.post('/admin/menus', payload);
       }
-      
+
       await fetchMenus();
       setIsMenuModalOpen(false);
     } catch (err) {
@@ -495,7 +518,7 @@ export const AdminMenuManagement = () => {
   // 메뉴 삭제
   const handleDeleteMenu = async (id: number) => {
     if (!confirm('정말로 이 메뉴를 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.')) return;
-    
+
     setSavingId(id);
     try {
       await apiClient.delete(`/admin/menus/${id}`);
@@ -510,15 +533,32 @@ export const AdminMenuManagement = () => {
   // 판매 상태 토글
   const handleToggleAvailability = async (menu: AdminMenu) => {
     setSavingId(menu.id);
+    const newStatus = !menu.is_available;
     try {
-      await apiClient.patch(`/admin/menus/${menu.id}`, { is_available: !menu.is_available });
+      await apiClient.patch(`/admin/menus/${menu.id}`, { is_available: newStatus });
       await fetchMenus();
-    } catch { 
-      alert('상태 변경에 실패했습니다.'); 
-    } finally { 
-      setSavingId(null); 
+      showToast(`'${menu.name}' 메뉴가 ${newStatus ? '판매 중' : '품절'} 상태로 변경되었습니다.`, 'info');
+    } catch {
+      alert('상태 변경에 실패했습니다.');
+    } finally {
+      setSavingId(null);
     }
   };
+
+  // 노출 상태 토글
+  // const handleToggleActive = async (menu: AdminMenu) => {
+  //   setSavingId(menu.id);
+  //   const newStatus = !menu.is_active;
+  //   try {
+  //     await apiClient.patch(`/admin/menus/${menu.id}`, { is_active: newStatus });
+  //     await fetchMenus();
+  //     showToast(`'${menu.name}' 메뉴가 목록에서 ${newStatus ? '노출' : '숨김'} 처리되었습니다.`, 'success');
+  //   } catch {
+  //     alert('노출 상태 변경에 실패했습니다.');
+  //   } finally {
+  //     setSavingId(null);
+  //   }
+  // };
 
   // 이미지 업로드 시뮬레이션
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -537,11 +577,10 @@ export const AdminMenuManagement = () => {
             <div className="flex items-center gap-3 mb-0.5">
               <h1 className="text-xl font-bold text-gray-900">메뉴 관리</h1>
               <div className="flex items-center gap-1.5 bg-gray-50 px-2.5 py-0.5 rounded-full border border-gray-100">
-                <span className={`w-1 h-1 rounded-full ${
-                  wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' : 
-                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' : 
-                  'bg-red-400'
-                }`}></span>
+                <span className={`w-1 h-1 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
+                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
+                    'bg-red-400'
+                  }`}></span>
                 <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
                   {wsStatus === 'CONNECTED' ? 'Live' : wsStatus === 'RECONNECTING' ? 'Wait' : 'Off'}
                 </span>
@@ -550,13 +589,13 @@ export const AdminMenuManagement = () => {
             <p className="text-[12px] text-gray-400">카페 메뉴의 가격, 옵션 및 판매 상태를 관리하세요.</p>
           </div>
           <div className="flex gap-2">
-            <button 
+            <button
               onClick={() => setIsCategoryModalOpen(true)}
               className="flex items-center gap-1.5 text-[13px] font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 px-4 py-2.5 rounded-xl transition-colors"
             >
               카테고리 설정
             </button>
-            <button 
+            <button
               onClick={handleOpenAdd}
               className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-primary hover:bg-primary/90 px-4 py-2.5 rounded-xl transition-colors shadow-sm"
             >
@@ -585,8 +624,16 @@ export const AdminMenuManagement = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-2 text-[13px] font-semibold rounded-xl whitespace-nowrap transition-all ${activeCategory === cat.id ? 'bg-[#1A0A0A] text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}
-              >{cat.name}</button>
+                className={`px-4 py-2 text-[13px] font-semibold rounded-xl whitespace-nowrap transition-all flex items-center gap-1.5 ${activeCategory === cat.id
+                  ? 'bg-[#1A0A0A] text-white shadow-md'
+                  : cat.is_active
+                    ? 'text-gray-500 hover:bg-gray-100'
+                    : 'text-gray-300 bg-gray-50 border border-dashed border-gray-200 opacity-70 hover:bg-gray-100'
+                  }`}
+              >
+                {!cat.is_active && <EyeOff size={12} className="shrink-0" />}
+                {cat.name}
+              </button>
             ))}
           </div>
         </div>
@@ -600,17 +647,17 @@ export const AdminMenuManagement = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-6">
-            <DndContext 
+            <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleMenuDragEnd}
             >
-              <SortableContext 
+              <SortableContext
                 items={displayedMenus.map(m => m.id)}
                 strategy={verticalListSortingStrategy}
               >
                 {displayedMenus.map(menu => (
-                  <SortableMenuCard 
+                  <SortableMenuCard
                     key={menu.id}
                     menu={menu}
                     isDraggable={activeCategory !== 'all'}
@@ -716,7 +763,7 @@ export const AdminMenuManagement = () => {
               <div className="bg-gray-50/50 border border-gray-100 rounded-2xl p-5">
                 <div className="flex justify-between items-center mb-4">
                   <label className="text-[13px] font-bold text-gray-700 uppercase tracking-wider">추가 옵션 설정</label>
-                  <button 
+                  <button
                     onClick={handleAddOption}
                     className="text-primary text-[12px] font-bold flex items-center gap-1 hover:underline bg-white px-3 py-1.5 rounded-lg border border-primary/20 shadow-sm"
                   >
@@ -775,7 +822,7 @@ export const AdminMenuManagement = () => {
                   ))}
                   {editForm.options.length === 0 && (
                     <div className="text-center py-8 text-[12px] text-gray-400 bg-gray-50 border border-dashed border-gray-200 rounded-xl">
-                      상단의 프리셋을 선택하거나<br/>'직접 입력'을 눌러 옵션을 추가하세요.
+                      상단의 프리셋을 선택하거나<br />'직접 입력'을 눌러 옵션을 추가하세요.
                     </div>
                   )}
                 </div>
@@ -800,7 +847,7 @@ export const AdminMenuManagement = () => {
       {/* 카테고리 설정 모달 */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsCategoryModalOpen(false)}>
-          <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">카테고리 설정</h2>
@@ -808,20 +855,20 @@ export const AdminMenuManagement = () => {
               </div>
               <button onClick={() => setIsCategoryModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
             </div>
-            
-            <div className="mb-8 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-              <DndContext 
+
+            <div className="mb-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+              <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <SortableContext 
+                <SortableContext
                   items={categories.map(c => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className="space-y-3">
                     {categories.map((cat, idx) => (
-                      <SortableCategoryItem 
+                      <SortableCategoryItem
                         key={cat.id}
                         cat={cat}
                         index={idx}
@@ -839,6 +886,19 @@ export const AdminMenuManagement = () => {
                             alert(err.response?.data?.detail || '삭제 실패');
                           }
                         }}
+                        onToggleActive={async (id, currentStatus) => {
+                          try {
+                            const cat = categories.find(c => c.id === id);
+                            const newStatus = !currentStatus;
+                            await apiClient.patch(`/admin/categories/${id}`, { is_active: newStatus });
+                            fetchMenus();
+                            if (cat) {
+                              showToast(`'${cat.name}' 카테고리가 ${newStatus ? '노출' : '숨김'} 상태로 변경되었습니다.`, 'success');
+                            }
+                          } catch {
+                            alert('상태 변경 실패');
+                          }
+                        }}
                       />
                     ))}
                   </div>
@@ -849,12 +909,12 @@ export const AdminMenuManagement = () => {
             <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
               <label className="text-[12px] font-bold text-primary mb-3 block uppercase tracking-wider">새 카테고리 추가</label>
               <div className="flex gap-2">
-                <input 
+                <input
                   id="new-category-input"
                   placeholder="예: 시그니처"
                   className="flex-1 bg-white border border-primary/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
                 />
-                <button 
+                <button
                   onClick={async () => {
                     const input = document.getElementById('new-category-input') as HTMLInputElement;
                     if (!input.value) return;
@@ -866,6 +926,17 @@ export const AdminMenuManagement = () => {
                 >추가</button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 토스트 알림 UI */}
+      {toast && (
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className={`px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-md ${toast.type === 'success' ? 'bg-white/90 border-blue-100 text-blue-600' : 'bg-white/90 border-orange-100 text-orange-600'
+            }`}>
+            <div className={`w-2 h-2 rounded-full animate-pulse ${toast.type === 'success' ? 'bg-blue-500' : 'bg-orange-500'}`} />
+            <span className="text-[13px] font-bold tracking-tight">{toast.message}</span>
           </div>
         </div>
       )}

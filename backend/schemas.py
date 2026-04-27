@@ -68,6 +68,8 @@ class MenuResponse(BaseModel):
     description: Optional[str] = None
     image_url: Optional[str] = None
     is_available: bool
+    display_order: int
+    is_active: bool
     options: List[MenuOptionResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
@@ -75,6 +77,8 @@ class MenuResponse(BaseModel):
 class CategoryWithMenusResponse(BaseModel):
     id: int
     name: str
+    display_order: int
+    is_active: bool
     menus: List[MenuResponse] = []
     
     model_config = ConfigDict(from_attributes=True)
@@ -194,6 +198,7 @@ class MenuUpdate(BaseModel):
     category_id: Optional[int] = None
     image_url: Optional[str] = None
     is_available: Optional[bool] = None
+    is_active: Optional[bool] = None
     options: Optional[List[MenuOptionCreate]] = None
 
 class MenuCreate(BaseModel):
@@ -211,6 +216,7 @@ class CategoryCreate(BaseModel):
 class CategoryUpdate(BaseModel):
     name: Optional[str] = None
     display_order: Optional[int] = None
+    is_active: Optional[bool] = None
 
 class CategoryReorderRequest(BaseModel):
     category_ids: List[int]

@@ -240,6 +240,12 @@ async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
 
 # ─── 카테고리 관리 ───
 
+@router.get("/categories", response_model=schemas.StandardResponse[List[schemas.CategoryWithMenusResponse]])
+def get_all_categories(db: Session = Depends(get_db)):
+    """관리사용 카테고리 전체 조회 (숨김 상태 포함)"""
+    categories = db.query(models.Category).order_by(models.Category.display_order).all()
+    return schemas.StandardResponse(success=True, data=categories, message="카테고리 목록을 가져왔습니다.")
+
 @router.post("/categories", response_model=schemas.StandardResponse)
 async def create_category(category_data: schemas.CategoryCreate, db: Session = Depends(get_db)):
     new_cat = models.Category(name=category_data.name, display_order=category_data.display_order)
