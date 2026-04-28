@@ -559,7 +559,8 @@ def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session 
     ).first()
     
     if existing:
-        existing.volunteers = schedule_data.volunteers
+        # Pydantic 모델을 딕셔너리로 변환하여 JSON 컬럼에 저장 (직렬화 에러 방지)
+        existing.volunteers = schedule_data.volunteers.model_dump() if schedule_data.volunteers else None
         existing.memo = schedule_data.memo
         db.commit()
         db.refresh(existing)
@@ -567,7 +568,7 @@ def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session 
     else:
         new_schedule = models.VolunteerSchedule(
             sunday_date=schedule_data.sunday_date,
-            volunteers=schedule_data.volunteers,
+            volunteers=schedule_data.volunteers.model_dump() if schedule_data.volunteers else None,
             memo=schedule_data.memo
         )
         db.add(new_schedule)

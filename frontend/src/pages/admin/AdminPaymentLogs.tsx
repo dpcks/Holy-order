@@ -183,13 +183,13 @@ export const AdminPaymentLogs = () => {
             </button>
 
             {showDatePicker && (
-              <div 
-                className={`${isMobile 
-                  ? 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm' 
+              <div
+                className={`${isMobile
+                  ? 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'
                   : 'absolute top-full left-0 mt-2 z-50'}`}
                 onClick={isMobile ? () => setShowDatePicker(false) : undefined}
               >
-                <div 
+                <div
                   className={`bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden ${isMobile ? 'animate-in zoom-in-95 duration-200' : ''}`}
                   onClick={e => e.stopPropagation()}
                 >

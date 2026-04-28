@@ -6,17 +6,19 @@
 */
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { 
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save, 
+import {
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save,
   FileText, CheckCircle2, AlertCircle, Users, X, Trash2,
   Quote, Sparkles
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
-import { 
-  format, startOfMonth, endOfMonth, eachDayOfInterval, 
+import { Toast } from '../../components/ui/Toast';
+import type { ToastType } from '../../components/ui/Toast';
+import {
+  format, startOfMonth, endOfMonth, eachDayOfInterval,
   startOfWeek, endOfWeek, isSameMonth, isSameDay,
-  addMonths, subMonths 
+  addMonths, subMonths
 } from 'date-fns';
 
 interface VolunteerSchedule {
@@ -40,7 +42,12 @@ export const AdminSchedule = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [savingDate, setSavingDate] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  const showToast = (message: string, type: ToastType = 'info') => {
+    setToast({ message, type });
+  };
+
   // 마스터 봉사자 명단 상태
   const [masterVolunteers, setMasterVolunteers] = useState<Volunteer[]>([]);
   const [isEditingMaster, setIsEditingMaster] = useState(false);
@@ -58,11 +65,11 @@ export const AdminSchedule = () => {
 
   const fetchSchedules = useCallback(async () => {
     if (calendarDays.length === 0) return;
-    
+
     try {
       const startDate = format(calendarDays[0], 'yyyy-MM-dd');
       const endDate = format(calendarDays[calendarDays.length - 1], 'yyyy-MM-dd');
-      
+
       const res = await apiClient.get<VolunteerSchedule[], StandardResponse<VolunteerSchedule[]>>(
         `/admin/schedules?start_date=${startDate}&end_date=${endDate}`
       );
@@ -92,7 +99,7 @@ export const AdminSchedule = () => {
 
   const handleAddVolunteerMaster = async () => {
     if (!newVolunteerName.trim() || isAddingVolunteer) return;
-    
+
     setIsAddingVolunteer(true);
     try {
       const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name: newVolunteerName.trim() });
@@ -140,7 +147,7 @@ export const AdminSchedule = () => {
         const newNames = names.includes(name)
           ? names.filter(n => n !== name)
           : [...names, name];
-        
+
         return prev.map(s => s.sunday_date === date ? {
           ...s,
           volunteers: { ...s.volunteers, names: newNames }
@@ -187,19 +194,20 @@ export const AdminSchedule = () => {
       if (res.success) {
         setSelectedDate(null);
         setMessage(null);
+        showToast('스케줄이 성공적으로 저장되었습니다.', 'success');
         fetchSchedules();
       }
     } catch (err) {
       console.error('저장 실패:', err);
-      setMessage({ type: 'error', text: '저장에 실패했습니다.' });
+      showToast('스케줄 저장에 실패했습니다.', 'error');
     } finally {
       setSavingDate(null);
     }
   };
 
   const currentSelectedSchedule = selectedDate ? getScheduleForDate(parseDate(selectedDate)) : null;
-  const currentNames = Array.isArray(currentSelectedSchedule?.volunteers?.names) 
-    ? currentSelectedSchedule?.volunteers?.names 
+  const currentNames = Array.isArray(currentSelectedSchedule?.volunteers?.names)
+    ? currentSelectedSchedule?.volunteers?.names
     : [];
 
   return (
@@ -228,18 +236,18 @@ export const AdminSchedule = () => {
           </button>
         </div>
       </header>
-      
+
       {/* 성경 구절 격려 카드 - 여백 최적화 */}
       <div className="px-6 xl:px-8 pt-2 xl:pt-3 shrink-0">
         <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-orange-100/50 shadow-sm p-3 xl:p-4 group">
           {/* 장식용 요소 */}
           <div className="absolute top-[-20%] right-[-5%] w-32 h-32 bg-white/40 rounded-full blur-3xl group-hover:bg-white/60 transition-all duration-1000" />
-          
+
           <div className="relative flex items-center gap-4">
             <div className="flex-shrink-0 w-9 h-9 bg-white rounded-xl flex items-center justify-center shadow-md border border-orange-100">
               <Quote className="text-orange-400 rotate-180" size={16} />
             </div>
-            
+
             <div className="flex-1">
               <p className="text-[12px] xl:text-[14px] font-black text-gray-800 leading-relaxed tracking-tight break-keep">
                 "그러므로 내 사랑하는 형제들아 견실하며 흔들리지 말고 항상 주의 일에 더욱 힘쓰는자들이 되라 이는 너희 수고가 주 안에서 헛되지 않은 줄 앎이라"
@@ -249,7 +257,7 @@ export const AdminSchedule = () => {
                 <span className="text-[9px] xl:text-[10px] font-black text-orange-500 uppercase tracking-widest">고린도전서 15:58</span>
               </div>
             </div>
-            
+
             <div className="hidden md:flex items-center gap-1 px-2.5 py-1 bg-white/60 backdrop-blur-md rounded-full border border-white/80 shadow-sm text-[9px] font-black text-orange-600">
               <Sparkles size={10} className="animate-pulse" />
               <span>축복합니다</span>
@@ -285,12 +293,10 @@ export const AdminSchedule = () => {
                   <div
                     key={dateStr}
                     onClick={() => isSun && setSelectedDate(dateStr)}
-                    className={`p-3 lg:p-4 border-r border-b border-gray-50 transition-all group relative flex flex-col h-full ${
-                      !isCurrentMonth ? 'opacity-20' : ''
-                    } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${
-                      isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' : 
-                      isToday ? 'bg-emerald-50/50 ring-2 ring-inset ring-emerald-500' : ''
-                    }`}
+                    className={`p-3 lg:p-4 border-r border-b border-gray-50 transition-all group relative flex flex-col h-full ${!isCurrentMonth ? 'opacity-20' : ''
+                      } ${isSun ? 'cursor-pointer hover:bg-[#1A0A0A]/[0.02]' : 'cursor-default'} ${isSelected ? 'bg-primary/[0.03] ring-2 ring-inset ring-primary/20' :
+                        isToday ? 'bg-emerald-50/50 ring-2 ring-inset ring-emerald-500' : ''
+                      }`}
                   >
                     <span className={`text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'}`}>
                       {format(day, 'd')}
@@ -331,17 +337,16 @@ export const AdminSchedule = () => {
 
       {/* 배경 오버레이 (사이드바 오픈 시) */}
       {selectedDate && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/10 backdrop-blur-[2px] z-30 animate-in fade-in duration-300"
           onClick={() => setSelectedDate(null)}
         />
       )}
 
       {/* 오른쪽: 입력 사이드바 (오버레이 방식) */}
-      <div 
-        className={`fixed top-0 right-0 h-full w-full lg:w-[450px] bg-white shadow-[-30px_0_60px_-15px_rgba(0,0,0,0.1)] border-l border-gray-100 z-40 transition-transform duration-500 ease-in-out flex flex-col ${
-          selectedDate ? 'translate-x-0' : 'translate-x-full'
-        }`}
+      <div
+        className={`fixed top-0 right-0 h-full w-full lg:w-[450px] bg-white shadow-[-30px_0_60px_-15px_rgba(0,0,0,0.1)] border-l border-gray-100 z-40 transition-transform duration-500 ease-in-out flex flex-col ${selectedDate ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         {selectedDate && (
           <>
@@ -351,7 +356,7 @@ export const AdminSchedule = () => {
                 <span className="px-3 py-1 bg-red-50 text-red-600 text-[11px] font-black rounded-full uppercase tracking-widest">
                   Sunday Schedule
                 </span>
-                <button 
+                <button
                   onClick={() => setSelectedDate(null)}
                   className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400"
                 >
@@ -371,13 +376,12 @@ export const AdminSchedule = () => {
                   <label className="flex items-center gap-2 text-[13px] font-black text-gray-400 uppercase tracking-widest">
                     <Users size={14} className="text-gray-400" /> 봉사자 선택
                   </label>
-                  <button 
+                  <button
                     onClick={() => setIsEditingMaster(!isEditingMaster)}
-                    className={`text-[11px] font-bold px-3 py-1 rounded-full transition-all ${
-                      isEditingMaster 
-                        ? 'bg-black text-white' 
+                    className={`text-[11px] font-bold px-3 py-1 rounded-full transition-all ${isEditingMaster
+                        ? 'bg-black text-white'
                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
+                      }`}
                   >
                     {isEditingMaster ? '완료' : '명단 편집'}
                   </button>
@@ -386,7 +390,7 @@ export const AdminSchedule = () => {
                 {isEditingMaster ? (
                   <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="flex gap-2">
-                      <input 
+                      <input
                         type="text"
                         value={newVolunteerName}
                         onChange={(e) => setNewVolunteerName(e.target.value)}
@@ -395,7 +399,7 @@ export const AdminSchedule = () => {
                         className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-black transition-all disabled:opacity-50"
                         onKeyDown={(e) => e.key === 'Enter' && handleAddVolunteerMaster()}
                       />
-                      <button 
+                      <button
                         onClick={handleAddVolunteerMaster}
                         disabled={isAddingVolunteer}
                         className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center min-w-[60px]"
@@ -411,7 +415,7 @@ export const AdminSchedule = () => {
                       {masterVolunteers.map(v => (
                         <div key={v.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-xl group">
                           <span className="text-sm font-bold text-gray-700">{v.name}</span>
-                          <button 
+                          <button
                             onClick={() => handleDeleteVolunteerMaster(v.id)}
                             className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
                           >
@@ -430,11 +434,10 @@ export const AdminSchedule = () => {
                           <button
                             key={v.id}
                             onClick={() => handleToggleVolunteer(selectedDate, v.name)}
-                            className={`py-3 rounded-2xl text-[14px] font-black transition-all border-2 ${
-                              isSelected
+                            className={`py-3 rounded-2xl text-[14px] font-black transition-all border-2 ${isSelected
                                 ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-200/50 scale-[1.02]'
                                 : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
-                            }`}
+                              }`}
                           >
                             {v.name}
                           </button>
@@ -482,9 +485,8 @@ export const AdminSchedule = () => {
               </div>
 
               {message && (
-                <div className={`mt-4 p-4 rounded-2xl flex items-center justify-center gap-2 animate-in slide-in-from-top-2 ${
-                  message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                }`}>
+                <div className={`mt-4 p-4 rounded-2xl flex items-center justify-center gap-2 animate-in slide-in-from-top-2 ${message.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                  }`}>
                   {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                   <span className="text-[13px] font-bold">{message.text}</span>
                 </div>
@@ -493,6 +495,14 @@ export const AdminSchedule = () => {
           </>
         )}
       </div>
-    </div>
+
+    {/* 토스트 알림 */}
+    <Toast 
+      message={toast?.message || ''} 
+      type={toast?.type} 
+      isVisible={!!toast} 
+      onClose={() => setToast(null)} 
+    />
+  </div>
   );
 };
