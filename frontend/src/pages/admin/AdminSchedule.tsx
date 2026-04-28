@@ -20,6 +20,8 @@ import {
   startOfWeek, endOfWeek, isSameMonth, isSameDay,
   addMonths, subMonths
 } from 'date-fns';
+import { getDailyVerse } from '../../utils/bibleVerses';
+import type { BibleVerse } from '../../utils/bibleVerses';
 
 
 export const AdminSchedule = () => {
@@ -28,6 +30,7 @@ export const AdminSchedule = () => {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [savingDate, setSavingDate] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [dailyVerse, setDailyVerse] = useState<BibleVerse | null>(null);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   const showToast = (message: string, type: ToastType = 'info') => {
@@ -79,6 +82,7 @@ export const AdminSchedule = () => {
   }, []);
 
   useEffect(() => {
+    setDailyVerse(getDailyVerse());
     fetchSchedules();
     fetchMasterVolunteers();
   }, [fetchSchedules, fetchMasterVolunteers]);
@@ -236,11 +240,11 @@ export const AdminSchedule = () => {
 
             <div className="flex-1">
               <p className="text-[12px] xl:text-[14px] font-black text-gray-800 leading-relaxed tracking-tight break-keep">
-                "그러므로 내 사랑하는 형제들아 견실하며 흔들리지 말고 항상 주의 일에 더욱 힘쓰는자들이 되라 이는 너희 수고가 주 안에서 헛되지 않은 줄 앎이라"
+                "{dailyVerse?.text}"
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="h-[1px] w-5 bg-orange-200" />
-                <span className="text-[9px] xl:text-[10px] font-black text-orange-500 uppercase tracking-widest">고린도전서 15:58</span>
+                <span className="text-[9px] xl:text-[10px] font-black text-orange-500 uppercase tracking-widest">{dailyVerse?.ref}</span>
               </div>
             </div>
 
@@ -365,8 +369,8 @@ export const AdminSchedule = () => {
                   <button
                     onClick={() => setIsEditingMaster(!isEditingMaster)}
                     className={`text-[11px] font-bold px-3 py-1 rounded-full transition-all ${isEditingMaster
-                        ? 'bg-black text-white'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      ? 'bg-black text-white'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                       }`}
                   >
                     {isEditingMaster ? '완료' : '명단 편집'}
@@ -421,8 +425,8 @@ export const AdminSchedule = () => {
                             key={v.id}
                             onClick={() => handleToggleVolunteer(selectedDate, v.name)}
                             className={`py-3 rounded-2xl text-[14px] font-black transition-all border-2 ${isSelected
-                                ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-200/50 scale-[1.02]'
-                                : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm shadow-emerald-200/50 scale-[1.02]'
+                              : 'bg-gray-50 border-transparent text-gray-400 hover:bg-gray-100'
                               }`}
                           >
                             {v.name}
@@ -482,13 +486,13 @@ export const AdminSchedule = () => {
         )}
       </div>
 
-    {/* 토스트 알림 */}
-    <Toast 
-      message={toast?.message || ''} 
-      type={toast?.type} 
-      isVisible={!!toast} 
-      onClose={() => setToast(null)} 
-    />
-  </div>
+      {/* 토스트 알림 */}
+      <Toast
+        message={toast?.message || ''}
+        type={toast?.type}
+        isVisible={!!toast}
+        onClose={() => setToast(null)}
+      />
+    </div>
   );
 };
