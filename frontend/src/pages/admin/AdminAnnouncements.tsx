@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
-  X, PartyPopper, Bell
+  X, PartyPopper, Bell, Calendar
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { Toast } from '../../components/ui/Toast';
@@ -158,8 +158,8 @@ export const AdminAnnouncements = () => {
             <Megaphone className="text-amber-600" size={20} />
           </div>
           <div>
-            <h1 className="text-[18px] font-black text-gray-900 tracking-tight">이벤트 / 공지</h1>
-            <p className="text-[11px] text-gray-400 font-medium">골든벨 이벤트 및 공지사항 관리</p>
+            <h1 className="text-[18px] font-black text-gray-900 tracking-tight">이벤트 & 공지</h1>
+            <p className="text-[11px] text-gray-400 font-medium">섬김 골든벨 및 공지사항 관리</p>
           </div>
         </div>
         <button
@@ -207,9 +207,8 @@ export const AdminAnnouncements = () => {
             {announcements.map((item) => (
               <div
                 key={item.id}
-                className={`bg-white rounded-2xl p-5 border shadow-sm transition-all ${
-                  item.is_active ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-100'
-                }`}
+                className={`bg-white rounded-2xl p-5 border shadow-sm transition-all ${item.is_active ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-100'
+                  }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
@@ -248,11 +247,10 @@ export const AdminAnnouncements = () => {
                     </button>
                     <button
                       onClick={() => handleToggleActive(item)}
-                      className={`p-2 rounded-lg transition-colors ${
-                        item.is_active
-                          ? 'hover:bg-red-50 text-green-500 hover:text-red-500'
-                          : 'hover:bg-green-50 text-gray-400 hover:text-green-500'
-                      }`}
+                      className={`p-2 rounded-lg transition-colors ${item.is_active
+                        ? 'hover:bg-red-50 text-green-500 hover:text-red-500'
+                        : 'hover:bg-green-50 text-gray-400 hover:text-green-500'
+                        }`}
                       title={item.is_active ? '이벤트 종료' : '이벤트 활성화'}
                       aria-label={item.is_active ? '이벤트 종료' : '이벤트 활성화'}
                       tabIndex={0}
@@ -389,7 +387,13 @@ export const AdminAnnouncements = () => {
             </div>
             <div className="p-5 space-y-5">
               <div className="bg-amber-50 rounded-xl p-4">
-                <h3 className="text-[14px] font-black text-gray-900 mb-1">{reportTarget.title}</h3>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-[14px] font-black text-gray-900">{reportTarget.title}</h3>
+                  <div className="flex items-center gap-1 text-[11px] text-amber-600 font-bold">
+                    <Calendar size={12} />
+                    <span>{new Date(reportTarget.starts_at || reportTarget.created_at).toLocaleDateString('ko-KR')}</span>
+                  </div>
+                </div>
                 {reportTarget.sponsor_name && (
                   <p className="text-[12px] text-amber-700 font-bold">
                     후원: {reportTarget.sponsor_name} {reportTarget.sponsor_duty || ''}

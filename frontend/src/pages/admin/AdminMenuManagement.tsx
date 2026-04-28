@@ -101,8 +101,12 @@ const SortableCategoryItem = ({
           <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${cat.is_active ? 'translate-x-4.5' : 'translate-x-0.5'}`} />
         </button>
         <button
-          onClick={() => onDelete(cat.id)}
-          className="p-1 text-gray-300 hover:text-red-500 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(cat.id);
+          }}
+          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+          title="카테고리 삭제"
         >
           <Trash2 size={16} />
         </button>
@@ -189,11 +193,14 @@ const SortableMenuCard = ({
         <div className="flex justify-between items-start mb-1">
           <h3 className="font-bold text-gray-900 text-[15px]">{menu.name}</h3>
           <button
-            onClick={() => onDelete(menu.id)}
-            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all rounded-lg"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(menu.id);
+            }}
+            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all rounded-xl"
             title="메뉴 삭제"
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} />
           </button>
         </div>
         <p className="text-primary font-black text-[15px] mb-1">₩{menu.price.toLocaleString()}</p>
@@ -839,7 +846,21 @@ export const AdminMenuManagement = () => {
             </div>
 
             <div className="flex gap-4 mt-10">
-              <button onClick={() => setIsMenuModalOpen(false)} className="flex-1 py-3.5 text-[14px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all">취소</button>
+              <div className="flex gap-2 flex-1">
+                <button onClick={() => setIsMenuModalOpen(false)} className="flex-1 py-3.5 text-[14px] font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-2xl transition-all">취소</button>
+                {editingMenu && (
+                  <button
+                    onClick={() => {
+                      setIsMenuModalOpen(false);
+                      handleDeleteMenu(editingMenu.id);
+                    }}
+                    className="p-3.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-2xl transition-all border border-red-100"
+                    title="메뉴 삭제"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={handleSaveMenu}
                 disabled={savingId !== null}

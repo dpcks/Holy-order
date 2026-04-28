@@ -10,12 +10,10 @@ import {
   Settings as SettingsIcon, 
   Store, 
   Power, 
-  Bell, 
   CreditCard, 
   Save, 
   CheckCircle2, 
-  AlertCircle,
-  Clock
+  AlertCircle
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
@@ -185,43 +183,7 @@ export const AdminSettings = () => {
               </div>
             </section>
 
-            {/* 3. 공지사항 및 운영 시간 (예정) */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
-                  <Bell size={20} />
-                </div>
-                <h2 className="text-lg font-black text-gray-900">공지사항 및 안내</h2>
-              </div>
 
-              <div className="flex-1 flex flex-col gap-5">
-                <div className="flex-1 flex flex-col">
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">영업 종료 시 안내 문구</label>
-                  <textarea 
-                    value={settings.notice || ''}
-                    onChange={(e) => setSettings({...settings, notice: e.target.value})}
-                    className="flex-1 w-full bg-gray-50 border-none rounded-3xl px-6 py-5 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none resize-none"
-                    placeholder="영업 종료 화면에 표시될 공지사항을 입력하세요."
-                  />
-                </div>
-                
-                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 flex items-start gap-3">
-                  <Clock size={16} className="text-gray-400 mt-0.5" />
-                  <p className="text-[11px] font-bold text-gray-400 leading-relaxed">
-                    운영 시간 설정 기능은 추후 업데이트 예정입니다.<br/>지금은 수동으로 영업을 시작/종료해 주세요.
-                  </p>
-                </div>
-
-                <button 
-                  onClick={() => handleUpdate({ notice: settings.notice })}
-                  disabled={saving}
-                  className="w-full bg-black text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                  <Save size={18} />
-                  공지사항 저장
-                </button>
-              </div>
-            </section>
           </div>
 
           {/* 하단 메시지 알림 */}

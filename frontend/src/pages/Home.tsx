@@ -135,13 +135,12 @@ export const Home = () => {
           <img
             src="/img/closed.jpg"
             alt="Closed"
-            className="w-full h-full object-cover opacity-60 scale-105 blur-[2px]"
+            className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
         </div>
 
         {/* 안내 문구 영역 */}
-        <div className="relative flex-1 flex flex-col items-center justify-end pb-24 px-8 text-center">
+        {/* <div className="relative flex-1 flex flex-col items-center justify-end pb-24 px-8 text-center">
           <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 border border-white/20 animate-bounce">
             <Coffee className="text-white" size={40} />
           </div>
@@ -159,7 +158,7 @@ export const Home = () => {
           <div className="px-6 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
             <p className="text-[12px] font-black text-primary uppercase tracking-[0.2em]">다음주에 만나요~~~</p>
           </div>
-        </div>
+        </div> */}
 
         {/* 하단 푸터 (진행 중인 주문이 있다면 표시) */}
         {activeOrders.length > 0 && (
@@ -253,11 +252,11 @@ export const Home = () => {
             ) : (
               <div className="grid grid-cols-2 gap-4 gap-y-8">
                 {activeCategory?.menus.map((menu) => (
-                  <MenuCard 
-                    key={menu.id} 
+                  <MenuCard
+                    key={menu.id}
                     menu={menu}
                     isEventMode={!!activeEvent?.is_event_mode}
-                    onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })} 
+                    onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                     onShowToast={showToast}
                   />
                 ))}
@@ -274,11 +273,11 @@ export const Home = () => {
           ) : (
             <div className="grid grid-cols-2 gap-4 gap-y-8">
               {filteredMenus.map((menu) => (
-                <MenuCard 
-                  key={menu.id} 
+                <MenuCard
+                  key={menu.id}
                   menu={menu}
                   isEventMode={!!activeEvent?.is_event_mode}
-                  onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })} 
+                  onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                   onShowToast={showToast}
                 />
               ))}
@@ -317,11 +316,11 @@ export const Home = () => {
       )}
 
       {/* 토스트 알림 */}
-      <Toast 
-        message={toast?.message || ''} 
-        type={toast?.type} 
-        isVisible={!!toast} 
-        onClose={() => setToast(null)} 
+      <Toast
+        message={toast?.message || ''}
+        type={toast?.type}
+        isVisible={!!toast}
+        onClose={() => setToast(null)}
       />
 
       {/* 웰컴 모달 */}

@@ -223,13 +223,23 @@ async def create_menu(menu_data: schemas.MenuCreate, db: Session = Depends(get_d
 
 @router.delete("/menus/{menu_id}")
 async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
-    """메뉴 삭제 (물리적 삭제 대신 is_active 필드가 있다면 소프트 삭제를 권장하나 여기서는 우선 물리적 삭제)"""
+    """메뉴 삭제 (물리적 삭제 시도 후, 과거 주문 내역이 있으면 소프트 삭제 처리)"""
     menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
     if not menu:
         raise HTTPException(status_code=404, detail="메뉴를 찾을 수 없습니다.")
     
-    db.delete(menu)
-    db.commit()
+    try:
+        db.delete(menu)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        error_msg = str(e).lower()
+        if "foreign key" in error_msg or "integrity" in error_msg or "violates" in error_msg:
+            # 무결성 에러 발생 시 소프트 삭제로 대체
+            menu.is_active = False
+            db.commit()
+        else:
+            raise HTTPException(status_code=500, detail="메뉴 삭제 중 알 수 없는 오류가 발생했습니다.")
     
     await manager.broadcast({
         "type": "MENU_DELETED",
@@ -242,8 +252,12 @@ async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
 
 @router.get("/categories", response_model=schemas.StandardResponse[List[schemas.CategoryWithMenusResponse]])
 def get_all_categories(db: Session = Depends(get_db)):
-    """관리사용 카테고리 전체 조회 (숨김 상태 포함)"""
+    """관리사용 카테고리 전체 조회 (숨김 상태 포함, 소프트 삭제된 메뉴 제외)"""
     categories = db.query(models.Category).order_by(models.Category.display_order).all()
+    
+    for category in categories:
+        category.menus = [m for m in category.menus if m.is_active]
+        
     return schemas.StandardResponse(success=True, data=categories, message="카테고리 목록을 가져왔습니다.")
 
 @router.post("/categories", response_model=schemas.StandardResponse)

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { 
-  ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, 
-  Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone 
+import {
+  ClipboardList, UtensilsCrossed, BarChart2, LogOut, History,
+  Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone
 } from 'lucide-react';
 
 const navItems = [
@@ -154,7 +154,7 @@ export const AdminLayout = () => {
   useEffect(() => {
     localStorage.setItem('adminSidebarCollapsed', String(isCollapsed));
   }, [isCollapsed]);
-  
+
   // 화면 너비에 따른 사이드바 자동 접힘 로직
   useEffect(() => {
     const handleResize = () => {
@@ -163,7 +163,7 @@ export const AdminLayout = () => {
         setIsCollapsed(true);
       }
     };
-    
+
     handleResize(); // 초기 로드 시 실행
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -174,10 +174,9 @@ export const AdminLayout = () => {
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden font-sans text-gray-900">
       {/* 사이드바 */}
-      <aside 
-        className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${
-          isCollapsed ? 'w-[80px]' : 'w-[260px]'
-        }`}
+      <aside
+        className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-[80px]' : 'w-[260px]'
+          }`}
       >
         {/* 로고 영역 */}
         <div className={`px-6 py-8 border-b border-white/5 transition-all ${isCollapsed ? 'px-4' : ''}`}>
@@ -196,9 +195,9 @@ export const AdminLayout = () => {
                 </h1>
               )}
             </div>
-            
+
             {!isCollapsed && (
-              <button 
+              <button
                 onClick={toggleSidebar}
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-white/30 hover:bg-white/10 hover:text-white transition-all animate-in slide-in-from-right-2"
                 title="사이드바 접기"
@@ -209,7 +208,7 @@ export const AdminLayout = () => {
           </div>
 
           {isCollapsed && (
-            <button 
+            <button
               onClick={toggleSidebar}
               className="mt-4 w-full h-8 flex items-center justify-center rounded-lg text-white/20 hover:bg-white/5 hover:text-white transition-all"
               title="사이드바 펴기"
@@ -221,7 +220,7 @@ export const AdminLayout = () => {
           {!isCollapsed && (
             <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-700">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <p className="text-[10px] text-white/30 font-bold tracking-widest uppercase">Management Portal</p>
+              <p className="text-[10px] text-white/30 font-bold tracking-widest uppercase">평택중앙교회카페 관리자 페이지</p>
             </div>
           )}
         </div>
@@ -235,12 +234,10 @@ export const AdminLayout = () => {
               end={item.end}
               title={isCollapsed ? item.label : ''}
               className={({ isActive }) =>
-                `flex items-center rounded-xl text-[13px] font-semibold transition-all duration-200 group relative ${
-                  isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2.5 gap-3'
-                } ${
-                  isActive
-                    ? 'bg-primary text-white shadow-md'
-                    : 'text-white/50 hover:bg-white/10 hover:text-white'
+                `flex items-center rounded-xl text-[13px] font-semibold transition-all duration-200 group relative ${isCollapsed ? 'justify-center px-0 py-3' : 'px-3 py-2.5 gap-3'
+                } ${isActive
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-white/50 hover:bg-white/10 hover:text-white'
                 }`
               }
             >
