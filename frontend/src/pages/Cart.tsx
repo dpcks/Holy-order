@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Building2, MessageSquare, ChevronDown, Wallet } from 'lucide-react';
 import { Header } from '../components/layout/Header';
@@ -7,7 +7,7 @@ import { useCart } from '../context/CartContext';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
-import type { Duty, StandardResponse, PaymentMethod } from '../types';
+import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
 
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
@@ -158,6 +158,22 @@ export const Cart = () => {
   const discount = 0;
   const finalPrice = totalPrice - discount;
 
+  // 이벤트 모드 상태 조회
+  const [activeEvent, setActiveEvent] = useState<Announcement | null>(null);
+  const isEventMode = !!activeEvent?.is_event_mode;
+  // 이벤트 모드일 때는 최종 결제 금액을 0원으로 처리
+  const eventFinalPrice = isEventMode ? 0 : finalPrice;
+
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
+        if (res.success && res.data) setActiveEvent(res.data);
+      } catch (_) { /* 이벤트 조회 실패 시 일반 모드로 운영 */ }
+    };
+    fetchEvent();
+  }, []);
+
   // 주문 버튼 클릭 → 사용자 정보 확인을 위해 항상 모달 오픈
   const handleOrderClick = () => {
     if (items.length === 0) return;
@@ -172,7 +188,7 @@ export const Cart = () => {
       const orderData = {
         user_id: userId,
         payment_method: paymentMethod,
-        total_price: finalPrice,
+        total_price: eventFinalPrice,
         request: requests.trim() || null,
         items: items.map(item => ({
           menu_id: item.menu_id,
@@ -203,7 +219,7 @@ export const Cart = () => {
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
         
         navigate(`/order/status/${response.data.id}`, { 
-          state: { orderNumber: response.data.order_number, total: finalPrice } 
+          state: { orderNumber: response.data.order_number, total: eventFinalPrice } 
         });
       } else {
         showToast(response.message || '주문에 실패했습니다.', 'error');
@@ -374,13 +390,27 @@ export const Cart = () => {
               <span className="text-[13px] text-gray-500 font-medium">상품금액</span>
               <span className="text-[13px] font-semibold text-gray-800">{totalPrice.toLocaleString()}원</span>
             </div>
-            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
-              <span className="text-[13px] text-gray-500 font-medium">할인금액</span>
-              <span className="text-[13px] font-semibold text-gray-800">-0원</span>
-            </div>
+            {isEventMode ? (
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+                <span className="text-[13px] text-amber-600 font-bold">🎉 이벤트 할인</span>
+                <span className="text-[13px] font-bold text-amber-600">-{totalPrice.toLocaleString()}원</span>
+              </div>
+            ) : (
+              <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-100">
+                <span className="text-[13px] text-gray-500 font-medium">할인금액</span>
+                <span className="text-[13px] font-semibold text-gray-800">-0원</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-[14px] font-bold text-gray-900">최종 결제 금액</span>
-              <span className="text-lg font-bold text-primary">{finalPrice.toLocaleString()}원</span>
+              {isEventMode ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-[14px] text-gray-400 line-through">{totalPrice.toLocaleString()}원</span>
+                  <span className="text-lg font-black text-amber-600">0원</span>
+                </div>
+              ) : (
+                <span className="text-lg font-bold text-primary">{finalPrice.toLocaleString()}원</span>
+              )}
             </div>
           </section>
 
@@ -395,7 +425,7 @@ export const Cart = () => {
             disabled={isSubmitting}
             className="text-[16px] h-14"
           >
-            {isSubmitting ? '처리 중...' : `${finalPrice.toLocaleString()}원 주문하기`}
+            {isSubmitting ? '처리 중...' : isEventMode ? '무료 주문하기 🎉' : `${finalPrice.toLocaleString()}원 주문하기`}
           </Button>
         </div>
 

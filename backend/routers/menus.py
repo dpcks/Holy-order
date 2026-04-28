@@ -38,3 +38,27 @@ def get_public_settings(db: Session = Depends(get_db)):
         return schemas.StandardResponse(success=False, data=None, message="설정 정보가 없습니다.")
     return schemas.StandardResponse(success=True, data=setting, message="설정을 불러왔습니다.")
 
+
+@router.get("/announcements/active", response_model=schemas.StandardResponse)
+def get_active_announcement(db: Session = Depends(get_db)):
+    """현재 활성화된 이벤트/공지 조회 (인증 없이 접근 가능) - 없으면 data=null 반환"""
+    announcement = db.query(models.Announcement).filter(
+        models.Announcement.is_active == True
+    ).first()
+    if not announcement:
+        return schemas.StandardResponse(success=True, data=None, message="현재 활성 이벤트가 없습니다.")
+    return schemas.StandardResponse(success=True, data={
+        "id": announcement.id,
+        "title": announcement.title,
+        "content": announcement.content,
+        "banner_text": announcement.banner_text,
+        "image_url": announcement.image_url,
+        "is_event_mode": announcement.is_event_mode,
+        "sponsor_name": announcement.sponsor_name,
+        "sponsor_duty": announcement.sponsor_duty,
+        "event_type": announcement.event_type,
+        "is_active": announcement.is_active,
+        "starts_at": announcement.starts_at.isoformat() if announcement.starts_at else None,
+        "ends_at": announcement.ends_at.isoformat() if announcement.ends_at else None,
+        "created_at": announcement.created_at.isoformat() if announcement.created_at else None,
+    }, message="활성 이벤트를 조회했습니다.")

@@ -192,3 +192,31 @@ export interface Volunteer {
   name: string;
   created_at?: string;
 }
+
+// ==========================================
+// 이벤트/공지 관련 (Announcements)
+// ==========================================
+
+export interface Announcement {
+  id: number;
+  title: string;
+  content: string | null;
+  banner_text: string | null;
+  image_url: string | null;
+  is_event_mode: boolean;
+  sponsor_name: string | null;
+  sponsor_duty: string | null;
+  event_type: string | null;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+}
+
+export interface AnnouncementReport {
+  total_orders: number;
+  total_items: number;
+  original_price_sum: number;
+  menu_breakdown: { name: string; count: number; revenue: number }[];
+  duty_breakdown: Record<string, number>;
+}

@@ -17,6 +17,7 @@ export const MenuDetail = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { menu } = location.state as { menu: Menu };
+  const isEventMode = (location.state as any)?.isEventMode || false;
   
   const { addItem } = useCart();
   
@@ -69,6 +70,8 @@ export const MenuDetail = () => {
     selectedExtras.reduce((sum, opt) => sum + opt.extra_price, 0);
   const unitPrice = menu.price + extraPriceSum;
   const totalPrice = unitPrice * quantity;
+  // 이벤트 모드일 때는 실제 결제 금액을 0원으로 처리
+  const displayPrice = isEventMode ? 0 : totalPrice;
 
   const handleAddToCart = (shouldNavigate = true) => {
     // 혹시 모를 품절 재확인 (state가 stale할 경우 대비)
@@ -90,8 +93,8 @@ export const MenuDetail = () => {
       name: menu.name,
       image_url: menu.image_url || undefined,
       quantity,
-      price: unitPrice,
-      sub_total: totalPrice,
+      price: isEventMode ? 0 : unitPrice,
+      sub_total: isEventMode ? 0 : totalPrice,
       options_text: optionsTextParts.join(' / ') || null,
     });
 
@@ -251,7 +254,14 @@ export const MenuDetail = () => {
               />
               <div className="text-right">
                 <p className="text-[11px] text-gray-500 font-medium mb-0.5">총 주문 금액</p>
-                <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+                {isEventMode ? (
+                  <div className="flex items-center gap-1.5 justify-end">
+                    <span className="text-[14px] text-gray-400 line-through font-medium">{totalPrice.toLocaleString()}원</span>
+                    <span className="text-xl font-black text-amber-600">0원</span>
+                  </div>
+                ) : (
+                  <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+                )}
               </div>
             </div>
 

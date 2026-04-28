@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee } from 'lucide-react';
+import { MapPin, Coffee, X, PartyPopper, Gift } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
-import type { Category, StandardResponse, Menu } from '../types';
+import type { Category, StandardResponse, Menu, Announcement } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -15,6 +15,8 @@ export const Home = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [shopSettings, setShopSettings] = useState<{ is_open: boolean, notice?: string } | null>(null);
+  const [activeEvent, setActiveEvent] = useState<Announcement | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -43,6 +45,20 @@ export const Home = () => {
         if (response.data.length > 0 && activeCategoryId === null) {
           setActiveCategoryId(response.data[0].id);
         }
+      }
+
+      // 3. 활성 이벤트 조회
+      const eventRes = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
+      if (eventRes.success && eventRes.data) {
+        setActiveEvent(eventRes.data);
+        // 세션당 1회만 웰컴 모달 표시
+        const modalShown = sessionStorage.getItem(`event_modal_${eventRes.data.id}`);
+        if (!modalShown) {
+          setShowWelcomeModal(true);
+          sessionStorage.setItem(`event_modal_${eventRes.data.id}`, 'true');
+        }
+      } else {
+        setActiveEvent(null);
       }
     } catch (error) {
       console.error('Failed to fetch data', error);
@@ -176,6 +192,31 @@ export const Home = () => {
 
       {!searchQuery ? (
         <>
+          {/* 이벤트 배너 */}
+          {activeEvent && activeEvent.is_event_mode && (
+            <div className="px-4 pb-2 animate-in slide-in-from-top-4 duration-500">
+              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+                <div className="absolute top-[-20%] right-[-10%] w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+                <div className="relative flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                    <PartyPopper size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[13px] font-black leading-snug break-keep">
+                      {activeEvent.banner_text || `${activeEvent.title} - 오늘은 카페가 무료 운영됩니다!`}
+                    </p>
+                    {activeEvent.sponsor_name && (
+                      <p className="text-[11px] text-white/80 font-bold mt-0.5">
+                        후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
+                      </p>
+                    )}
+                  </div>
+                  <Gift size={16} className="text-white/60 animate-bounce" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Store Selector */}
           <div className="px-4 py-4">
             <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg">
@@ -214,8 +255,9 @@ export const Home = () => {
                 {activeCategory?.menus.map((menu) => (
                   <MenuCard 
                     key={menu.id} 
-                    menu={menu} 
-                    onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} 
+                    menu={menu}
+                    isEventMode={!!activeEvent?.is_event_mode}
+                    onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })} 
                     onShowToast={showToast}
                   />
                 ))}
@@ -234,8 +276,9 @@ export const Home = () => {
               {filteredMenus.map((menu) => (
                 <MenuCard 
                   key={menu.id} 
-                  menu={menu} 
-                  onClick={() => navigate(`/menu/${menu.id}`, { state: { menu } })} 
+                  menu={menu}
+                  isEventMode={!!activeEvent?.is_event_mode}
+                  onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })} 
                   onShowToast={showToast}
                 />
               ))}
@@ -280,12 +323,46 @@ export const Home = () => {
         isVisible={!!toast} 
         onClose={() => setToast(null)} 
       />
+
+      {/* 웰컴 모달 */}
+      {showWelcomeModal && activeEvent && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={() => setShowWelcomeModal(false)}>
+          <div
+            className="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {activeEvent.image_url && (
+              <img src={activeEvent.image_url} alt={activeEvent.title} className="w-full h-48 object-cover" />
+            )}
+            <div className="p-6 text-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                <PartyPopper size={28} className="text-white" />
+              </div>
+              <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{activeEvent.title}</h2>
+              {activeEvent.content && (
+                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep">{activeEvent.content}</p>
+              )}
+              {activeEvent.sponsor_name && (
+                <p className="text-[13px] font-bold text-amber-600 mb-4">
+                  {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}님의 사랑으로 준비되었습니다 ❤️
+                </p>
+              )}
+              <button
+                onClick={() => setShowWelcomeModal(false)}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-2xl font-black text-[14px] shadow-lg hover:shadow-xl transition-all active:scale-95"
+              >
+                감사히 주문하기 ☕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, onClick, onShowToast }: { menu: Menu, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
+const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
   const handleCardClick = () => {
     if (!menu.is_available) {
       onShowToast(`'${menu.name}' 메뉴는 현재 품절입니다.`, 'error');
@@ -319,7 +396,14 @@ const MenuCard = ({ menu, onClick, onShowToast }: { menu: Menu, onClick: () => v
           </div>
         )}
 
-        {menu.is_available && (() => {
+        {/* 이벤트 모드 무료 배지 */}
+        {isEventMode && menu.is_available && (
+          <div className="absolute top-2 left-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md animate-pulse">
+            FREE 🎉
+          </div>
+        )}
+
+        {!isEventMode && menu.is_available && (() => {
           const createdDate = new Date(menu.created_at);
           const now = new Date();
           const diffTime = Math.abs(now.getTime() - createdDate.getTime());
@@ -339,7 +423,15 @@ const MenuCard = ({ menu, onClick, onShowToast }: { menu: Menu, onClick: () => v
       {menu.description && (
         <p className="text-[11px] text-gray-400 line-clamp-1 mb-1 font-medium">{menu.description}</p>
       )}
-      <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
+      {/* 이벤트 모드: 기존 가격 취소선 + 0원 표시 */}
+      {isEventMode ? (
+        <div className="flex items-center gap-1.5">
+          <span className="text-[13px] text-gray-400 line-through font-medium">{menu.price.toLocaleString()}원</span>
+          <span className="font-black text-amber-600 text-[15px]">0원</span>
+        </div>
+      ) : (
+        <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
+      )}
     </div>
   );
 };

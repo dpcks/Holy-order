@@ -49,13 +49,29 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
             "sub_total": item_total
         })
 
-    if calculated_total != order.total_price:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"결제 금액이 올바르지 않습니다. (요청: {order.total_price}, 실제: {calculated_total})"
-        )
+    # 2. 이벤트(골든벨) 모드 확인 - 활성 이벤트가 있으면 무료 처리
+    active_event = db.query(models.Announcement).filter(
+        models.Announcement.is_active == True,
+        models.Announcement.is_event_mode == True
+    ).first()
 
-    # 2. 당일 주문 번호 계산
+    if active_event:
+        # 이벤트 모드: 원래 금액을 보관하고 실제 결제는 0원
+        final_price = 0
+        original_price = calculated_total
+        announcement_id = active_event.id
+    else:
+        # 일반 모드: 기존 금액 검증 로직 유지
+        if calculated_total != order.total_price:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"결제 금액이 올바르지 않습니다. (요청: {order.total_price}, 실제: {calculated_total})"
+            )
+        final_price = calculated_total
+        original_price = None
+        announcement_id = None
+
+    # 3. 당일 주문 번호 계산
     today = models.get_seoul_time().date()
     last_order = db.query(models.Order)\
         .filter(models.Order.order_date == today)\
@@ -63,14 +79,16 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         .first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
-    # 3. 주문 및 상세 내역 저장
+    # 4. 주문 및 상세 내역 저장
     new_order = models.Order(
         user_id=order.user_id,
         user_duty_snapshot=user.duty,
         user_name_snapshot=user.name,
         user_phone_snapshot=user.phone,
         request=order.request,
-        total_price=calculated_total, # 검증된 금액 저장
+        total_price=final_price,
+        original_price=original_price,
+        announcement_id=announcement_id,
         payment_method=order.payment_method.value,
         status=schemas.OrderStatusEnum.PENDING.value,
         order_number=next_order_number,

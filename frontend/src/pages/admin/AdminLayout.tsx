@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History, 
-  Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings 
+  Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone 
 } from 'lucide-react';
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/admin/menus', label: '메뉴 관리', icon: UtensilsCrossed },
   { to: '/admin/reports', label: '매출 통계', icon: BarChart2 },
   { to: '/admin/schedules', label: '봉사 스케줄', icon: Calendar },
+  { to: '/admin/announcements', label: '이벤트/공지', icon: Megaphone },
   { to: '/admin/settings', label: '설정', icon: Settings },
 ];
 

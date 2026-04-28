@@ -147,6 +147,9 @@ class OrderResponse(BaseModel):
     status: str
     created_at: datetime
     items: List[OrderItemResponse] = []
+    # 이벤트(골든벨) 관련 필드
+    announcement_id: Optional[int] = None
+    original_price: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -266,6 +269,50 @@ class VolunteerCreate(BaseModel):
 class VolunteerResponse(BaseModel):
     id: int
     name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+# ===============================
+# Announcements (이벤트/공지)
+# ===============================
+class AnnouncementCreate(BaseModel):
+    title: str
+    content: Optional[str] = None
+    banner_text: Optional[str] = None
+    image_url: Optional[str] = None
+    is_event_mode: bool = False
+    sponsor_name: Optional[str] = None
+    sponsor_duty: Optional[str] = None
+    event_type: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
+class AnnouncementUpdate(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    banner_text: Optional[str] = None
+    image_url: Optional[str] = None
+    is_event_mode: Optional[bool] = None
+    sponsor_name: Optional[str] = None
+    sponsor_duty: Optional[str] = None
+    event_type: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+
+class AnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    content: Optional[str] = None
+    banner_text: Optional[str] = None
+    image_url: Optional[str] = None
+    is_event_mode: bool
+    sponsor_name: Optional[str] = None
+    sponsor_duty: Optional[str] = None
+    event_type: Optional[str] = None
+    is_active: bool
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

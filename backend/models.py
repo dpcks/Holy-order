@@ -84,6 +84,10 @@ class Order(Base):
     payment_method = Column(String) # BANK_TRANSFER, KAKAOPAY 등
     status = Column(String, default="PENDING") # PENDING, PREPARING, READY, COMPLETED, CANCELLED
     
+    # 이벤트(골든벨) 관련 필드 - 이벤트 주문 시 원래 가격과 이벤트 연결 정보 보관
+    announcement_id = Column(Integer, ForeignKey("announcements.id"), nullable=True) # 이벤트 주문 시 연결
+    original_price = Column(Integer, nullable=True) # 이벤트 주문 시 원래 계산 금액 (정산용)
+    
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
@@ -97,6 +101,7 @@ class Order(Base):
     user = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
     payment_log = relationship("PaymentLog", back_populates="order", uselist=False)
+    announcement = relationship("Announcement", back_populates="orders")
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -178,3 +183,27 @@ class Volunteer(Base):
     name = Column(String, unique=True, index=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+# ==========================================
+# 4. 이벤트/공지 (Announcements)
+# ==========================================
+
+class Announcement(Base):
+    """이벤트/공지 데이터 모델 - 골든벨(무료 제공) 이벤트 및 일반 공지를 관리"""
+    __tablename__ = "announcements"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False) # 이벤트 제목 (예: "김철수 장로님 칠순 감사")
+    content = Column(String, nullable=True) # 상세 내용
+    banner_text = Column(String, nullable=True) # 사용자 화면 상단 배너 문구
+    image_url = Column(String, nullable=True) # 이벤트 이미지 URL
+    is_event_mode = Column(Boolean, default=False) # True이면 골든벨(무료) 모드
+    sponsor_name = Column(String, nullable=True) # 후원자 성함
+    sponsor_duty = Column(String, nullable=True) # 후원자 직분
+    event_type = Column(String, nullable=True) # 이벤트 유형 (칠순감사, 결혼감사, 출산감사 등)
+    is_active = Column(Boolean, default=False) # 현재 활성 여부 (동시에 1개만 활성)
+    starts_at = Column(DateTime, nullable=True) # 이벤트 시작 일시
+    ends_at = Column(DateTime, nullable=True) # 이벤트 종료 일시
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    orders = relationship("Order", back_populates="announcement")
