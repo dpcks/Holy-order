@@ -11,7 +11,10 @@ import type { Category, StandardResponse, Menu, Announcement } from '../types';
 export const Home = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
+    const saved = sessionStorage.getItem('lastActiveCategoryId');
+    return saved ? Number(saved) : null;
+  });
   const [activeOrders, setActiveOrders] = useState<{ id: string, orderNumber: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,7 +46,9 @@ export const Home = () => {
       const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
       if (response.success && response.data) {
         setCategories(response.data);
-        if (response.data.length > 0 && activeCategoryId === null) {
+        // 기존 선택된 카테고리가 목록에 있는지 확인
+        const isValid = response.data.some(c => c.id === activeCategoryId);
+        if (response.data.length > 0 && (!activeCategoryId || !isValid)) {
           setActiveCategoryId(response.data[0].id);
         }
       }
@@ -122,6 +127,13 @@ export const Home = () => {
   }, [fetchData, connectWebSocket]);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
+
+  // 선택된 카테고리 저장
+  useEffect(() => {
+    if (activeCategoryId !== null) {
+      sessionStorage.setItem('lastActiveCategoryId', String(activeCategoryId));
+    }
+  }, [activeCategoryId]);
 
   // 영업 종료 화면 렌더링
   if (!loading && shopSettings && !shopSettings.is_open) {
