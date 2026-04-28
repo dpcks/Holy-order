@@ -12,7 +12,7 @@ import {
   Quote, Sparkles
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import type { StandardResponse } from '../../api/client';
+import type { StandardResponse, VolunteerSchedule, Volunteer } from '../../types';
 import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
 import {
@@ -21,20 +21,6 @@ import {
   addMonths, subMonths
 } from 'date-fns';
 
-interface VolunteerSchedule {
-  id: number;
-  sunday_date: string;
-  volunteers: {
-    names?: string[];
-    [key: string]: any;
-  };
-  memo: string;
-}
-
-interface Volunteer {
-  id: number;
-  name: string;
-}
 
 export const AdminSchedule = () => {
   const [currentDate, setCurrentDate] = useState(new Date());

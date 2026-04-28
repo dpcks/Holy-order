@@ -170,3 +170,25 @@ export interface PaymentLogListResponse {
   limit: number;
   total_pages: number;
 }
+
+// ==========================================
+// 봉사 스케줄 관련 (Volunteer Schedules)
+// ==========================================
+
+export interface VolunteerData {
+  names?: string[];
+  [key: string]: any;
+}
+
+export interface VolunteerSchedule {
+  id: number;
+  sunday_date: string;
+  volunteers: VolunteerData;
+  memo: string;
+}
+
+export interface Volunteer {
+  id: number;
+  name: string;
+  created_at?: string;
+}
