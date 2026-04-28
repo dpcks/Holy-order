@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, X, PartyPopper, Gift } from 'lucide-react';
+import { MapPin, Coffee, PartyPopper, Gift } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
@@ -239,8 +239,9 @@ export const Home = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategoryId(cat.id)}
-                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
-                  }`}
+                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${
+                  activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
+                }`}
               >
                 {cat.name}
                 {activeCategoryId === cat.id && (

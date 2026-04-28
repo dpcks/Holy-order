@@ -36,17 +36,27 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
                 detail=f"'{menu.name}' 메뉴는 현재 품절입니다. 장바구니에서 제거 후 다시 시도해주세요."
             )
         
-        item_total = menu.price * item.quantity
+        # 프론트엔드에서 보내온 옵션 포함 금액(sub_total) 사용
+        # 단, 악의적인 조작 방지를 위해 최소한 (메뉴 기본가 * 수량) 보다는 커야 함
+        base_total = menu.price * item.quantity
+        item_total = item.sub_total
+        
+        if item_total < base_total:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"'{menu.name}' 메뉴의 금액이 기본가({base_total}원)보다 낮게 요청되었습니다."
+            )
+            
         calculated_total += item_total
         
         # OrderItem 생성을 위한 데이터 준비
         order_items_prepared.append({
             "menu_id": item.menu_id,
             "menu_name_snapshot": menu.name,
-            "menu_price_snapshot": menu.price,
+            "menu_price_snapshot": menu.price, # 기본가 저장
             "quantity": item.quantity,
             "options_text": item.options_text,
-            "sub_total": item_total
+            "sub_total": item_total # 옵션 포함 총액 저장
         })
 
     # 2. 이벤트(골든벨) 모드 확인 - 활성 이벤트가 있으면 무료 처리
