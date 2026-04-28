@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 
 import models, schemas
@@ -9,8 +9,26 @@ router = APIRouter(prefix="/api/v1", tags=["menus"])
 
 @router.get("/categories", response_model=schemas.StandardResponse[List[schemas.CategoryWithMenusResponse]])
 def get_categories_with_menus(db: Session = Depends(get_db)):
-    categories = db.query(models.Category).filter(models.Category.is_active == True).order_by(models.Category.display_order).all()
-    return schemas.StandardResponse(success=True, data=categories, message="메뉴 목록을 가져왔습니다.")
+    categories = db.query(models.Category).filter(
+        models.Category.is_active == True
+    ).options(
+        # 메뉴와 옵션을 미리 로딩 (N+1 쿼리 방지)
+        joinedload(models.Category.menus).joinedload(models.Menu.options)
+    ).order_by(models.Category.display_order).all()
+
+    # 각 카테고리의 비활성 메뉴 제외
+    for category in categories:
+        category.menus = [
+            menu for menu in category.menus
+            if menu.is_active  # is_active만 필터링
+            # is_available은 품절 표시를 위해 유지
+        ]
+
+    return schemas.StandardResponse(
+        success=True,
+        data=categories,
+        message="메뉴 목록을 가져왔습니다."
+    )
 
 @router.get("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
 def get_public_settings(db: Session = Depends(get_db)):
