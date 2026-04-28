@@ -20,6 +20,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { apiClient } from '../../api/client';
+import { getWsUrl } from '../../utils/url';
 import type { Category, Menu, StandardResponse } from '../../types';
 
 
@@ -357,11 +358,7 @@ export const AdminMenuManagement = () => {
       wsRef.current.close();
     }
 
-    const { hostname, protocol } = window.location;
-    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const wsPort = isLocal ? ':8000' : '';
-    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+    const wsUrl = getWsUrl();
 
     setWsStatus('RECONNECTING');
     const ws = new WebSocket(wsUrl);

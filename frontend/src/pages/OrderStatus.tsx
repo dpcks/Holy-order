@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft, Wallet } from 'lucide-react';
 import { apiClient } from '../api/client';
+import { getWsUrl } from '../utils/url';
 import type { Order, SettingResponse, ActiveOrder, StandardResponse } from '../types';
 
 export const OrderStatus = () => {
@@ -23,6 +24,8 @@ export const OrderStatus = () => {
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryCountRef = useRef(0);
   const isUnmountingRef = useRef(false);
+  const prevStatusRef = useRef<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -72,11 +75,7 @@ export const OrderStatus = () => {
       wsRef.current.close();
     }
 
-    const { hostname, protocol } = window.location;
-    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const wsPort = isLocal ? ':8000' : '';
-    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+    const wsUrl = getWsUrl();
 
     setWsStatus('RECONNECTING');
     const ws = new WebSocket(wsUrl);
@@ -150,6 +149,15 @@ export const OrderStatus = () => {
     fetchData(true);
     connectWebSocket();
 
+    // 알림음 설정 (Pebble sound)
+    audioRef.current = new Audio('https://t1.daumcdn.net/kakaopay/tesla/20210105/sounds/pebble.mp3');
+    audioRef.current.load();
+
+    // 알림 권한 요청
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
         console.log('📱 [Visibility] 화면 활성화 - 주문 상태 즉시 갱신');
@@ -167,6 +175,44 @@ export const OrderStatus = () => {
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
   }, [fetchData, connectWebSocket]);
+
+  // 주문 상태 변경 감지 및 알림 발송 (진동/소리)
+  useEffect(() => {
+    if (!order) return;
+
+    // 상태가 READY로 변경되는 순간 감지
+    if (order.status === 'READY' && prevStatusRef.current !== 'READY' && prevStatusRef.current !== null) {
+      console.log('🔔 [Alert] 주문 완료 알림 발생!');
+
+      // 1. 진동 (안드로이드/Chrome 지원)
+      if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 500]);
+      }
+
+      // 2. 소리 알림
+      if (audioRef.current) {
+        audioRef.current.play().catch(err => {
+          console.warn('🔊 [Audio] 소리 재생이 차단되었습니다. (사용자 상호작용 필요)', err);
+        });
+      }
+
+      // 3. 브라우저 알림 (권한이 있는 경우)
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('평택중앙교회 카페', {
+            body: `주문하신 메뉴가 준비되었습니다! #${order.order_number}번 픽업대로 오세요.`,
+            icon: '/logo192.png',
+            tag: `order-${order.id}`
+          });
+        } catch (err) {
+          console.error('Notification error:', err);
+        }
+      }
+    }
+
+    // 현재 상태를 ref에 보관하여 다음 업데이트 시 비교
+    prevStatusRef.current = order.status;
+  }, [order]);
 
   const handleCopyAccount = async () => {
     if (!setting?.account_number) return;

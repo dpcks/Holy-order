@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee, X, PartyPopper, Gift } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { apiClient } from '../api/client';
+import { getWsUrl } from '../utils/url';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import type { Category, StandardResponse, Menu, Announcement } from '../types';
@@ -71,11 +72,7 @@ export const Home = () => {
   const connectWebSocket = useCallback(() => {
     if (wsRef.current) wsRef.current.close();
 
-    const { hostname, protocol } = window.location;
-    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const wsPort = isLocal ? ':8000' : '';
-    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+    const wsUrl = getWsUrl();
 
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;

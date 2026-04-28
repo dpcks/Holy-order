@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { getWsUrl } from '../../utils/url';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
 
@@ -120,16 +121,7 @@ export const AdminOrderManagement = () => {
       wsRef.current.close();
     }
 
-    // WebSocket URL 설정 (HTTP -> WS, HTTPS -> WSS)
-    // 로컬 개발 환경(8000포트)과 운영 환경을 모두 고려
-    const { hostname, protocol } = window.location;
-    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-
-    // 개발 환경(localhost 또는 IP 접속)에서는 8000 포트 사용
-    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const wsPort = isLocal ? ':8000' : '';
-
-    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+    const wsUrl = getWsUrl();
 
     setWsStatus('RECONNECTING');
     const ws = new WebSocket(wsUrl);

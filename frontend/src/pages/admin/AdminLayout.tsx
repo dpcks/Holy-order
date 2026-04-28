@@ -4,6 +4,7 @@ import {
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History,
   Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone
 } from 'lucide-react';
+import { getWsUrl } from '../../utils/url';
 
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
@@ -86,11 +87,7 @@ export const AdminLayout = () => {
       reconnectTimeoutRef.current = null;
     }
 
-    const { hostname, protocol } = window.location;
-    const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
-    const isLocal = hostname === 'localhost' || /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
-    const wsPort = isLocal ? ':8000' : '';
-    const wsUrl = `${wsProtocol}//${hostname}${wsPort}/ws`;
+    const wsUrl = getWsUrl();
 
     try {
       const ws = new WebSocket(wsUrl);
