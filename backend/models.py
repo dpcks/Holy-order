@@ -85,7 +85,7 @@ class Order(Base):
     status = Column(String, default="PENDING") # PENDING, PREPARING, READY, COMPLETED, CANCELLED
     
     # 이벤트(골든벨) 관련 필드 - 이벤트 주문 시 원래 가격과 이벤트 연결 정보 보관
-    announcement_id = Column(Integer, ForeignKey("announcements.id"), nullable=True) # 이벤트 주문 시 연결
+    announcement_id = Column(Integer, ForeignKey("announcements.id"), nullable=True, index=True) # 이벤트 주문 시 연결
     original_price = Column(Integer, nullable=True) # 이벤트 주문 시 원래 계산 금액 (정산용)
     
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
@@ -200,7 +200,7 @@ class Announcement(Base):
     sponsor_name = Column(String, nullable=True) # 후원자 성함
     sponsor_duty = Column(String, nullable=True) # 후원자 직분
     event_type = Column(String, nullable=True) # 이벤트 유형 (칠순감사, 결혼감사, 출산감사 등)
-    is_active = Column(Boolean, default=False) # 현재 활성 여부 (동시에 1개만 활성)
+    is_active = Column(Boolean, default=False, index=True) # 현재 활성 여부 (동시에 1개만 활성)
     starts_at = Column(DateTime, nullable=True) # 이벤트 시작 일시
     ends_at = Column(DateTime, nullable=True) # 이벤트 종료 일시
     created_at = Column(DateTime(timezone=True), server_default=func.now())
