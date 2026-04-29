@@ -50,7 +50,14 @@ export const AdminIngredients = () => {
         apiClient.get<Ingredient[], StandardResponse<Ingredient[]>>('/admin/ingredients/alerts'),
       ]);
       if (listRes.success && listRes.data) setIngredients(listRes.data);
-      if (alertRes.success && alertRes.data) setLowStockItems(alertRes.data);
+      if (alertRes.success && alertRes.data) {
+        // 상단 카드에는 '위험(20% 이하)' 상태인 항목만 표시
+        const criticalItems = alertRes.data.filter(item => {
+          const ratio = item.current_stock / item.alert_threshold;
+          return item.alert_threshold > 0 && (ratio <= 0.2 || item.current_stock === 0);
+        });
+        setLowStockItems(criticalItems);
+      }
     } catch (err) {
       console.error('재고 데이터 조회 실패:', err);
     } finally {
@@ -164,8 +171,14 @@ export const AdminIngredients = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // 부족 재고 여부 확인 헬퍼
-  const isLowStock = (item: Ingredient) => item.current_stock <= item.alert_threshold;
+  // 재고 상태 확인 헬퍼
+  const getStockStatus = (item: Ingredient) => {
+    if (item.alert_threshold <= 0) return 'NORMAL';
+    const ratio = item.current_stock / item.alert_threshold;
+    if (ratio <= 0.2 || item.current_stock === 0) return 'CRITICAL'; // 20% 이하: 주문필요
+    if (ratio <= 0.5) return 'WARNING'; // 50% 이하: 주의
+    return 'NORMAL';
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
@@ -196,13 +209,13 @@ export const AdminIngredients = () => {
           {lowStockItems.length > 0 && (
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-[28px] p-6 border border-amber-200/60 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
                   <AlertTriangle size={22} />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-amber-900 tracking-tight">부족 재고 알림</h2>
-                  <p className="text-[12px] text-amber-600 font-bold">
-                    {lowStockItems.length}개 항목의 재고가 부족합니다
+                  <h2 className="text-lg font-black text-red-900 tracking-tight">재고 주문필요 알림</h2>
+                  <p className="text-[12px] text-red-600 font-bold">
+                    {lowStockItems.length}개 항목의 재고가 매우 부족합니다
                   </p>
                 </div>
               </div>
@@ -210,7 +223,7 @@ export const AdminIngredients = () => {
                 {lowStockItems.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-white rounded-2xl p-4 border border-amber-200/50 flex items-center justify-between group hover:shadow-md transition-all cursor-pointer"
+                    className="bg-white rounded-2xl p-4 border border-red-200/50 flex items-center justify-between group hover:shadow-md transition-all cursor-pointer"
                     onClick={() => handleOpenModal(item)}
                     role="button"
                     tabIndex={0}
@@ -219,12 +232,12 @@ export const AdminIngredients = () => {
                   >
                     <div className="min-w-0">
                       <p className="font-bold text-gray-900 text-sm truncate">{item.name}</p>
-                      <p className="text-[11px] text-amber-600 font-semibold mt-0.5">
+                      <p className="text-[11px] text-red-600 font-semibold mt-0.5">
                         {item.category && <span className="text-gray-400 mr-1">{item.category}</span>}
-                        현재 {item.current_stock}{item.unit || '개'} / 기준 {item.alert_threshold}{item.unit || '개'}
+                        현재 {item.current_stock}{item.unit || '개'} (주문필요)
                       </p>
                     </div>
-                    <div className="w-8 h-8 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center shrink-0 ml-3 group-hover:bg-amber-200 transition-colors">
+                    <div className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center shrink-0 ml-3 group-hover:bg-red-200 transition-colors">
                       <Pencil size={14} />
                     </div>
                   </div>
@@ -296,18 +309,21 @@ export const AdminIngredients = () => {
                 </thead>
                 <tbody>
                   {filteredIngredients.map((item) => {
-                    const low = isLowStock(item);
+                    const status = getStockStatus(item);
                     return (
                       <tr
                         key={item.id}
                         className={`border-b border-gray-50 transition-colors hover:bg-gray-50/50 ${
-                          low ? 'bg-amber-50/40' : ''
+                          status === 'CRITICAL' ? 'bg-red-50/40' : status === 'WARNING' ? 'bg-amber-50/40' : ''
                         }`}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            {low && (
-                              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse shrink-0" />
+                            {status === 'CRITICAL' && (
+                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+                            )}
+                            {status === 'WARNING' && (
+                              <div className="w-2 h-2 bg-amber-500 rounded-full shrink-0" />
                             )}
                             <span className="font-bold text-gray-900 text-sm">{item.name}</span>
                           </div>
@@ -324,7 +340,9 @@ export const AdminIngredients = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`font-black text-sm ${low ? 'text-amber-600' : 'text-gray-900'}`}>
+                          <span className={`font-black text-sm ${
+                            status === 'CRITICAL' ? 'text-red-600' : status === 'WARNING' ? 'text-amber-600' : 'text-gray-900'
+                          }`}>
                             {item.current_stock}
                           </span>
                           <span className="text-gray-400 text-[11px] ml-1">{item.unit || '개'}</span>
@@ -336,9 +354,13 @@ export const AdminIngredients = () => {
                           <span className="text-gray-400 text-[11px] ml-1">{item.unit || '개'}</span>
                         </td>
                         <td className="px-6 py-4">
-                          {low ? (
+                          {status === 'CRITICAL' ? (
+                            <span className="text-[11px] font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-full">
+                              🚨 주문필요
+                            </span>
+                          ) : status === 'WARNING' ? (
                             <span className="text-[11px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
-                              ⚠️ 부족
+                              ⚠️ 주의
                             </span>
                           ) : (
                             <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
