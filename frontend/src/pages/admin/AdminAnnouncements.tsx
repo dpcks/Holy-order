@@ -107,8 +107,9 @@ export const AdminAnnouncements = () => {
       }
       setShowFormModal(false);
       fetchAnnouncements();
-    } catch (err) {
-      showToast('처리 중 오류가 발생했습니다.', 'error');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || '처리 중 오류가 발생했습니다.';
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -118,8 +119,9 @@ export const AdminAnnouncements = () => {
       await apiClient.delete<any, StandardResponse<any>>(`/admin/announcements/${id}`);
       showToast('이벤트가 삭제되었습니다.', 'success');
       fetchAnnouncements();
-    } catch (err) {
-      showToast('삭제 실패', 'error');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || '삭제에 실패했습니다.';
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -129,8 +131,9 @@ export const AdminAnnouncements = () => {
       await apiClient.post<any, StandardResponse<any>>(`/admin/announcements/${item.id}/${endpoint}`, {});
       showToast(item.is_active ? '이벤트가 종료되었습니다.' : '이벤트가 활성화되었습니다.', 'success');
       fetchAnnouncements();
-    } catch (err) {
-      showToast('상태 변경 실패', 'error');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || '상태 변경에 실패했습니다.';
+      showToast(errorMsg, 'error');
     }
   };
 
@@ -142,8 +145,9 @@ export const AdminAnnouncements = () => {
         setReportTarget(item);
         setShowReportModal(true);
       }
-    } catch (err) {
-      showToast('리포트 조회 실패', 'error');
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.detail || '리포트 조회에 실패했습니다.';
+      showToast(errorMsg, 'error');
     }
   };
 

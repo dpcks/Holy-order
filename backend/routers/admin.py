@@ -270,7 +270,6 @@ async def create_category(category_data: schemas.CategoryCreate, db: Session = D
 @router.patch("/categories/reorder")
 async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session = Depends(get_db)):
     """카테고리 순서 일괄 변경"""
-    print(f"DEBUG: Reorder Request Data -> {data}") # 디버그 로그
     for index, cat_id in enumerate(data.category_ids):
         db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
     db.commit()
@@ -699,8 +698,16 @@ def get_announcements(db: Session = Depends(get_db)):
 
 
 @router.post("/announcements", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(get_db)):
+async def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(get_db)):
     """이벤트/공지 생성"""
+    # 유효성 검증
+    if data.is_event_mode:
+        if not data.sponsor_name or not data.event_type:
+            raise HTTPException(status_code=400, detail="이벤트 모드일 경우 후원자 이름과 이벤트 유형은 필수입니다.")
+    
+    if data.starts_at and data.ends_at and data.starts_at > data.ends_at:
+        raise HTTPException(status_code=400, detail="시작 시간이 종료 시간보다 늦을 수 없습니다.")
+
     new_announcement = models.Announcement(
         title=data.title,
         content=data.content,
@@ -717,15 +724,35 @@ def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(
     db.add(new_announcement)
     db.commit()
     db.refresh(new_announcement)
+
+    await manager.broadcast({
+        "type": "ANNOUNCEMENT_UPDATED",
+        "announcement_id": new_announcement.id,
+        "is_active": new_announcement.is_active,
+        "timestamp": datetime.now().isoformat()
+    })
     return schemas.StandardResponse(success=True, data=new_announcement, message="이벤트가 생성되었습니다.")
 
 
 @router.patch("/announcements/{announcement_id}", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-def update_announcement(announcement_id: int, data: schemas.AnnouncementUpdate, db: Session = Depends(get_db)):
+async def update_announcement(announcement_id: int, data: schemas.AnnouncementUpdate, db: Session = Depends(get_db)):
     """이벤트/공지 수정"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
+
+    # 유효성 검증 (업데이트 시에도 체크)
+    is_event = data.is_event_mode if data.is_event_mode is not None else announcement.is_event_mode
+    if is_event:
+        sponsor = data.sponsor_name if data.sponsor_name is not None else announcement.sponsor_name
+        e_type = data.event_type if data.event_type is not None else announcement.event_type
+        if not sponsor or not e_type:
+            raise HTTPException(status_code=400, detail="이벤트 모드일 경우 후원자 이름과 이벤트 유형은 필수입니다.")
+
+    s_at = data.starts_at if data.starts_at is not None else announcement.starts_at
+    e_at = data.ends_at if data.ends_at is not None else announcement.ends_at
+    if s_at and e_at and s_at > e_at:
+        raise HTTPException(status_code=400, detail="시작 시간이 종료 시간보다 늦을 수 없습니다.")
 
     update_dict = data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
@@ -733,27 +760,52 @@ def update_announcement(announcement_id: int, data: schemas.AnnouncementUpdate, 
 
     db.commit()
     db.refresh(announcement)
+
+    await manager.broadcast({
+        "type": "ANNOUNCEMENT_UPDATED",
+        "announcement_id": announcement.id,
+        "is_active": announcement.is_active,
+        "timestamp": datetime.now().isoformat()
+    })
     return schemas.StandardResponse(success=True, data=announcement, message="이벤트가 수정되었습니다.")
 
 
 @router.delete("/announcements/{announcement_id}", response_model=schemas.StandardResponse)
-def delete_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def delete_announcement(announcement_id: int, db: Session = Depends(get_db)):
     """이벤트/공지 삭제"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
 
+    # 삭제 안전장치: 활성화된 이벤트는 삭제 불가
+    if announcement.is_active:
+        raise HTTPException(status_code=400, detail="현재 활성화된 이벤트는 삭제할 수 없습니다. 먼저 종료(Deactivate)해 주세요.")
+
     db.delete(announcement)
     db.commit()
+
+    await manager.broadcast({
+        "type": "ANNOUNCEMENT_UPDATED",
+        "announcement_id": announcement_id,
+        "is_active": False,
+        "timestamp": datetime.now().isoformat()
+    })
     return schemas.StandardResponse(success=True, message="이벤트가 삭제되었습니다.")
 
 
 @router.post("/announcements/{announcement_id}/activate", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-def activate_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def activate_announcement(announcement_id: int, db: Session = Depends(get_db)):
     """이벤트 활성화 - 기존 활성 이벤트를 자동으로 비활성화하여 동시에 1개만 활성 상태 유지"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
+
+    # 시간 검증
+    now = datetime.now()
+    if announcement.starts_at and announcement.starts_at > now:
+        raise HTTPException(status_code=400, detail="아직 시작 시간이 되지 않은 이벤트는 활성화할 수 없습니다.")
+    if announcement.ends_at and announcement.ends_at < now:
+        raise HTTPException(status_code=400, detail="이미 종료 시간이 지난 이벤트는 활성화할 수 없습니다.")
 
     # 기존 활성 이벤트 전부 비활성화 (동시에 1개만 활성 원칙)
     db.query(models.Announcement).filter(
@@ -764,11 +816,18 @@ def activate_announcement(announcement_id: int, db: Session = Depends(get_db)):
     announcement.is_active = True
     db.commit()
     db.refresh(announcement)
+
+    await manager.broadcast({
+        "type": "ANNOUNCEMENT_UPDATED",
+        "announcement_id": announcement.id,
+        "is_active": True,
+        "timestamp": datetime.now().isoformat()
+    })
     return schemas.StandardResponse(success=True, data=announcement, message="이벤트가 활성화되었습니다.")
 
 
 @router.post("/announcements/{announcement_id}/deactivate", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db)):
     """이벤트 비활성화"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -777,10 +836,17 @@ def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db))
     announcement.is_active = False
     db.commit()
     db.refresh(announcement)
+
+    await manager.broadcast({
+        "type": "ANNOUNCEMENT_UPDATED",
+        "announcement_id": announcement.id,
+        "is_active": False,
+        "timestamp": datetime.now().isoformat()
+    })
     return schemas.StandardResponse(success=True, data=announcement, message="이벤트가 종료되었습니다.")
 
 
-@router.get("/announcements/{announcement_id}/report", response_model=schemas.StandardResponse)
+@router.get("/announcements/{announcement_id}/report", response_model=schemas.StandardResponse[schemas.AnnouncementReportResponse])
 def get_announcement_report(announcement_id: int, db: Session = Depends(get_db)):
     """이벤트 정산 리포트 - 후원자 기준 정산 정보 제공"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
@@ -798,6 +864,39 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db))
 
     # 총 제공 수량 계산 (OrderItem의 quantity 합산)
     order_ids = [o.id for o in orders]
+    total_items = db.query(func.sum(models.OrderItem.quantity)).filter(models.OrderItem.order_id.in_(order_ids)).scalar() or 0
+
+    # 메뉴별 판매 현황 집계
+    menu_breakdown_raw = (
+        db.query(
+            models.OrderItem.menu_name_snapshot,
+            func.sum(models.OrderItem.quantity).label("count"),
+            func.sum(models.OrderItem.menu_price_snapshot * models.OrderItem.quantity).label("revenue")
+        )
+        .filter(models.OrderItem.order_id.in_(order_ids))
+        .group_by(models.OrderItem.menu_name_snapshot)
+        .all()
+    )
+    menu_breakdown = [
+        {"name": r.menu_name_snapshot, "count": int(r.count), "revenue": int(r.revenue)}
+        for r in menu_breakdown_raw
+    ]
+
+    # 직분별 이용 현황 집계
+    duty_counts = {}
+    for o in orders:
+        duty = o.user_duty_snapshot
+        duty_counts[duty] = duty_counts.get(duty, 0) + 1
+
+    data = {
+        "total_orders": total_orders,
+        "total_items": int(total_items),
+        "original_price_sum": original_price_sum,
+        "menu_breakdown": menu_breakdown,
+        "duty_breakdown": duty_counts
+    }
+
+    return schemas.StandardResponse(success=True, data=data, message="정산 리포트를 조회했습니다.")
     total_items = 0
     menu_count: dict = {}  # {menu_name: {count: N, revenue: N}}
     duty_count: dict = {}  # {duty: count}
