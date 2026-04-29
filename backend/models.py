@@ -207,3 +207,22 @@ class Announcement(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     orders = relationship("Order", back_populates="announcement")
+
+# ==========================================
+# 5. 재고 관리 (Inventory Management)
+# ==========================================
+
+class Ingredient(Base):
+    """재료/소모품 재고 관리 모델 - 자동 차감 없이 수동 관리 방식"""
+    __tablename__ = "ingredients"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True, nullable=False)          # 품목명 (예: 우유, 일회용컵)
+    category = Column(String, nullable=True)                   # 카테고리 (재료, 소모품)
+    unit = Column(String, nullable=True)                       # 단위 (kg, 개, 팩 등)
+    current_stock = Column(Integer, default=0)                 # 현재 재고 수량
+    alert_threshold = Column(Integer, default=0)               # 부족 알림 임계값
+    memo = Column(String, nullable=True)                       # 메모 (구매처, 비고 등)
+    is_active = Column(Boolean, default=True)                  # 소프트 삭제용
+    display_order = Column(Integer, default=0)                 # 정렬 순서
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -828,3 +828,59 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db))
     }
 
     return schemas.StandardResponse(success=True, data=report, message="정산 리포트를 조회했습니다.")
+
+
+# ────────────────────────────────────────
+# 재고 관리 (Inventory Management)
+# ────────────────────────────────────────
+
+@router.get("/ingredients", response_model=schemas.StandardResponse[List[schemas.IngredientResponse]])
+def list_ingredients(db: Session = Depends(get_db)):
+    """활성 재고 항목 전체 조회 (정렬 순서 기준)"""
+    items = db.query(models.Ingredient).filter(
+        models.Ingredient.is_active == True
+    ).order_by(models.Ingredient.display_order, models.Ingredient.id).all()
+    return schemas.StandardResponse(success=True, data=items, message="재고 목록을 조회했습니다.")
+
+@router.get("/ingredients/alerts", response_model=schemas.StandardResponse[List[schemas.IngredientResponse]])
+def get_low_stock_alerts(db: Session = Depends(get_db)):
+    """부족 재고 항목 조회 (current_stock <= alert_threshold)"""
+    items = db.query(models.Ingredient).filter(
+        models.Ingredient.is_active == True,
+        models.Ingredient.current_stock <= models.Ingredient.alert_threshold
+    ).order_by(models.Ingredient.display_order, models.Ingredient.id).all()
+    return schemas.StandardResponse(success=True, data=items, message="부족 재고 항목을 조회했습니다.")
+
+@router.post("/ingredients", response_model=schemas.StandardResponse[schemas.IngredientResponse])
+def create_ingredient(payload: schemas.IngredientCreate, db: Session = Depends(get_db)):
+    """재고 항목 신규 생성"""
+    ingredient = models.Ingredient(**payload.model_dump())
+    db.add(ingredient)
+    db.commit()
+    db.refresh(ingredient)
+    return schemas.StandardResponse(success=True, data=ingredient, message="재고 항목이 추가되었습니다.")
+
+@router.patch("/ingredients/{ingredient_id}", response_model=schemas.StandardResponse[schemas.IngredientResponse])
+def update_ingredient(ingredient_id: int, payload: schemas.IngredientUpdate, db: Session = Depends(get_db)):
+    """재고 항목 수정 (부분 업데이트)"""
+    ingredient = db.query(models.Ingredient).filter(models.Ingredient.id == ingredient_id).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="재고 항목을 찾을 수 없습니다.")
+    
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(ingredient, key, value)
+    
+    db.commit()
+    db.refresh(ingredient)
+    return schemas.StandardResponse(success=True, data=ingredient, message="재고 항목이 수정되었습니다.")
+
+@router.delete("/ingredients/{ingredient_id}", response_model=schemas.StandardResponse)
+def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
+    """재고 항목 소프트 삭제 (is_active = False)"""
+    ingredient = db.query(models.Ingredient).filter(models.Ingredient.id == ingredient_id).first()
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="재고 항목을 찾을 수 없습니다.")
+    
+    ingredient.is_active = False
+    db.commit()
+    return schemas.StandardResponse(success=True, data=None, message="재고 항목이 삭제(비활성화)되었습니다.")

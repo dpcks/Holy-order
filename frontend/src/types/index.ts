@@ -220,3 +220,41 @@ export interface AnnouncementReport {
   menu_breakdown: { name: string; count: number; revenue: number }[];
   duty_breakdown: Record<string, number>;
 }
+
+// ==========================================
+// 재고 관리 (Inventory Management)
+// ==========================================
+
+export interface Ingredient {
+  id: number;
+  name: string;
+  category: string | null;
+  unit: string | null;
+  current_stock: number;
+  alert_threshold: number;
+  memo: string | null;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IngredientCreate {
+  name: string;
+  category?: string | null;
+  unit?: string | null;
+  current_stock?: number;
+  alert_threshold?: number;
+  memo?: string | null;
+  display_order?: number;
+}
+
+export interface IngredientUpdate {
+  name?: string;
+  category?: string | null;
+  unit?: string | null;
+  current_stock?: number;
+  alert_threshold?: number;
+  memo?: string | null;
+  display_order?: number;
+}

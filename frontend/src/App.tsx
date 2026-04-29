@@ -17,6 +17,7 @@ import { AdminPaymentLogs } from './pages/admin/AdminPaymentLogs';
 import { AdminSchedule } from './pages/admin/AdminSchedule';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminAnnouncements } from './pages/admin/AdminAnnouncements';
+import { AdminIngredients } from './pages/admin/AdminIngredients';
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
             <Route path="reports" element={<AdminSalesReports />} />
             <Route path="schedules" element={<AdminSchedule />} />
             <Route path="announcements" element={<AdminAnnouncements />} />
+            <Route path="ingredients" element={<AdminIngredients />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>
         </Routes>

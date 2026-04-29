@@ -316,3 +316,42 @@ class AnnouncementResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+# ===============================
+# Ingredients (재고 관리)
+# ===============================
+class IngredientCreate(BaseModel):
+    """재고 항목 생성 스키마"""
+    name: str
+    category: Optional[str] = None          # 재료 / 소모품
+    unit: Optional[str] = None              # 단위 (kg, 개, 팩 등)
+    current_stock: int = 0
+    alert_threshold: int = 0
+    memo: Optional[str] = None
+    display_order: int = 0
+
+class IngredientUpdate(BaseModel):
+    """재고 항목 수정 스키마 - 모든 필드 Optional"""
+    name: Optional[str] = None
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    current_stock: Optional[int] = None
+    alert_threshold: Optional[int] = None
+    memo: Optional[str] = None
+    display_order: Optional[int] = None
+
+class IngredientResponse(BaseModel):
+    """재고 항목 응답 스키마"""
+    id: int
+    name: str
+    category: Optional[str] = None
+    unit: Optional[str] = None
+    current_stock: int
+    alert_threshold: int
+    memo: Optional[str] = None
+    is_active: bool
+    display_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
