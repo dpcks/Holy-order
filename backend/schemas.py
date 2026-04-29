@@ -67,10 +67,10 @@ class MenuResponse(BaseModel):
     price: int
     description: Optional[str] = None
     image_url: Optional[str] = None
+    category_id: int
     is_available: bool
-    display_order: int
-    is_active: bool
-    options: List[MenuOptionResponse] = []
+    options: List[MenuOptionResponse]
+    created_at: datetime
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -295,6 +295,7 @@ class AnnouncementUpdate(BaseModel):
     banner_text: Optional[str] = None
     image_url: Optional[str] = None
     is_event_mode: Optional[bool] = None
+    is_active: Optional[bool] = None # 유연성을 위해 추가
     sponsor_name: Optional[str] = None
     sponsor_duty: Optional[str] = None
     event_type: Optional[str] = None
@@ -302,6 +303,26 @@ class AnnouncementUpdate(BaseModel):
     ends_at: Optional[datetime] = None
 
 class AnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    content: Optional[str] = None
+    banner_text: Optional[str] = None
+    image_url: Optional[str] = None
+    is_event_mode: bool
+    is_active: bool
+    sponsor_name: Optional[str] = None
+    sponsor_duty: Optional[str] = None
+    event_type: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+# 공개 API 전용 응답 타입
+class ActiveAnnouncementResponse(BaseModel):
     id: int
     title: str
     content: Optional[str] = None
@@ -316,7 +337,24 @@ class AnnouncementResponse(BaseModel):
     ends_at: Optional[datetime] = None
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    class Config:
+        from_attributes = True
+
+# 정산 리포트 응답 타입
+class MenuBreakdown(BaseModel):
+    name: str
+    count: int
+    revenue: int
+
+class AnnouncementReportResponse(BaseModel):
+    total_orders: int
+    total_items: int
+    original_price_sum: int
+    menu_breakdown: List[MenuBreakdown]
+    duty_breakdown: dict # {duty: count}
+
+    class Config:
+        from_attributes = True
 
 # ===============================
 # Ingredients (재고 관리)
