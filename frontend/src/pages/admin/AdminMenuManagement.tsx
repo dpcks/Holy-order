@@ -744,6 +744,7 @@ export const AdminMenuManagement = () => {
                     type="number"
                     value={editForm.price}
                     onChange={e => setEditForm(f => ({ ...f, price: e.target.value }))}
+                    onFocus={(e) => e.target.select()}
                     className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                     placeholder="2500"
                   />
@@ -825,6 +826,7 @@ export const AdminMenuManagement = () => {
                           placeholder="0"
                           value={opt.extra_price}
                           onChange={e => handleUpdateOption(idx, 'extra_price', Number(e.target.value))}
+                          onFocus={(e) => e.target.select()}
                           className="w-full text-[12px] outline-none bg-transparent font-black"
                         />
                       </div>
