@@ -52,16 +52,16 @@ const DonutChart = ({ data }: { data: { label: string; value: number; color: str
   );
 };
 
-// 동적 트렌드 바 차트 (일간, 주간, 월간 지원)
-const TrendChart = ({ data, periodType }: { data: Record<string, { count: number, revenue: number }>, periodType: '일간' | '주간' | '월간' }) => {
+// 동적 트렌드 바 차트 (주일, 주차별, 월별 지원)
+const TrendChart = ({ data, periodType }: { data: Record<string, { count: number, revenue: number }>, periodType: '주일' | '주차별' | '월별' }) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   let keys: string[] = [];
-  if (periodType === '일간') {
+  if (periodType === '주일') {
     keys = Array.from({ length: 7 }, (_, i) => String(i + 9));
-  } else if (periodType === '주간') {
+  } else if (periodType === '주차별') {
     keys = Array.from({ length: 5 }, (_, i) => `${i + 1}주차`);
-  } else if (periodType === '월간') {
+  } else if (periodType === '월별') {
     keys = Array.from({ length: 12 }, (_, i) => `${i + 1}월`);
   }
 
@@ -75,7 +75,7 @@ const TrendChart = ({ data, periodType }: { data: Record<string, { count: number
         const revenue = data[k]?.revenue || 0;
         const height = (count / max) * 100;
         const isSelected = selectedKey === k;
-        const displayLabel = periodType === '일간' ? `${k}시` : k;
+        const displayLabel = periodType === '주일' ? `${k}시` : k;
 
         return (
           <div key={k} className="flex-1 flex flex-col items-center gap-2 group relative">
@@ -138,7 +138,7 @@ const groupDuty = (duty_breakdown: Record<string, number>) => {
 export const AdminSalesReports = () => {
   const [stats, setStats] = useState<ReportStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState<'일간' | '주간' | '월간'>('일간');
+  const [period, setPeriod] = useState<'주일' | '주차별' | '월별'>('주일');
   const [selectedDate, setSelectedDate] = useState(() => {
     // 기본값: 현재 로컬 시간 기준 YYYY-MM-DD
     const today = new Date();
@@ -170,7 +170,7 @@ export const AdminSalesReports = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const typeMap = { '일간': 'daily', '주간': 'weekly', '월간': 'monthly' };
+        const typeMap = { '주일': 'daily', '주차별': 'weekly', '월별': 'monthly' };
         const res = await apiClient.get<ReportStats, StandardResponse<ReportStats>>(`/admin/stats?type=${typeMap[period]}&date=${selectedDate}`);
         if (res.success) setStats(res.data);
       } catch (err) {
@@ -196,7 +196,7 @@ export const AdminSalesReports = () => {
         </div>
         <div className="flex flex-col gap-2.5 items-end">
           <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
-            {(['일간', '주간', '월간'] as const).map(p => (
+            {(['주일', '주차별', '월별'] as const).map(p => (
               <button key={p} onClick={() => setPeriod(p)}
                 className={`px-3 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
                 {p}
@@ -220,7 +220,7 @@ export const AdminSalesReports = () => {
 
             <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
               <CalendarIcon size={14} className="text-gray-500" />
-              {period === '일간' ? (
+              {period === '주일' ? (
                 <input
                   type="date"
                   value={selectedDate}
@@ -304,7 +304,7 @@ export const AdminSalesReports = () => {
             {/* 트렌드 현황 */}
             <div className="col-span-2 bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col">
               <h2 className="font-bold text-gray-900 text-[14px] mb-4 shrink-0">
-                {period === '일간' ? '시간대별 주문 현황' : period === '주간' ? '주차별 주문 추이' : '월별 주문 추이'}
+                {period === '주일' ? '주일별 시간대 주문 현황' : period === '주차별' ? '주차별 주문 추이' : '월별 주문 추이'}
               </h2>
               <div className="shrink-0 mb-4">
                 <TrendChart data={stats.trend_data || {}} periodType={period} />
@@ -316,7 +316,7 @@ export const AdminSalesReports = () => {
                   .filter(([_, d]) => d.count > 0 || period === '주간') // 주간은 비어있어도 구조 파악을 위해 보여줌
                   .map(([k, d]) => (
                     <div key={k} className="bg-gray-50 rounded-xl p-3 border border-gray-100/50 min-w-[80px] shrink-0 flex flex-col items-center text-center">
-                      <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '일간' ? `${k}시` : k}</p>
+                      <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '주일' ? `${k}시` : k}</p>
                       <p className="text-[14px] font-black text-gray-900 leading-tight mb-0.5">{d.count}건</p>
                       <p className="text-[10px] font-bold text-primary">₩{d.revenue.toLocaleString()}</p>
                     </div>
