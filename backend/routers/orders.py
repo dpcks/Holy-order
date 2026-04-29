@@ -16,7 +16,29 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없거나 활성화되지 않았습니다.")
         
-    # 1. 메뉴 데이터 일괄 조회 및 금액 검증 (보안 및 성능 최적화)
+    # 1. 이벤트(골든벨) 모드 확인
+    from sqlalchemy import or_
+    now = models.get_seoul_time().replace(tzinfo=None)
+    # [강화] 시간 조건이 맞는 이벤트를 먼저 찾되, 없다면 현재 활성화(is_active)된 이벤트라도 가져옴
+    active_event = db.query(models.Announcement).filter(
+        models.Announcement.is_active == True,
+        models.Announcement.is_event_mode == True,
+        or_(models.Announcement.starts_at == None, models.Announcement.starts_at <= now),
+        or_(models.Announcement.ends_at == None, models.Announcement.ends_at >= now)
+    ).first()
+    
+    if not active_event:
+        active_event = db.query(models.Announcement).filter(
+            models.Announcement.is_active == True,
+            models.Announcement.is_event_mode == True
+        ).first()
+
+    # 2. 이벤트 주문 여부 판단 (DB 조회 결과 또는 요청 데이터를 모두 고려)
+    # 프론트엔드에서 결제 수단을 FREE로 보냈거나 총액을 0으로 보냈다면 이벤트 주문으로 간주
+    is_event_request = (order.payment_method == schemas.PaymentMethodEnum.FREE or order.total_price == 0)
+    is_event_mode = active_event is not None or is_event_request
+
+    # 3. 메뉴 데이터 일괄 조회 및 금액 검증
     menu_ids = [item.menu_id for item in order.items]
     menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
     menu_dict = {m.id: m for m in menus}
@@ -29,47 +51,39 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         if not menu:
             raise HTTPException(status_code=400, detail=f"존재하지 않는 메뉴(ID: {item.menu_id})가 포함되어 있습니다.")
         
-        # ✅ 백엔드에서도 품절 여부를 한 번 더 체크 (품절 시 주문 차단)
         if not menu.is_available:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"'{menu.name}' 메뉴는 현재 품절입니다. 장바구니에서 제거 후 다시 시도해주세요."
-            )
+            raise HTTPException(status_code=400, detail=f"'{menu.name}' 메뉴는 현재 품절입니다.")
         
-        # 프론트엔드에서 보내온 옵션 포함 금액(sub_total) 사용
-        # 단, 악의적인 조작 방지를 위해 최소한 (메뉴 기본가 * 수량) 보다는 커야 함
         base_total = menu.price * item.quantity
         item_total = item.sub_total
         
-        if item_total < base_total:
+        # [중요] 이벤트 모드(DB 확인 또는 요청 기반)가 아닐 때만 금액 미달 검증 수행
+        if not is_event_mode and item_total < base_total:
             raise HTTPException(
                 status_code=400, 
                 detail=f"'{menu.name}' 메뉴의 금액이 기본가({base_total}원)보다 낮게 요청되었습니다."
             )
             
+        # [중요] 이벤트 모드라도 통계(TOP 5)를 위해 개별 아이템의 원래 가치는 보존
         calculated_total += item_total
-        
-        # OrderItem 생성을 위한 데이터 준비
         order_items_prepared.append({
             "menu_id": item.menu_id,
             "menu_name_snapshot": menu.name,
-            "menu_price_snapshot": menu.price, # 기본가 저장
+            "menu_price_snapshot": menu.price,
             "quantity": item.quantity,
             "options_text": item.options_text,
-            "sub_total": item_total # 옵션 포함 총액 저장
+            "sub_total": item_total  # 이벤트 모드라도 프론트에서 넘어온 원래 금액을 저장
         })
 
-    # 2. 이벤트(골든벨) 모드 확인 - 활성 이벤트가 있으면 무료 처리
-    active_event = db.query(models.Announcement).filter(
-        models.Announcement.is_active == True,
-        models.Announcement.is_event_mode == True
-    ).first()
-
-    if active_event:
+    is_event_order = False
+    if is_event_mode:
         # 이벤트 모드: 원래 금액을 보관하고 실제 결제는 0원
+        is_event_order = True
         final_price = 0
-        original_price = calculated_total
-        announcement_id = active_event.id
+        # 정산용 원래 가격 계산 (계산된 값이 0이면 메뉴가를 기준으로 합산)
+        original_price = calculated_total if calculated_total > 0 else sum(m.price * i.quantity for i, m in [(item, menu_dict[item.menu_id]) for item in order.items])
+        announcement_id = active_event.id if active_event else None
+        payment_method = "FREE"
     else:
         # 일반 모드: 기존 금액 검증 로직 유지
         if calculated_total != order.total_price:
@@ -80,6 +94,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         final_price = calculated_total
         original_price = None
         announcement_id = None
+        payment_method = order.payment_method.value
 
     # 3. 당일 주문 번호 계산
     today = models.get_seoul_time().date()
@@ -99,7 +114,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         total_price=final_price,
         original_price=original_price,
         announcement_id=announcement_id,
-        payment_method=order.payment_method.value,
+        payment_method=payment_method,
         status=schemas.OrderStatusEnum.PENDING.value,
         order_number=next_order_number,
         order_date=today
@@ -130,6 +145,8 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     await manager.broadcast({
         "type": "NEW_ORDER",
         "order_id": new_order.id,
+        "is_event_order": is_event_order,
+        "announcement_id": announcement_id,
         "status": new_order.status,
         "timestamp": datetime.now().isoformat()
     })

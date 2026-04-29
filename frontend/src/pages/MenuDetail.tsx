@@ -93,8 +93,8 @@ export const MenuDetail = () => {
       name: menu.name,
       image_url: menu.image_url || undefined,
       quantity,
-      price: isEventMode ? 0 : unitPrice,
-      sub_total: isEventMode ? 0 : totalPrice,
+      price: unitPrice,
+      sub_total: totalPrice,
       options_text: optionsTextParts.join(' / ') || null,
     });
 

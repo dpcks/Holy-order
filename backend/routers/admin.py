@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, or_
+from sqlalchemy import func, desc, or_, case
 from typing import List
 from datetime import date, datetime
 
@@ -374,7 +374,12 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         db.query(
             models.OrderItem.menu_name_snapshot,
             func.sum(models.OrderItem.quantity).label("total_qty"),
-            func.sum(models.OrderItem.sub_total).label("total_revenue"),
+            func.sum(
+                case(
+                    (models.OrderItem.sub_total == 0, models.OrderItem.menu_price_snapshot * models.OrderItem.quantity),
+                    else_=models.OrderItem.sub_total
+                )
+            ).label("total_revenue"),
         )
         .join(models.Order, models.Order.id == models.OrderItem.order_id)
         .filter(
@@ -801,12 +806,14 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db))
         items = db.query(models.OrderItem).filter(models.OrderItem.order_id.in_(order_ids)).all()
         for item in items:
             total_items += item.quantity
-            # 메뉴별 집계
+            # 메뉴별 집계 (이벤트 주문으로 0원인 경우 가치 환산)
             name = item.menu_name_snapshot
             if name not in menu_count:
                 menu_count[name] = {"count": 0, "revenue": 0}
             menu_count[name]["count"] += item.quantity
-            menu_count[name]["revenue"] += item.sub_total
+            
+            price_to_add = item.sub_total if item.sub_total > 0 else (item.menu_price_snapshot * item.quantity)
+            menu_count[name]["revenue"] += price_to_add
 
     # 직분별 집계
     for o in orders:

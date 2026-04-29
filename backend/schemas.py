@@ -95,6 +95,7 @@ class OrderItemCreate(BaseModel):
 class PaymentMethodEnum(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"
     CASH = "CASH"
+    FREE = "FREE"
 
 class OrderCreate(BaseModel):
     user_id: int

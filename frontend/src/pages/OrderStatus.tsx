@@ -440,7 +440,9 @@ export const OrderStatus = () => {
                 <h5 className="font-black text-[#1A0A0A] text-[15px] truncate mb-0.5">{item.menu_name_snapshot}</h5>
                 <p className="text-gray-400 text-[12px] font-bold">수량 {item.quantity}개 {item.options_text ? `· ${item.options_text}` : ''}</p>
               </div>
-              <span className="text-[15px] font-black text-gray-900">₩{item.sub_total.toLocaleString()}</span>
+              <span className="text-[15px] font-black text-gray-900">
+                ₩{(order?.payment_method === 'FREE' || order?.total_price === 0) ? 0 : item.sub_total.toLocaleString()}
+              </span>
             </div>
           ))}
           <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between items-center">
