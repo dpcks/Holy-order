@@ -360,7 +360,7 @@ export const Home = () => {
                 onClick={() => setShowWelcomeModal(false)}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-2xl font-black text-[14px] shadow-lg hover:shadow-xl transition-all active:scale-95"
               >
-                감사히 주문하기 ☕
+                {activeEvent.is_event_mode ? '감사히 주문하기 ☕' : '주문하기'}
               </button>
             </div>
           </div>
