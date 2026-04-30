@@ -169,7 +169,9 @@ export const Cart = () => {
       try {
         const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
         if (res.success && res.data) setActiveEvent(res.data);
-      } catch (_) { /* 이벤트 조회 실패 시 일반 모드로 운영 */ }
+      } catch (err) {
+        console.warn('이벤트 정보를 불러오지 못했습니다. 일반 모드로 진행합니다.', err);
+      }
     };
     fetchEvent();
   }, []);
@@ -202,10 +204,10 @@ export const Cart = () => {
 
       if (response.success) {
         clearCart();
-        
+
         // 내 정보 저장 (이미 UserInfoModal에서 저장하지만, 여기서도 최신 상태를 유지하도록 확인)
         const savedUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
-        localStorage.setItem('userInfo', JSON.stringify({ 
+        localStorage.setItem('userInfo', JSON.stringify({
           ...savedUser,
           id: userId,
         }));
@@ -213,13 +215,13 @@ export const Cart = () => {
         // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
         const existingOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
         const newOrder = { id: String(response.data.id), orderNumber: response.data.order_number };
-        
+
         // 중복 방지 및 추가 (타입 안정성을 위해 String으로 비교)
         const updatedOrders = [...existingOrders.filter((o: any) => String(o.id) !== String(newOrder.id)), newOrder];
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
-        
-        navigate(`/order/status/${response.data.id}`, { 
-          state: { orderNumber: response.data.order_number, total: eventFinalPrice } 
+
+        navigate(`/order/status/${response.data.id}`, {
+          state: { orderNumber: response.data.order_number, total: eventFinalPrice }
         });
       } else {
         showToast(response.message || '주문에 실패했습니다.', 'error');
@@ -274,6 +276,21 @@ export const Cart = () => {
         />
 
         <main className="flex-1 p-4 flex flex-col gap-4">
+
+          {/* 이벤트 안내 배너 */}
+          {isEventMode && (
+            <section className="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white shadow-md animate-in slide-in-from-top-2">
+              <div className="flex items-center gap-3">
+                <div className="bg-white/20 p-2 rounded-xl">
+                  <span className="text-xl">🎁</span>
+                </div>
+                <div>
+                  <p className="text-[14px] font-black leading-tight">섬김의 시간 안내</p>
+                  <p className="text-[11px] opacity-90 font-bold mt-0.5">장바구니에 담긴 모든 메뉴가 무료로 제공됩니다.</p>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* 장바구니 리스트 */}
           <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -344,44 +361,56 @@ export const Cart = () => {
             />
           </section>
 
-          {/* 결제수단 */}
+          {/* 결제수단 / 이벤트 안내 카드 */}
           <section className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-3">
               <Building2 size={16} className="text-gray-700" />
-              <h2 className="font-bold text-[15px] text-gray-900">결제수단</h2>
+              <h2 className="font-bold text-[15px] text-gray-900">{isEventMode ? '주문 안내' : '결제수단'}</h2>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button 
-                onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
-                  paymentMethod === 'BANK_TRANSFER' 
-                    ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
+
+            {isEventMode ? (
+              <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
+                <p className="text-[13px] font-bold text-amber-800 leading-relaxed break-keep">
+                  오늘은 <span className="text-orange-600 font-black">{activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}</span>께서 섬겨주십니다.<br />감사인사 나눠주세용~ ❤️
+                </p>
+                {activeEvent?.sponsor_name && (
+                  <p className="text-[11px] text-amber-600 font-bold mt-2 pt-2 border-t border-amber-200/50">
+                    후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setPaymentMethod('BANK_TRANSFER')}
+                  className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
+                    ? 'bg-[#2D1616] text-white border-transparent shadow-md'
                     : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                }`}
-              >
-                <Building2 size={20} />
-                <span className="text-[12px] font-bold">계좌이체</span>
-              </button>
-              <button 
-                onClick={() => setPaymentMethod('CASH')}
-                className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${
-                  paymentMethod === 'CASH' 
-                    ? 'bg-[#2D1616] text-white border-transparent shadow-md' 
+                    }`}
+                >
+                  <Building2 size={20} />
+                  <span className="text-[12px] font-bold">계좌이체</span>
+                </button>
+                <button
+                  onClick={() => setPaymentMethod('CASH')}
+                  className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'CASH'
+                    ? 'bg-[#2D1616] text-white border-transparent shadow-md'
                     : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                }`}
-              >
-                <Wallet size={20} />
-                <span className="text-[12px] font-bold">현금 결제</span>
-              </button>
-              <button 
-                disabled
-                className="py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 text-gray-300 border border-gray-100 relative opacity-60 cursor-not-allowed"
-              >
-                <div className="absolute top-1 right-1 bg-gray-200 text-gray-500 text-[8px] px-1 py-0.5 rounded font-bold scale-90">준비중</div>
-                <MessageSquare size={20} />
-                <span className="text-[12px] font-bold text-gray-300">카카오페이</span>
-              </button>
-            </div>
+                    }`}
+                >
+                  <Wallet size={20} />
+                  <span className="text-[12px] font-bold">현금 결제</span>
+                </button>
+                <button
+                  disabled
+                  className="py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 text-gray-300 border border-gray-100 relative opacity-60 cursor-not-allowed"
+                >
+                  <div className="absolute top-1 right-1 bg-gray-200 text-gray-500 text-[8px] px-1 py-0.5 rounded font-bold scale-90">준비중</div>
+                  <MessageSquare size={20} />
+                  <span className="text-[12px] font-bold text-gray-300">카카오페이</span>
+                </button>
+              </div>
+            )}
           </section>
 
           {/* 결제 요약 */}
@@ -390,7 +419,7 @@ export const Cart = () => {
               <span className="text-[14px] text-gray-500 font-medium">상품금액</span>
               <span className="text-[14px] font-bold text-gray-800">{totalPrice.toLocaleString()}원</span>
             </div>
-            
+
             {isEventMode ? (
               <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-200">
                 <span className="text-[14px] text-amber-600 font-extrabold flex items-center gap-1.5">
@@ -404,7 +433,7 @@ export const Cart = () => {
                 <span className="text-[14px] font-semibold text-gray-800">-0원</span>
               </div>
             )}
-            
+
             <div className="flex justify-between items-end">
               <span className="text-[15px] font-black text-gray-900 mb-1">최종 결제 금액</span>
               <div className="text-right">
@@ -438,18 +467,18 @@ export const Cart = () => {
         </div>
 
         {/* 토스트 알림 */}
-        <Toast 
-          message={toast?.message || ''} 
-          type={toast?.type} 
-          isVisible={!!toast} 
-          onClose={() => setToast(null)} 
+        <Toast
+          message={toast?.message || ''}
+          type={toast?.type}
+          isVisible={!!toast}
+          onClose={() => setToast(null)}
         />
       </div>
     </>
   );
 };
 
-function ShoppingBag(props: any) {
+function ShoppingBag(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
