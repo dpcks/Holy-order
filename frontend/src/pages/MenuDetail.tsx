@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Gift } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
@@ -16,11 +17,10 @@ const CUP_OPTION_NAMES = ['텀블러', '일회용컵'];
 export const MenuDetail = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { menu } = location.state as { menu: Menu };
-  const isEventMode = (location.state as any)?.isEventMode || false;
-  
+  const { menu, isEventMode = false } = location.state as { menu: Menu; isEventMode?: boolean };
+
   const { addItem } = useCart();
-  
+
   const [quantity, setQuantity] = useState(1);
 
   // 토스트 상태
@@ -29,14 +29,14 @@ export const MenuDetail = () => {
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
   };
-  
+
   // ────────────────────────────────────────────────────────────────
   // [동적 매핑] 백엔드에서 받은 options 배열을 name 기준으로 그룹화
   // 하드코딩 없이 백엔드 데이터 변경만으로 UI가 자동으로 업데이트됨
   // ────────────────────────────────────────────────────────────────
   const tempOptions = menu.options.filter(o => TEMP_OPTION_NAMES.includes(o.name));
   const cupOptions = menu.options.filter(o => CUP_OPTION_NAMES.includes(o.name));
-  
+
   // 위 두 그룹에 해당하지 않는 나머지는 '추가 옵션'으로 분류
   const extraOptions = menu.options.filter(
     o => !TEMP_OPTION_NAMES.includes(o.name) && !CUP_OPTION_NAMES.includes(o.name)
@@ -70,8 +70,6 @@ export const MenuDetail = () => {
     selectedExtras.reduce((sum, opt) => sum + opt.extra_price, 0);
   const unitPrice = menu.price + extraPriceSum;
   const totalPrice = unitPrice * quantity;
-  // 이벤트 모드일 때는 실제 결제 금액을 0원으로 처리
-  const displayPrice = isEventMode ? 0 : totalPrice;
 
   const handleAddToCart = (shouldNavigate = true) => {
     // 혹시 모를 품절 재확인 (state가 stale할 경우 대비)
@@ -119,6 +117,21 @@ export const MenuDetail = () => {
       <Header title="메뉴상세" showBack showCart />
 
       <main className="flex-1">
+        {/* 이벤트 안내 배너 (상세 페이지용) */}
+        {isEventMode && (
+          <div className="mx-4 mt-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white shadow-md animate-in slide-in-from-top-2">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-xl">
+                <Gift size={18} className="text-white" />
+              </div>
+              <p className="text-[13px] font-black leading-tight">
+                섬김의 시간<br />
+                <span className="text-[11px] opacity-90 font-bold">모든 메뉴와 옵션이 무료로 제공됩니다 🎁</span>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* 상단 메뉴 이미지 */}
         <div className="px-4 py-4">
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-[#0F0A0A]">
@@ -160,11 +173,10 @@ export const MenuDetail = () => {
                     <button
                       key={opt.id}
                       onClick={() => setSelectedTemp(opt)}
-                      className={`flex-1 py-3 text-sm font-bold rounded-full transition-all ${
-                        isSelected
-                          ? `bg-white shadow-sm ${isIce ? 'text-blue-500' : 'text-orange-500'}`
-                          : 'text-gray-400 hover:text-gray-600'
-                      }`}
+                      className={`flex-1 py-3 text-sm font-bold rounded-full transition-all ${isSelected
+                        ? `bg-white shadow-sm ${isIce ? 'text-blue-500' : 'text-orange-500'}`
+                        : 'text-gray-400 hover:text-gray-600'
+                        }`}
                     >
                       {opt.name}
                     </button>
@@ -185,11 +197,10 @@ export const MenuDetail = () => {
                     <button
                       key={opt.id}
                       onClick={() => setSelectedCup(opt)}
-                      className={`flex-1 py-3.5 text-[13px] font-bold rounded-lg transition-all ${
-                        isSelected
-                          ? 'bg-[#2D1616] text-white shadow-md'
-                          : 'text-gray-600 hover:bg-gray-200'
-                      }`}
+                      className={`flex-1 py-3.5 text-[13px] font-bold rounded-lg transition-all ${isSelected
+                        ? 'bg-[#2D1616] text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
                     >
                       {opt.name}
                     </button>
@@ -210,16 +221,15 @@ export const MenuDetail = () => {
                     <button
                       key={opt.id}
                       onClick={() => handleToggleExtra(opt)}
-                      className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'border-primary bg-red-50/30'
-                          : 'border-gray-200 bg-white hover:border-gray-300'
-                      }`}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isSelected
+                        ? 'border-primary bg-red-50/30'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        }`}
                     >
                       <span className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
                         {opt.name}
                       </span>
-                      {opt.extra_price > 0 && (
+                      {opt.extra_price > 0 && !isEventMode && (
                         <span className="text-gray-500 text-sm font-medium">
                           +{opt.extra_price.toLocaleString()}원
                         </span>
@@ -278,11 +288,11 @@ export const MenuDetail = () => {
       </div>
 
       {/* 토스트 알림 */}
-      <Toast 
-        message={toast?.message || ''} 
-        type={toast?.type} 
-        isVisible={!!toast} 
-        onClose={() => setToast(null)} 
+      <Toast
+        message={toast?.message || ''}
+        type={toast?.type}
+        isVisible={!!toast}
+        onClose={() => setToast(null)}
       />
     </div>
   );
