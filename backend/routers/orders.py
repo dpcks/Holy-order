@@ -16,22 +16,15 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없거나 활성화되지 않았습니다.")
         
-    # 1. 이벤트(골든벨) 모드 확인
+    # 1. 활성 이벤트(골든벨) 모드 확인 (시간 범위 포함)
     from sqlalchemy import or_
     now = models.get_seoul_time().replace(tzinfo=None)
-    # [강화] 시간 조건이 맞는 이벤트를 먼저 찾되, 없다면 현재 활성화(is_active)된 이벤트라도 가져옴
     active_event = db.query(models.Announcement).filter(
         models.Announcement.is_active == True,
         models.Announcement.is_event_mode == True,
         or_(models.Announcement.starts_at == None, models.Announcement.starts_at <= now),
         or_(models.Announcement.ends_at == None, models.Announcement.ends_at >= now)
     ).first()
-    
-    if not active_event:
-        active_event = db.query(models.Announcement).filter(
-            models.Announcement.is_active == True,
-            models.Announcement.is_event_mode == True
-        ).first()
 
     # 2. 이벤트 주문 여부 판단 (DB 조회 결과 또는 요청 데이터를 모두 고려)
     # 프론트엔드에서 결제 수단을 FREE로 보냈거나 총액을 0으로 보냈다면 이벤트 주문으로 간주
