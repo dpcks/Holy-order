@@ -71,7 +71,7 @@ export const Home = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeCategoryId]);
+  }, []); // activeCategoryId 의존성 제거 (불필요한 재생성 방지)
 
   // WebSocket 연결 함수
   const connectWebSocket = useCallback(() => {
@@ -90,9 +90,9 @@ export const Home = () => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // 메뉴 관련 업데이트가 있으면 데이터를 다시 불러옴
-        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED'].includes(data.type)) {
-          console.log('🔔 [WebSocket] 메뉴 정보 변경 감지, 리로드 중...');
+        // 메뉴 또는 이벤트 관련 업데이트가 있으면 데이터를 다시 불러옴
+        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED', 'ANNOUNCEMENT_UPDATED'].includes(data.type)) {
+          console.log(`🔔 [WebSocket] ${data.type} 감지, 리로드 중...`);
           fetchData();
         }
       } catch (e) {
@@ -198,32 +198,33 @@ export const Home = () => {
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-6 shadow-2xl relative">
       <Header showSearch showCart onSearchChange={setSearchQuery} />
 
+      {/* 이벤트 배너 (검색 여부와 상관없이 노출) */}
+      {activeEvent && activeEvent.is_event_mode && (
+        <div className="px-4 pb-2 animate-in slide-in-from-top-4 duration-500">
+          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
+            <div className="absolute top-[-20%] right-[-10%] w-24 h-24 bg-white/10 rounded-full blur-2xl" />
+            <div className="relative flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                <PartyPopper size={20} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[13px] font-black leading-snug break-keep">
+                  {activeEvent.banner_text || `${activeEvent.title} - 오늘은 카페가 무료 운영됩니다!`}
+                </p>
+                {activeEvent.sponsor_name && (
+                  <p className="text-[11px] text-white/80 font-bold mt-0.5">
+                    후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
+                  </p>
+                )}
+              </div>
+              <Gift size={16} className="text-white/60 animate-bounce" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {!searchQuery ? (
         <>
-          {/* 이벤트 배너 */}
-          {activeEvent && activeEvent.is_event_mode && (
-            <div className="px-4 pb-2 animate-in slide-in-from-top-4 duration-500">
-              <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 rounded-2xl p-4 text-white shadow-lg relative overflow-hidden">
-                <div className="absolute top-[-20%] right-[-10%] w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-                <div className="relative flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                    <PartyPopper size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[13px] font-black leading-snug break-keep">
-                      {activeEvent.banner_text || `${activeEvent.title} - 오늘은 카페가 무료 운영됩니다!`}
-                    </p>
-                    {activeEvent.sponsor_name && (
-                      <p className="text-[11px] text-white/80 font-bold mt-0.5">
-                        후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
-                      </p>
-                    )}
-                  </div>
-                  <Gift size={16} className="text-white/60 animate-bounce" />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Store Selector */}
           <div className="px-4 py-4">
