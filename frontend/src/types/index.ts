@@ -69,7 +69,6 @@ export interface Order {
   id: number;
   order_number: number;
   status: OrderStatus;
-  /** 관리자 화면에서만 사용 (사용자 정보 스냅샷) */
   user_name_snapshot: string | null;
   user_duty_snapshot: string;
   user_phone_snapshot: string | null;
@@ -231,11 +230,17 @@ export interface ActiveAnnouncement {
   created_at: string;
 }
 
-export interface AnnouncementReport {
+export interface MenuBreakdown {
+  name: string;
+  count: number;
+  revenue: number;
+}
+
+export interface AnnouncementReportResponse {
   total_orders: number;
   total_items: number;
   original_price_sum: number;
-  menu_breakdown: { name: string; count: number; revenue: number }[];
+  menu_breakdown: MenuBreakdown[];
   duty_breakdown: Record<string, number>;
 }
 

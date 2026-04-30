@@ -12,7 +12,7 @@ import {
 import { apiClient } from '../../api/client';
 import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
-import type { Announcement, AnnouncementReport, StandardResponse } from '../../types';
+import type { Announcement, AnnouncementReportResponse, StandardResponse } from '../../types';
 
 // 이벤트 유형 옵션
 const EVENT_TYPES = ['칠순감사', '결혼감사', '출산감사', '임직감사', '기타감사'];
@@ -26,7 +26,7 @@ export const AdminAnnouncements = () => {
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Announcement | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportData, setReportData] = useState<AnnouncementReport | null>(null);
+  const [reportData, setReportData] = useState<AnnouncementReportResponse | null>(null);
   const [reportTarget, setReportTarget] = useState<Announcement | null>(null);
 
   // 폼 상태
@@ -158,7 +158,7 @@ export const AdminAnnouncements = () => {
 
   const handleShowReport = async (item: Announcement) => {
     try {
-      const res = await apiClient.get<AnnouncementReport, StandardResponse<AnnouncementReport>>(`/admin/announcements/${item.id}/report`);
+      const res = await apiClient.get<AnnouncementReportResponse, StandardResponse<AnnouncementReportResponse>>(`/admin/announcements/${item.id}/report`);
       if (res.success && res.data) {
         setReportData(res.data);
         setReportTarget(item);
