@@ -75,6 +75,8 @@ export interface Order {
   user_phone_snapshot: string | null;
   request: string | null;
   total_price: number;
+  original_price: number | null;
+  announcement_id: number | null;
   payment_method: PaymentMethod;
   created_at: string;
   items: OrderItem[];
@@ -176,8 +178,7 @@ export interface PaymentLogListResponse {
 // ==========================================
 
 export interface VolunteerData {
-  names?: string[];
-  [key: string]: any;
+  names: string[];
 }
 
 export interface VolunteerSchedule {
@@ -190,7 +191,7 @@ export interface VolunteerSchedule {
 export interface Volunteer {
   id: number;
   name: string;
-  created_at?: string;
+  created_at: string;
 }
 
 // ==========================================
@@ -198,6 +199,23 @@ export interface Volunteer {
 // ==========================================
 
 export interface Announcement {
+  id: number;
+  title: string;
+  content: string | null;
+  banner_text: string | null;
+  image_url: string | null;
+  is_event_mode: boolean;
+  sponsor_name: string | null;
+  sponsor_duty: string | null;
+  event_type: string | null;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+}
+
+/** 공개 API /announcements/active 전용 응답 타입 */
+export interface ActiveAnnouncement {
   id: number;
   title: string;
   content: string | null;
