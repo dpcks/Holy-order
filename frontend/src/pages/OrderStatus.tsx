@@ -14,6 +14,7 @@ export const OrderStatus = () => {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+  const [activeEvent, setActiveEvent] = useState<any>(null);
 
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
@@ -33,9 +34,10 @@ export const OrderStatus = () => {
   const fetchData = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
     try {
-      const [orderRes, settingRes] = await Promise.all([
+      const [orderRes, settingRes, eventRes] = await Promise.all([
         id ? apiClient.get<Order, StandardResponse<Order>>(`/orders/status/${id}`) : Promise.resolve(null),
         apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings'),
+        apiClient.get<any, StandardResponse<any>>('/announcements/active'),
       ]);
       
       if (orderRes?.success) {
@@ -59,6 +61,9 @@ export const OrderStatus = () => {
       }
       if (settingRes?.success) {
         setSetting(settingRes.data);
+      }
+      if (eventRes?.success) {
+        setActiveEvent(eventRes.data);
       }
     } catch (error) {
       console.error('Failed to fetch order status', error);
@@ -344,10 +349,10 @@ export const OrderStatus = () => {
 
         {isPending && (
           <div className="w-full bg-white rounded-3xl border-2 border-primary/20 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="bg-primary/10 px-6 py-3.5 flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-primary font-black text-[13px] tracking-wide uppercase">
-                {order?.payment_method === 'CASH' ? '현금 결제 대기' : '입금 확인 대기'}
+            <div className={`px-6 py-3.5 flex items-center gap-2.5 ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'bg-amber-100' : 'bg-primary/10'}`}>
+              <div className={`w-2 h-2 rounded-full animate-pulse ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'bg-amber-600' : 'bg-primary'}`} />
+              <span className={`font-black text-[13px] tracking-wide uppercase ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'text-amber-700' : 'text-primary'}`}>
+                {(order?.payment_method === 'FREE' || totalAmount === 0) ? '섬김의 시간 안내' : order?.payment_method === 'CASH' ? '현금 결제 대기' : '입금 확인 대기'}
               </span>
             </div>
             <div className="px-6 py-6 flex flex-col gap-5">
@@ -360,7 +365,21 @@ export const OrderStatus = () => {
               
               <div className="h-[1px] w-full bg-gray-50 border-t border-dashed border-gray-200" />
               
-              {order?.payment_method === 'CASH' ? (
+              {(order?.payment_method === 'FREE' || totalAmount === 0) ? (
+                <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 text-center">
+                  <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-600">
+                    <PartyPopper size={24} />
+                  </div>
+                  <p className="text-[14px] font-bold text-amber-800 leading-relaxed break-keep">
+                    오늘은 <span className="text-orange-600 font-black">{activeEvent?.sponsor_name || '섬기는 분'} {activeEvent?.sponsor_duty || ''}</span>께서 섬겨주십니다.<br />감사 인사를 전해주세요~ ❤️
+                  </p>
+                  {activeEvent?.sponsor_name && (
+                    <p className="text-[11px] text-amber-600 font-bold mt-2 pt-2 border-t border-amber-200/50">
+                      후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
+                    </p>
+                  )}
+                </div>
+              ) : order?.payment_method === 'CASH' ? (
                 <div className="flex flex-col items-center gap-4 py-2">
                   <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
                     <Wallet size={32} />
@@ -398,7 +417,7 @@ export const OrderStatus = () => {
             {isCompleted ? '수령이 완료되었습니다! ☺️' : 
              isReady ? '메뉴가 준비되었습니다! 🎉' : 
              isPreparing ? '맛있게 만들고 있어요! ☕️' : 
-             (order?.payment_method === 'CASH' ? '카운터에서 결제해 주세요 💵' : '입금을 기다리고 있어요 💳')}
+             ((order?.payment_method === 'FREE' || totalAmount === 0) ? '주문이 정상 접수되었습니다 ❤️' : order?.payment_method === 'CASH' ? '카운터에서 결제해 주세요 💵' : '입금을 기다리고 있어요 💳')}
           </h3>
           <div className="inline-flex items-center gap-2.5 bg-white border border-gray-100 shadow-md px-6 py-3 rounded-full">
             <div className={`w-3 h-3 rounded-full animate-pulse ${isReady || isCompleted ? 'bg-green-500' : isPreparing ? 'bg-primary' : 'bg-orange-400'}`} />
@@ -406,7 +425,7 @@ export const OrderStatus = () => {
               {isCompleted ? '이용해 주셔서 감사합니다' : 
                isReady ? '픽업대에서 가져가세요' : 
                isPreparing ? '잠시만 기다려 주세요' : 
-               (order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : '입금 확인 시 제조 시작')}
+               ((order?.payment_method === 'FREE' || totalAmount === 0) ? '곧 맛있게 만들어 드릴게요' : order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : '입금 확인 시 제조 시작')}
             </span>
           </div>
         </div>
