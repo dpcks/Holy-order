@@ -85,6 +85,25 @@ export const AdminAnnouncements = () => {
       showToast('제목을 입력해주세요.', 'error');
       return;
     }
+
+    if (formData.is_event_mode) {
+      if (!formData.sponsor_name.trim()) {
+        showToast('후원자 성함을 입력해주세요.', 'error');
+        return;
+      }
+      if (!formData.event_type) {
+        showToast('이벤트 유형을 선택해주세요.', 'error');
+        return;
+      }
+    }
+
+    if (formData.starts_at && formData.ends_at) {
+      if (new Date(formData.starts_at) > new Date(formData.ends_at)) {
+        showToast('시작일시가 종료일시보다 늦을 수 없습니다.', 'error');
+        return;
+      }
+    }
+
     try {
       const payload = {
         ...formData,
@@ -192,6 +211,16 @@ export const AdminAnnouncements = () => {
               <p className="text-[12px] text-amber-600 font-bold mt-2">
                 후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
               </p>
+            )}
+            {(activeEvent.starts_at || activeEvent.ends_at) && (
+              <div className="flex items-center gap-1.5 mt-3 pt-3 border-t border-amber-200/30 text-[11px] text-amber-700/70 font-bold">
+                <Calendar size={12} />
+                <span>
+                  {activeEvent.starts_at ? new Date(activeEvent.starts_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '시작 미지정'}
+                  {' ~ '}
+                  {activeEvent.ends_at ? new Date(activeEvent.ends_at).toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '종료 미지정'}
+                </span>
+              </div>
             )}
           </div>
         )}
@@ -324,26 +353,30 @@ export const AdminAnnouncements = () => {
                   className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
                   placeholder="https://..." />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[12px] font-bold text-gray-600 mb-1 block">후원자 성함</label>
-                  <input value={formData.sponsor_name} onChange={(e) => setFormData(p => ({ ...p, sponsor_name: e.target.value }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
-                </div>
-                <div>
-                  <label className="text-[12px] font-bold text-gray-600 mb-1 block">후원자 직분</label>
-                  <input value={formData.sponsor_duty} onChange={(e) => setFormData(p => ({ ...p, sponsor_duty: e.target.value }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
-                </div>
-              </div>
-              <div>
-                <label className="text-[12px] font-bold text-gray-600 mb-1 block">이벤트 유형</label>
-                <select value={formData.event_type} onChange={(e) => setFormData(p => ({ ...p, event_type: e.target.value }))}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200">
-                  <option value="">선택 안함</option>
-                  {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+              {formData.is_event_mode && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[12px] font-bold text-gray-600 mb-1 block">후원자 성함 *</label>
+                      <input value={formData.sponsor_name} onChange={(e) => setFormData(p => ({ ...p, sponsor_name: e.target.value }))}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                    </div>
+                    <div>
+                      <label className="text-[12px] font-bold text-gray-600 mb-1 block">후원자 직분</label>
+                      <input value={formData.sponsor_duty} onChange={(e) => setFormData(p => ({ ...p, sponsor_duty: e.target.value }))}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[12px] font-bold text-gray-600 mb-1 block">이벤트 유형 *</label>
+                    <select value={formData.event_type} onChange={(e) => setFormData(p => ({ ...p, event_type: e.target.value }))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200">
+                      <option value="">선택 안함</option>
+                      {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                </>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[12px] font-bold text-gray-600 mb-1 block">시작일시</label>
@@ -415,10 +448,10 @@ export const AdminAnnouncements = () => {
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
                   <p className="text-[10px] text-gray-500 font-bold mb-1">총 수량</p>
                   <p className="text-[18px] font-black text-gray-900">{reportData.total_items}</p>
-                  <p className="text-[10px] text-gray-400">잔</p>
+                  <p className="text-[10px] text-gray-400">개</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-3 text-center">
-                  <p className="text-[10px] text-gray-500 font-bold mb-1">후원 총액</p>
+                  <p className="text-[10px] text-gray-500 font-bold mb-1">환산 총액</p>
                   <p className="text-[18px] font-black text-amber-600">{reportData.original_price_sum.toLocaleString()}</p>
                   <p className="text-[10px] text-gray-400">원</p>
                 </div>
@@ -433,8 +466,8 @@ export const AdminAnnouncements = () => {
                       <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
                         <span className="text-[12px] font-bold text-gray-800">{m.name}</span>
                         <div className="text-right">
-                          <span className="text-[12px] font-bold text-gray-600">{m.count}잔</span>
-                          <span className="text-[11px] text-gray-400 ml-2">{m.revenue.toLocaleString()}원</span>
+                          <span className="text-[12px] font-bold text-gray-600">{m.count}개</span>
+                          <span className="text-[11px] text-gray-900 font-bold ml-2">₩{m.revenue.toLocaleString()}</span>
                         </div>
                       </div>
                     ))}
@@ -459,8 +492,8 @@ export const AdminAnnouncements = () => {
               {/* 요약 문구 */}
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 text-center">
                 <p className="text-[13px] font-bold text-gray-700 leading-relaxed break-keep">
-                  오늘 총 <strong className="text-amber-700">{reportData.total_items}잔</strong>의 음료가 나눔 되었으며,
-                  <br />후원하실 총 금액은 <strong className="text-amber-700">{reportData.original_price_sum.toLocaleString()}원</strong>입니다.
+                  총 <strong className="text-amber-700">{reportData.total_items}개</strong>의 항목이 제공되었으며,
+                  <br />가치 환산 총액은 <strong className="text-amber-700">{reportData.original_price_sum.toLocaleString()}원</strong>입니다.
                 </p>
               </div>
             </div>
