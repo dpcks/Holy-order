@@ -391,7 +391,7 @@ export const AdminAnnouncements = () => {
                   </div>
                 </>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              {/* <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[12px] font-bold text-gray-600 mb-1 block">시작일시</label>
                   <input type="datetime-local" value={formData.starts_at} onChange={(e) => setFormData(p => ({ ...p, starts_at: e.target.value }))}
@@ -402,6 +402,60 @@ export const AdminAnnouncements = () => {
                   <input type="datetime-local" value={formData.ends_at} onChange={(e) => setFormData(p => ({ ...p, ends_at: e.target.value }))}
                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
                 </div>
+              </div> */}
+              {/* 아이패드 WebKit 팽창 버그 우회를 위해 날짜(date)와 시간(time) 입력창을 분리 */}
+              <div className="flex flex-col gap-4">
+
+                {/* 시작일시 분리형 */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                  <label className="text-[12px] font-bold text-gray-600 mb-2 block">시작일시</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={formData.starts_at ? formData.starts_at.split('T')[0] : ''}
+                      onChange={(e) => {
+                        const time = formData.starts_at ? formData.starts_at.split('T')[1] : '00:00';
+                        setFormData(p => ({ ...p, starts_at: e.target.value ? `${e.target.value}T${time}` : '' }))
+                      }}
+                      className="flex-1 w-full min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                    <input
+                      type="time"
+                      value={formData.starts_at ? formData.starts_at.split('T')[1] : ''}
+                      onChange={(e) => {
+                        const date = formData.starts_at ? formData.starts_at.split('T')[0] : new Date().toISOString().split('T')[0];
+                        setFormData(p => ({ ...p, starts_at: e.target.value ? `${date}T${e.target.value}` : '' }))
+                      }}
+                      className="flex-1 w-full min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                </div>
+
+                {/* 종료일시 분리형 */}
+                <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                  <label className="text-[12px] font-bold text-gray-600 mb-2 block">종료일시</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={formData.ends_at ? formData.ends_at.split('T')[0] : ''}
+                      onChange={(e) => {
+                        const time = formData.ends_at ? formData.ends_at.split('T')[1] : '00:00';
+                        setFormData(p => ({ ...p, ends_at: e.target.value ? `${e.target.value}T${time}` : '' }))
+                      }}
+                      className="flex-1 w-full min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                    <input
+                      type="time"
+                      value={formData.ends_at ? formData.ends_at.split('T')[1] : ''}
+                      onChange={(e) => {
+                        const date = formData.ends_at ? formData.ends_at.split('T')[0] : new Date().toISOString().split('T')[0];
+                        setFormData(p => ({ ...p, ends_at: e.target.value ? `${date}T${e.target.value}` : '' }))
+                      }}
+                      className="flex-1 w-full min-w-0 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                    />
+                  </div>
+                </div>
+
               </div>
               <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl cursor-pointer">
                 <input type="checkbox" checked={formData.is_event_mode} onChange={(e) => setFormData(p => ({ ...p, is_event_mode: e.target.checked }))}
