@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
-  X, PartyPopper, Bell, Calendar
+  X, PartyPopper, Bell, Calendar, ChevronDown
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { Toast } from '../../components/ui/Toast';
@@ -16,6 +16,9 @@ import type { Announcement, AnnouncementReportResponse, StandardResponse } from 
 
 // 이벤트 유형 옵션
 const EVENT_TYPES = ['칠순감사', '결혼감사', '출산감사', '임직감사', '기타감사'];
+
+// 직분 옵션 (Cart.tsx와 동일)
+const DUTY_OPTIONS = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
 
 export const AdminAnnouncements = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -363,8 +366,19 @@ export const AdminAnnouncements = () => {
                     </div>
                     <div>
                       <label className="text-[12px] font-bold text-gray-600 mb-1 block">후원자 직분</label>
-                      <input value={formData.sponsor_duty} onChange={(e) => setFormData(p => ({ ...p, sponsor_duty: e.target.value }))}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
+                      <div className="relative">
+                        <select
+                          value={formData.sponsor_duty}
+                          onChange={(e) => setFormData(p => ({ ...p, sponsor_duty: e.target.value }))}
+                          className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-amber-200"
+                        >
+                          <option value="">선택 안함</option>
+                          {DUTY_OPTIONS.map(duty => (
+                            <option key={duty} value={duty}>{duty}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                      </div>
                     </div>
                   </div>
                   <div>
