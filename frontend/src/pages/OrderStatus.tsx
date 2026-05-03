@@ -86,6 +86,9 @@ export const OrderStatus = () => {
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
+    // 하트비트 타이머 변수
+    let heartbeatInterval: ReturnType<typeof setInterval>;
+
     ws.onopen = () => {
       console.log('✅ [WebSocket] 주문 추적 연결 성공');
       setWsStatus('CONNECTED');
@@ -94,17 +97,27 @@ export const OrderStatus = () => {
         clearInterval(pollingTimerRef.current);
         pollingTimerRef.current = null;
       }
+
+      // 사파리 등 모바일 브라우저 연결 유지를 위한 하트비트 시작 (25초마다)
+      heartbeatInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 25000);
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        
+        // 서버에서 오는 핑은 무시
+        if (data.type === 'ping') return;
+
         if (data.type === 'ORDER_UPDATED') {
           // 1. 현재 보고 있는 주문 정보 갱신
           fetchData(false);
 
           // 2. 만약 다른 내 주문의 상태가 변경되었다면 해당 주문으로 자동 이동
-          // 현재 URL의 id와 메시지의 order_id가 다른 경우에만 이동
           if (String(data.order_id) !== String(id)) {
             const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
             const isMyOrder = orders.some((o: any) => String(o.id) === String(data.order_id));
@@ -121,6 +134,8 @@ export const OrderStatus = () => {
     };
 
     ws.onclose = (event) => {
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      
       // 1. 실제로 페이지를 나가는 중이라면 재연결하지 않음
       if (isUnmountingRef.current) {
         setWsStatus('DISCONNECTED');
