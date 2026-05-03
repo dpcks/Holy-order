@@ -7,13 +7,13 @@ import { useCart } from '../context/CartContext';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
-import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
+import type { Duty, StandardResponse, PaymentMethod, Announcement, SettingResponse } from '../types';
 
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
 
 // 주문자 정보 입력 모달 컴포넌트
-const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => void; onClose: () => void }) => {
+const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm: (userId: number) => void; onClose: () => void; requirePhone?: boolean }) => {
   // 저장된 정보가 있으면 초기값으로 사용
   const savedUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
   const [name, setName] = useState(savedUser.name || '');
@@ -23,18 +23,28 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
   const [error, setError] = useState('');
 
   const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim()) {
-      setError('이름과 전화번호를 입력해 주세요.');
+    if (!name.trim()) {
+      setError('이름을 입력해 주세요.');
+      return;
+    }
+
+    if (requirePhone && !phone.trim()) {
+      setError('전화번호를 입력해 주세요.');
       return;
     }
 
     setIsLoading(true);
     setError('');
     try {
+      // 필수 설정이 꺼져 있으면 전화번호를 보내지 않음
+      const phoneToSubmit = requirePhone && phone.trim() 
+        ? phone.trim().replace(/-/g, '') 
+        : null;
+
       // 전화번호로 기존 유저 조회 또는 새 유저 생성
       const response = await apiClient.post<any, StandardResponse<{ id: number; name: string }>>('/users/', {
         name: name.trim(),
-        phone: phone.trim().replace(/-/g, ''), // 하이픈 제거
+        phone: phoneToSubmit,
         duty,
       });
 
@@ -90,17 +100,19 @@ const UserInfoModal = ({ onConfirm, onClose }: { onConfirm: (userId: number) => 
             />
           </div>
 
-          {/* 전화번호 */}
-          <div>
-            <label className="text-[13px] font-semibold text-gray-600 mb-1.5 block">전화번호</label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="01012345678"
-              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
-            />
-          </div>
+          {/* 전화번호 - 필수 설정일 때만 표시 */}
+          {requirePhone && (
+            <div>
+              <label className="text-[13px] font-semibold text-gray-600 mb-1.5 block">전화번호</label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="01012345678"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50"
+              />
+            </div>
+          )}
 
           {/* 직분 */}
           <div>
@@ -150,6 +162,7 @@ export const Cart = () => {
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [settings, setSettings] = useState<SettingResponse | null>(null);
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
@@ -167,10 +180,15 @@ export const Cart = () => {
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
-        if (res.success && res.data) setActiveEvent(res.data);
+        const [eventRes, settingsRes] = await Promise.all([
+          apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active'),
+          apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings')
+        ]);
+        
+        if (eventRes.success && eventRes.data) setActiveEvent(eventRes.data);
+        if (settingsRes.success && settingsRes.data) setSettings(settingsRes.data);
       } catch (err) {
-        console.warn('이벤트 정보를 불러오지 못했습니다. 일반 모드로 진행합니다.', err);
+        console.warn('정보를 불러오지 못했습니다.', err);
       }
     };
     fetchEvent();
@@ -260,6 +278,7 @@ export const Cart = () => {
         <UserInfoModal
           onConfirm={handleOrderWithUser}
           onClose={() => setShowUserModal(false)}
+          requirePhone={settings?.require_phone ?? true}
         />
       )}
 
@@ -380,7 +399,7 @@ export const Cart = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => setPaymentMethod('BANK_TRANSFER')}
                   className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
@@ -401,6 +420,7 @@ export const Cart = () => {
                   <Wallet size={20} />
                   <span className="text-[12px] font-bold">현금 결제</span>
                 </button>
+                {/* 
                 <button
                   disabled
                   className="py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 text-gray-300 border border-gray-100 relative opacity-60 cursor-not-allowed"
@@ -409,6 +429,7 @@ export const Cart = () => {
                   <MessageSquare size={20} />
                   <span className="text-[12px] font-bold text-gray-300">카카오페이</span>
                 </button>
+                */}
               </div>
             )}
           </section>
@@ -480,16 +501,16 @@ export const Cart = () => {
 
 function ShoppingBag({ size = 24, ...props }: React.SVGProps<SVGSVGElement> & { size?: number | string }) {
   return (
-    <svg 
-      {...props} 
-      width={size} 
-      height={size} 
-      xmlns="http://www.w3.org/2000/svg" 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
+    <svg
+      {...props}
+      width={size}
+      height={size}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
       strokeLinejoin="round"
     >
       <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />

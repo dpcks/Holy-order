@@ -19,7 +19,7 @@ class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    phone = Column(String, unique=True, index=True) # 식별자 및 적립용
+    phone = Column(String, unique=True, index=True, nullable=True) # 식별자 및 적립용 (선택 사항 가능)
     duty = Column(String) # 직분 (성도, 집사, 권사, 장로, 목사 등)
     is_active = Column(Boolean, default=True) # 소프트 삭제용
     deleted_at = Column(DateTime, nullable=True) # 삭제 시각 기록
@@ -165,6 +165,7 @@ class Setting(Base):
     bank_name = Column(String, nullable=True) # 은행명 (예: 카카오뱅크)
     account_number = Column(String, nullable=True) # 계좌번호
     account_holder = Column(String, nullable=True) # 예금주
+    require_phone = Column(Boolean, default=True) # 전화번호 필수 입력 여부
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

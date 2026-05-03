@@ -13,7 +13,8 @@ import {
   CreditCard, 
   Save, 
   CheckCircle2, 
-  AlertCircle
+  AlertCircle,
+  Smartphone
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
@@ -129,7 +130,7 @@ export const AdminSettings = () => {
 
           <div className="grid grid-cols-2 gap-6">
             {/* 2. 결제 계좌 정보 */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100">
+            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
                   <CreditCard size={20} />
@@ -137,7 +138,7 @@ export const AdminSettings = () => {
                 <h2 className="text-lg font-black text-gray-900">결제 계좌 관리</h2>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-5 flex-1">
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">은행명</label>
                   <input 
@@ -183,7 +184,49 @@ export const AdminSettings = () => {
               </div>
             </section>
 
+            {/* 3. 전화번호 필수 입력 여부 제어 */}
+            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col relative group overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100/50 transition-colors" />
+              
+              <div className="relative mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                    settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
+                  }`}>
+                    <Smartphone size={20} />
+                  </div>
+                  <h2 className="text-lg font-black text-gray-900">전화번호 설정</h2>
+                </div>
+                <p className="text-[13px] font-bold text-gray-400">주문 시 전화번호를 필수 입력으로 설정할지 조절합니다.</p>
+              </div>
 
+              <div className="flex-1 flex flex-col justify-center items-center gap-8 relative">
+                <button 
+                  onClick={() => handleUpdate({ require_phone: !settings.require_phone })}
+                  disabled={saving}
+                  className={`relative w-28 h-14 rounded-full transition-all duration-500 p-2 focus:outline-none focus:ring-4 focus:ring-black/5 ${
+                    settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${
+                    settings.require_phone ? 'translate-x-14' : 'translate-x-0'
+                  }`}>
+                    <Smartphone size={20} className={settings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
+                  </div>
+                </button>
+
+                <div className={`w-full p-5 rounded-2xl flex flex-col items-center gap-2 border transition-all duration-500 ${
+                  settings.require_phone 
+                    ? 'bg-blue-50 border-blue-100 text-blue-700' 
+                    : 'bg-gray-50 border-gray-100 text-gray-500'
+                }`}>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] opacity-60">현재 설정</span>
+                  <span className="text-[15px] font-black">
+                    {settings.require_phone ? '전화번호 필수 입력' : '전화번호 입력 생략'}
+                  </span>
+                </div>
+              </div>
+            </section>
           </div>
 
           {/* 하단 메시지 알림 */}

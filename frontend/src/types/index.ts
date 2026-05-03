@@ -94,6 +94,7 @@ export interface SettingResponse {
   notice: string | null;
   open_time: string | null;
   close_time: string | null;
+  require_phone: boolean;
 }
 
 export type SettingUpdate = Partial<SettingResponse>;

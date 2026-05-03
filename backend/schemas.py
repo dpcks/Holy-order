@@ -33,11 +33,13 @@ class DutyEnum(str, Enum):
 
 class UserCreate(BaseModel):
     name: str
-    phone: str
+    phone: Optional[str] = None
     duty: DutyEnum
 
     @field_validator("phone")
     def validate_phone(cls, v):
+        if v is None or v == "":
+            return None
         if not re.match(r"^01[0-9]-?\d{3,4}-?\d{4}$", v):
             raise ValueError("올바른 전화번호 형식이 아닙니다.")
         return v
@@ -45,7 +47,7 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     id: int
     name: str
-    phone: str
+    phone: Optional[str] = None
     duty: str
     created_at: datetime
     
@@ -179,6 +181,7 @@ class SettingResponse(BaseModel):
     bank_name: Optional[str] = None
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
+    require_phone: bool = True
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -190,6 +193,7 @@ class SettingUpdate(BaseModel):
     bank_name: Optional[str] = None
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
+    require_phone: Optional[bool] = None
 
 class MenuOptionCreate(BaseModel):
     name: str
