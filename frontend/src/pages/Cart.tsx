@@ -182,7 +182,7 @@ export const Cart = () => {
       try {
         const [eventRes, settingsRes] = await Promise.all([
           apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active'),
-          apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings')
+          apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings')
         ]);
         
         if (eventRes.success && eventRes.data) setActiveEvent(eventRes.data);
