@@ -32,6 +32,10 @@ export const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  
+  // 비밀번호 실시간 검증을 위한 상태
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -320,39 +324,73 @@ export const AdminSettings = () => {
                   </div>
                   <h3 className="font-black text-gray-900">비밀번호 변경</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">현재 비밀번호</label>
                     <input 
                       type="password"
                       id="current_password"
                       className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                      placeholder="현재 비밀번호"
+                      placeholder="현재 비밀번호를 입력하세요"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호</label>
-                    <input 
-                      type="password"
-                      id="new_password"
-                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                      placeholder="새 비밀번호"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호</label>
+                      <input 
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                        placeholder="새 비밀번호"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호 확인</label>
+                      <input 
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                        placeholder="한번 더 입력"
+                      />
+                      {confirmPassword && (
+                        <div className={`text-[11px] font-bold px-2 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 ${
+                          newPassword === confirmPassword ? 'text-emerald-500' : 'text-red-500'
+                        }`}>
+                          {newPassword === confirmPassword ? (
+                            <><CheckCircle2 size={12} /> 비밀번호가 일치합니다</>
+                          ) : (
+                            <><AlertCircle size={12} /> 비밀번호가 일치하지 않습니다</>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button 
                   onClick={async () => {
                     const currentPwd = (document.getElementById('current_password') as HTMLInputElement).value;
-                    const newPwd = (document.getElementById('new_password') as HTMLInputElement).value;
-                    if (!currentPwd || !newPwd) return toast.error('모든 필드를 입력해 주세요.');
+                    
+                    if (!currentPwd || !newPassword || !confirmPassword) {
+                      return toast.error('모든 필드를 입력해 주세요.');
+                    }
+
+                    if (newPassword !== confirmPassword) {
+                      return toast.error('새 비밀번호가 일치하지 않습니다.');
+                    }
+
                     try {
-                      const res = await apiClient.patch('/admin/me/password', { current_password: currentPwd, new_password: newPwd });
+                      const res = await apiClient.patch('/admin/me/password', { current_password: currentPwd, new_password: newPassword });
                       if (res.success) {
-                        toast.success('비밀번호가 변경되었습니다.');
+                        toast.success('비밀번호가 안전하게 변경되었습니다.');
                         (document.getElementById('current_password') as HTMLInputElement).value = '';
-                        (document.getElementById('new_password') as HTMLInputElement).value = '';
+                        setNewPassword('');
+                        setConfirmPassword('');
                       }
-                    } catch (err: any) { toast.error(err.response?.data?.detail || '변경 실패'); }
+                    } catch (err: any) {
+                      console.error('비밀번호 변경 실패:', err);
+                    }
                   }}
                   className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
                 >
@@ -400,7 +438,10 @@ export const AdminSettings = () => {
                         (document.getElementById('new_login_id') as HTMLInputElement).value = '';
                         (document.getElementById('new_account_password') as HTMLInputElement).value = '';
                       }
-                    } catch (err: any) { toast.error(err.response?.data?.detail || '생성 실패'); }
+                    } catch (err: any) {
+                      // apiClient에서 공통 에러 처리를 수행합니다.
+                      console.error('계정 생성 실패:', err);
+                    }
                   }}
                   className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
                 >
