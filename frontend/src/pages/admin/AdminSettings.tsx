@@ -48,11 +48,26 @@ export const AdminSettings = () => {
   // 관리자 목록 상태
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
+  
+  // 현재 로그인된 관리자 정보 상태
+  const [currentAdmin, setCurrentAdmin] = useState<AdminInfo | null>(null);
 
   useEffect(() => {
     fetchSettings();
     fetchAdmins();
+    fetchCurrentAdmin();
   }, []);
+
+  const fetchCurrentAdmin = async () => {
+    try {
+      const res = await apiClient.get<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/me');
+      if (res.success) {
+        setCurrentAdmin(res.data);
+      }
+    } catch (err) {
+      console.error('현재 관리자 정보 조회 실패:', err);
+    }
+  };
 
   const fetchAdmins = async () => {
     try {
@@ -369,7 +384,7 @@ export const AdminSettings = () => {
           />
           
           {/* 모달 콘텐츠 */}
-          <div className="relative w-full max-w-2xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+          <div className="relative w-full max-w-5xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
             <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner">
@@ -388,16 +403,24 @@ export const AdminSettings = () => {
               </button>
             </div>
 
-            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
-              {/* 비밀번호 변경 섹션 */}
-              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center">
-                    <Lock size={16} />
+            <div className="p-8 grid grid-cols-2 gap-8 overflow-y-auto custom-scrollbar">
+              {/* 왼쪽: 비밀번호 변경 섹션 */}
+              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center">
+                      <Lock size={16} />
+                    </div>
+                    <h3 className="font-black text-gray-900">내 비밀번호 변경</h3>
                   </div>
-                  <h3 className="font-black text-gray-900">비밀번호 변경</h3>
+                  {currentAdmin && (
+                    <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">접속 계정</span>
+                      <span className="text-[12px] font-bold text-amber-600">@{currentAdmin.login_id}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4 flex-1">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">현재 비밀번호</label>
                     <input 
@@ -465,21 +488,21 @@ export const AdminSettings = () => {
                       console.error('비밀번호 변경 실패:', err);
                     }
                   }}
-                  className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                  className="w-full mt-auto bg-amber-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
                 >
                   비밀번호 업데이트
                 </button>
               </div>
 
-              {/* 관리자 계정 추가 섹션 */}
-              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+              {/* 오른쪽: 관리자 계정 추가 섹션 */}
+              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center">
                     <UserPlus size={16} />
                   </div>
                   <h3 className="font-black text-gray-900">관리자 계정 추가</h3>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-4 flex-1">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">관리자 성함</label>
@@ -584,7 +607,7 @@ export const AdminSettings = () => {
                       console.error('계정 생성 실패:', err);
                     }
                   }}
-                  className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                  className="w-full mt-auto bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
                 >
                   새 계정 생성하기
                 </button>
