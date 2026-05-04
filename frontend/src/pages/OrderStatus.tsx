@@ -16,6 +16,16 @@ export const OrderStatus = () => {
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const [activeEvent, setActiveEvent] = useState<any>(null);
 
+  // iOS 알림 관련 상태
+  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
+  const [isReadyFlash, setIsReadyFlash] = useState(false);
+  const [showIosNotice, setShowIosNotice] = useState(false);
+
+  // iOS 감지 헬퍼
+  const isIos = useCallback(() => {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }, []);
+
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
   const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
@@ -169,13 +179,21 @@ export const OrderStatus = () => {
     fetchData(true);
     connectWebSocket();
 
-    // 알림음 설정 (Pebble sound)
-    audioRef.current = new Audio('https://t1.daumcdn.net/kakaopay/tesla/20210105/sounds/pebble.mp3');
+    // 알림음 설정 (로컬 파일 우선)
+    // TODO: public/mp3/ready.mp3 파일이 존재하지 않으면 에러가 발생할 수 있습니다.
+    // 기존 대체 URL: https://t1.daumcdn.net/kakaopay/tesla/20210105/sounds/pebble.mp3
+    audioRef.current = new Audio('/mp3/ready.mp3');
     audioRef.current.load();
 
-    // 알림 권한 요청
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    // 알림 권한 요청 (지원 환경에서만 실행)
+    if ('Notification' in window) {
+      try {
+        if (Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      } catch (e) {
+        console.warn('Notification 권한 요청 실패:', e);
+      }
     }
 
     const handleVisibilityChange = () => {
@@ -196,34 +214,87 @@ export const OrderStatus = () => {
     };
   }, [fetchData, connectWebSocket]);
 
-  // 주문 상태 변경 감지 및 알림 발송 (진동/소리)
+  // iOS 안내 배너 노출 타이밍 제어
+  useEffect(() => {
+    if (isIos() && !isAudioUnlocked) {
+      setShowIosNotice(true);
+    }
+  }, [isIos, isAudioUnlocked]);
+
+  // 오디오 언락 메커니즘 (첫 터치 시 무음 재생 후 해제)
+  useEffect(() => {
+    if (isAudioUnlocked) return;
+
+    const unlockAudio = () => {
+      if (!audioRef.current) return;
+      audioRef.current.play().then(() => {
+        audioRef.current?.pause();
+        if (audioRef.current) audioRef.current.currentTime = 0;
+        setIsAudioUnlocked(true);
+        setShowIosNotice(false);
+        console.log('🔊 [Audio] 브라우저 오디오 재생 잠금 해제 성공');
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+      }).catch(err => {
+        console.warn('🔊 [Audio] 언락 대기 중 (사용자 상호작용 필요)');
+      });
+    };
+
+    window.addEventListener('click', unlockAudio);
+    window.addEventListener('touchstart', unlockAudio);
+
+    return () => {
+      window.removeEventListener('click', unlockAudio);
+      window.removeEventListener('touchstart', unlockAudio);
+    };
+  }, [isAudioUnlocked]);
+
+  // 주문 상태 변경 감지 및 알림 발송 (진동/소리/시각적 피드백)
   useEffect(() => {
     if (!order) return;
 
-    // 상태가 READY로 변경되는 순간 감지
+    // 상태가 READY로 변경되는 순간 감지 (중복 실행 방지)
     if (order.status === 'READY' && prevStatusRef.current !== 'READY' && prevStatusRef.current !== null) {
       console.log('🔔 [Alert] 주문 완료 알림 발생!');
 
-      // 1. 진동 (안드로이드/Chrome 지원)
-      if ('vibrate' in navigator) {
-        navigator.vibrate([200, 100, 200, 100, 500]);
-      }
+      // 시각적 피드백 (화면 깜빡임 등 - iOS 고려)
+      setIsReadyFlash(true);
+      setTimeout(() => setIsReadyFlash(false), 3000);
 
-      // 2. 소리 알림
-      if (audioRef.current) {
-        audioRef.current.play().catch(err => {
-          console.warn('🔊 [Audio] 소리 재생이 차단되었습니다. (사용자 상호작용 필요)', err);
-        });
-      }
-
-      // 3. 브라우저 알림 (권한이 있는 경우)
-      if ('Notification' in window && Notification.permission === 'granted') {
+      // 1. 진동 (지원 브라우저 및 iOS 제외)
+      if ('vibrate' in navigator && !isIos()) {
         try {
-          new Notification('평택중앙교회 카페', {
-            body: `주문하신 메뉴가 준비되었습니다! #${order.order_number}번 픽업대로 오세요.`,
-            icon: '/logo192.png',
-            tag: `order-${order.id}`
-          });
+          navigator.vibrate([200, 100, 200, 100, 500]);
+        } catch (e) {
+          console.warn('진동 재생 불가', e);
+        }
+      }
+
+      // 2. 소리 알림 (재시도 로직 포함)
+      const playAudio = (retry = false) => {
+        if (!audioRef.current) return;
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => {
+          if (!retry) {
+            console.warn('🔊 [Audio] 1차 재생 실패, 200ms 후 재시도합니다.');
+            setTimeout(() => playAudio(true), 200);
+          } else {
+            console.warn('🔊 [Audio] 최종 소리 재생 실패. 브라우저 정책에 의해 차단됨.', err);
+          }
+        });
+      };
+      playAudio();
+
+      // 3. 브라우저 알림 (권한이 있는 경우만 안전하게 호출)
+      if ('Notification' in window) {
+        try {
+          if (Notification.permission === 'granted') {
+            new Notification('평택중앙교회 카페', {
+              body: `주문하신 메뉴가 준비되었습니다! #${order.order_number}번 픽업대로 오세요.`,
+              icon: '/logo192.png',
+              tag: `order-${order.id}`
+            });
+          }
         } catch (err) {
           console.error('Notification error:', err);
         }
@@ -302,7 +373,16 @@ export const OrderStatus = () => {
   const currentIndex = activeOrders.findIndex(o => o.id === id);
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-8 shadow-2xl relative">
+    <div className={`flex flex-col min-h-screen w-full max-w-[500px] mx-auto pb-8 shadow-2xl relative transition-colors duration-700 ${isReadyFlash ? 'bg-primary/10' : 'bg-[#F9FAFB]'}`}>
+      
+      {/* iOS 안내 배너 */}
+      {showIosNotice && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur text-white text-center py-3.5 text-[13px] font-bold animate-in slide-in-from-top flex items-center justify-center gap-2 shadow-xl cursor-pointer">
+          <PartyPopper size={16} className="text-amber-400" />
+          알림음을 받으려면 화면을 한 번 터치해주세요
+        </div>
+      )}
+
       <header className="flex items-center justify-between px-6 h-16 bg-[#F9FAFB]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
         <div className="w-10">
           {activeOrders.length > 1 && currentIndex > 0 && (
