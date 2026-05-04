@@ -3,11 +3,25 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_, case
 from typing import List
 from datetime import date, datetime
-
-import models, schemas
+from fastapi.security import OAuth2PasswordRequestForm
+import models, schemas, auth
 from database import get_db
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+@router.post("/login", response_model=schemas.StandardResponse[schemas.TokenResponse])
+def login_admin(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """관리자 로그인 및 토큰 발급"""
+    admin = db.query(models.Admin).filter(models.Admin.login_id == form_data.username).first()
+    if not admin or not auth.verify_password(form_data.password, admin.password_hash):
+        raise HTTPException(status_code=400, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
+    
+    access_token = auth.create_access_token(data={"sub": admin.login_id})
+    return schemas.StandardResponse(
+        success=True, 
+        data={"access_token": access_token, "token_type": "bearer"}, 
+        message="로그인에 성공했습니다."
+    )
 
 
 # ────────────────────────────────────────
@@ -24,7 +38,7 @@ VALID_TRANSITIONS = {
 }
 
 @router.get("/orders/board", response_model=schemas.StandardResponse[List[schemas.OrderResponse]])
-def get_orders_board(db: Session = Depends(get_db)):
+def get_orders_board(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """칸반 보드용: 오늘 PENDING/PREPARING/READY 주문 전체 조회"""
     today = models.get_seoul_time().date()
     orders = db.query(models.Order).filter(
@@ -45,7 +59,7 @@ def get_orders_history(
     status: Optional[str] = None,
     payment_method: Optional[str] = None,
     search: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """주문 내역 히스토리: 필터링 및 페이징 지원"""
     query = db.query(models.Order)
@@ -94,7 +108,7 @@ def get_orders_history(
 from websocket import manager
 
 @router.patch("/orders/{order_id}/status")
-async def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db)):
+async def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """주문 상태 변경 (입금승인, 준비완료, 수령완료, 취소)"""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
@@ -152,7 +166,7 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
 # ────────────────────────────────────────
 
 @router.patch("/menus/reorder")
-async def reorder_menus(data: schemas.MenuReorderRequest, db: Session = Depends(get_db)):
+async def reorder_menus(data: schemas.MenuReorderRequest, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """메뉴 순서 일괄 변경 (카테고리 내 정렬)"""
     for index, menu_id in enumerate(data.menu_ids):
         db.query(models.Menu).filter(models.Menu.id == menu_id).update({"display_order": index})
@@ -160,7 +174,7 @@ async def reorder_menus(data: schemas.MenuReorderRequest, db: Session = Depends(
     return {"success": True, "message": "순서가 변경되었습니다."}
 
 @router.patch("/menus/{menu_id}")
-async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db)):
+async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """메뉴 정보 수정 (이름, 가격, 설명, 카테고리, 판매여부, 이미지, 옵션)"""
     menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
     if not menu:
@@ -195,7 +209,7 @@ async def update_menu(menu_id: int, menu_data: schemas.MenuUpdate, db: Session =
     return {"success": True, "data": None, "message": "메뉴가 수정되었습니다."}
 
 @router.post("/menus", response_model=schemas.StandardResponse)
-async def create_menu(menu_data: schemas.MenuCreate, db: Session = Depends(get_db)):
+async def create_menu(menu_data: schemas.MenuCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """새 메뉴 추가 (옵션 포함 가능)"""
     new_menu = models.Menu(
         category_id=menu_data.category_id,
@@ -222,7 +236,7 @@ async def create_menu(menu_data: schemas.MenuCreate, db: Session = Depends(get_d
     return {"success": True, "data": None, "message": "메뉴가 추가되었습니다."}
 
 @router.delete("/menus/{menu_id}")
-async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
+async def delete_menu(menu_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """메뉴 삭제 (물리적 삭제 시도 후, 과거 주문 내역이 있으면 소프트 삭제 처리)"""
     menu = db.query(models.Menu).filter(models.Menu.id == menu_id).first()
     if not menu:
@@ -251,7 +265,7 @@ async def delete_menu(menu_id: int, db: Session = Depends(get_db)):
 # ─── 카테고리 관리 ───
 
 @router.get("/categories", response_model=schemas.StandardResponse[List[schemas.CategoryWithMenusResponse]])
-def get_all_categories(db: Session = Depends(get_db)):
+def get_all_categories(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """관리사용 카테고리 전체 조회 (숨김 상태 포함, 소프트 삭제된 메뉴 제외)"""
     categories = db.query(models.Category).order_by(models.Category.display_order).all()
     
@@ -261,14 +275,14 @@ def get_all_categories(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=categories, message="카테고리 목록을 가져왔습니다.")
 
 @router.post("/categories", response_model=schemas.StandardResponse)
-async def create_category(category_data: schemas.CategoryCreate, db: Session = Depends(get_db)):
+async def create_category(category_data: schemas.CategoryCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     new_cat = models.Category(name=category_data.name, display_order=category_data.display_order)
     db.add(new_cat)
     db.commit()
     return {"success": True, "data": None, "message": "카테고리가 추가되었습니다."}
 
 @router.patch("/categories/reorder")
-async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session = Depends(get_db)):
+async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """카테고리 순서 일괄 변경"""
     for index, cat_id in enumerate(data.category_ids):
         db.query(models.Category).filter(models.Category.id == cat_id).update({"display_order": index})
@@ -277,7 +291,7 @@ async def reorder_categories(data: schemas.CategoryReorderRequest, db: Session =
 
 
 @router.patch("/categories/{category_id}")
-async def update_category(category_id: int, category_data: schemas.CategoryUpdate, db: Session = Depends(get_db)):
+async def update_category(category_id: int, category_data: schemas.CategoryUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     cat = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
@@ -296,7 +310,7 @@ async def update_category(category_id: int, category_data: schemas.CategoryUpdat
     return {"success": True, "data": None, "message": "카테고리가 수정되었습니다."}
 
 @router.delete("/categories/{category_id}")
-async def delete_category(category_id: int, db: Session = Depends(get_db)):
+async def delete_category(category_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     cat = db.query(models.Category).filter(models.Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="카테고리를 찾을 수 없습니다.")
@@ -322,7 +336,7 @@ async def delete_category(category_id: int, db: Session = Depends(get_db)):
 # ────────────────────────────────────────
 
 @router.get("/stats")
-def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_db)):
+def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """기간별(일간, 주간, 월간) 매출/주문 통계 집계"""
     import calendar
     from datetime import datetime
@@ -502,7 +516,7 @@ def get_payment_logs(
     sender_name: Optional[str] = None,
     order_id: Optional[int] = None,
     payment_method: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """입금 승인 로그 조회: 필터링 및 페이징 지원"""
     query = db.query(models.PaymentLog).join(models.Order, models.Order.id == models.PaymentLog.order_id)
@@ -545,7 +559,7 @@ import calendar
 def get_schedules(
     start_date: Optional[date] = None, 
     end_date: Optional[date] = None, 
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """특정 기간 내의 모든 봉사 스케줄 조회"""
     query = db.query(models.VolunteerSchedule)
@@ -570,7 +584,7 @@ def get_schedules(
     return schemas.StandardResponse(success=True, data=result, message="봉사 스케줄을 조회했습니다.")
 
 @router.post("/schedules", response_model=schemas.StandardResponse[schemas.VolunteerScheduleResponse])
-def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session = Depends(get_db)):
+def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """특정 날짜의 봉사 스케줄 저장 또는 수정"""
     existing = db.query(models.VolunteerSchedule).filter(
         models.VolunteerSchedule.sunday_date == schedule_data.sunday_date
@@ -600,7 +614,7 @@ def update_schedule(schedule_data: schemas.VolunteerScheduleUpdate, db: Session 
 # ────────────────────────────────────────
 
 @router.get("/volunteers", response_model=schemas.StandardResponse[List[schemas.VolunteerResponse]])
-def get_volunteers(db: Session = Depends(get_db)):
+def get_volunteers(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """전체 봉사자 마스터 명단 조회"""
     volunteers = db.query(models.Volunteer).order_by(models.Volunteer.name.asc()).all()
     # 명시적 필드 추출로 안정성 확보
@@ -608,7 +622,7 @@ def get_volunteers(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=data, message="봉사자 명단을 조회했습니다.")
 
 @router.post("/volunteers", response_model=schemas.StandardResponse[schemas.VolunteerResponse])
-def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_db)):
+def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """새로운 봉사자 등록"""
     # 이름 앞뒤 공백 제거
     name = v_data.name.strip()
@@ -639,7 +653,7 @@ def create_volunteer(v_data: schemas.VolunteerCreate, db: Session = Depends(get_
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 @router.delete("/volunteers/{v_id}")
-def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
+def delete_volunteer(v_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """봉사자 삭제"""
     v = db.query(models.Volunteer).filter(models.Volunteer.id == v_id).first()
     if not v:
@@ -653,7 +667,7 @@ def delete_volunteer(v_id: int, db: Session = Depends(get_db)):
 # ────────────────────────────────────────
 
 @router.get("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def get_settings(db: Session = Depends(get_db)):
+def get_settings(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """시스템 설정 조회 (없으면 기본값으로 생성)"""
     setting = db.query(models.Setting).first()
     if not setting:
@@ -670,7 +684,7 @@ def get_settings(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=setting, message="설정을 조회했습니다.")
 
 @router.put("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db)):
+def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """시스템 설정 업데이트"""
     setting = db.query(models.Setting).first()
     if not setting:
@@ -691,14 +705,14 @@ def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(ge
 # ────────────────────────────────────────
 
 @router.get("/announcements", response_model=schemas.StandardResponse[List[schemas.AnnouncementResponse]])
-def get_announcements(db: Session = Depends(get_db)):
+def get_announcements(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """전체 이벤트/공지 목록 조회 (최신순)"""
     announcements = db.query(models.Announcement).order_by(desc(models.Announcement.created_at)).all()
     return schemas.StandardResponse(success=True, data=announcements, message="이벤트 목록을 조회했습니다.")
 
 
 @router.post("/announcements", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-async def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(get_db)):
+async def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트/공지 생성"""
     # 유효성 검증
     if data.is_event_mode:
@@ -735,7 +749,7 @@ async def create_announcement(data: schemas.AnnouncementCreate, db: Session = De
 
 
 @router.patch("/announcements/{announcement_id}", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-async def update_announcement(announcement_id: int, data: schemas.AnnouncementUpdate, db: Session = Depends(get_db)):
+async def update_announcement(announcement_id: int, data: schemas.AnnouncementUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트/공지 수정"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -771,7 +785,7 @@ async def update_announcement(announcement_id: int, data: schemas.AnnouncementUp
 
 
 @router.delete("/announcements/{announcement_id}", response_model=schemas.StandardResponse)
-async def delete_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def delete_announcement(announcement_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트/공지 삭제"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -794,7 +808,7 @@ async def delete_announcement(announcement_id: int, db: Session = Depends(get_db
 
 
 @router.post("/announcements/{announcement_id}/activate", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-async def activate_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def activate_announcement(announcement_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트 활성화 - 기존 활성 이벤트를 자동으로 비활성화하여 동시에 1개만 활성 상태 유지"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -827,7 +841,7 @@ async def activate_announcement(announcement_id: int, db: Session = Depends(get_
 
 
 @router.post("/announcements/{announcement_id}/deactivate", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
-async def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db)):
+async def deactivate_announcement(announcement_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트 비활성화"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -847,7 +861,7 @@ async def deactivate_announcement(announcement_id: int, db: Session = Depends(ge
 
 
 @router.get("/announcements/{announcement_id}/report", response_model=schemas.StandardResponse[schemas.AnnouncementReportResponse])
-def get_announcement_report(announcement_id: int, db: Session = Depends(get_db)):
+def get_announcement_report(announcement_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트 정산 리포트 - 후원자 기준 정산 정보 제공"""
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
@@ -941,7 +955,7 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db))
 # ────────────────────────────────────────
 
 @router.get("/ingredients", response_model=schemas.StandardResponse[List[schemas.IngredientResponse]])
-def list_ingredients(db: Session = Depends(get_db)):
+def list_ingredients(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """활성 재고 항목 전체 조회 (정렬 순서 기준)"""
     items = db.query(models.Ingredient).filter(
         models.Ingredient.is_active == True
@@ -949,7 +963,7 @@ def list_ingredients(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=items, message="재고 목록을 조회했습니다.")
 
 @router.get("/ingredients/alerts", response_model=schemas.StandardResponse[List[schemas.IngredientResponse]])
-def get_low_stock_alerts(db: Session = Depends(get_db)):
+def get_low_stock_alerts(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """부족 재고 항목 조회 (current_stock <= alert_threshold)"""
     items = db.query(models.Ingredient).filter(
         models.Ingredient.is_active == True,
@@ -958,7 +972,7 @@ def get_low_stock_alerts(db: Session = Depends(get_db)):
     return schemas.StandardResponse(success=True, data=items, message="부족 재고 항목을 조회했습니다.")
 
 @router.post("/ingredients", response_model=schemas.StandardResponse[schemas.IngredientResponse])
-def create_ingredient(payload: schemas.IngredientCreate, db: Session = Depends(get_db)):
+def create_ingredient(payload: schemas.IngredientCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """재고 항목 신규 생성"""
     ingredient = models.Ingredient(**payload.model_dump())
     db.add(ingredient)
@@ -967,7 +981,7 @@ def create_ingredient(payload: schemas.IngredientCreate, db: Session = Depends(g
     return schemas.StandardResponse(success=True, data=ingredient, message="재고 항목이 추가되었습니다.")
 
 @router.patch("/ingredients/{ingredient_id}", response_model=schemas.StandardResponse[schemas.IngredientResponse])
-def update_ingredient(ingredient_id: int, payload: schemas.IngredientUpdate, db: Session = Depends(get_db)):
+def update_ingredient(ingredient_id: int, payload: schemas.IngredientUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """재고 항목 수정 (부분 업데이트)"""
     ingredient = db.query(models.Ingredient).filter(models.Ingredient.id == ingredient_id).first()
     if not ingredient:
@@ -981,7 +995,7 @@ def update_ingredient(ingredient_id: int, payload: schemas.IngredientUpdate, db:
     return schemas.StandardResponse(success=True, data=ingredient, message="재고 항목이 수정되었습니다.")
 
 @router.delete("/ingredients/{ingredient_id}", response_model=schemas.StandardResponse)
-def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db)):
+def delete_ingredient(ingredient_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """재고 항목 소프트 삭제 (is_active = False)"""
     ingredient = db.query(models.Ingredient).filter(models.Ingredient.id == ingredient_id).first()
     if not ingredient:

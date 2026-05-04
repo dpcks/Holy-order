@@ -41,9 +41,10 @@ def seed_data():
         db.add(setting)
 
         # 3. 관리자 계정 생성
+        import auth
         admin = Admin(
             login_id="admin",
-            password_hash="change-this-in-production",
+            password_hash=auth.hash_password("admin"),
             name="카페 관리자"
         )
         db.add(admin)

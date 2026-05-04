@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, Eye, EyeOff, Coffee, ChevronRight, AlertCircle } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Coffee, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { apiClient } from '../../api/client';
 
 /*
 [File Role]
@@ -21,17 +22,30 @@ const AdminLogin = () => {
     setIsLoading(true);
     setError('');
 
-    // TODO: 실제 백엔드 인증 로직 연결 예정
-    // 임시 시뮬레이션
-    setTimeout(() => {
-      if (username === 'admin' && password === '1234') {
-        localStorage.setItem('adminToken', 'temp-token');
+    try {
+      // OAuth2 명세에 따라 x-www-form-urlencoded 형식으로 데이터 준비
+      const formData = new URLSearchParams();
+      formData.append('username', username);
+      formData.append('password', password);
+
+      const response = await apiClient.post<any, any>('/admin/login', formData, {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      });
+
+      // apiClient 인터셉터가 이미 response.data를 반환하므로 바로 접근
+      if (response?.success) {
+        // 토큰 저장 및 이동
+        localStorage.setItem('adminToken', response.data.access_token);
         navigate('/admin');
-      } else {
-        setError('아이디 또는 비밀번호가 일치하지 않습니다.');
-        setIsLoading(false);
       }
-    }, 800);
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      setError(err.response?.data?.detail || '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -92,6 +106,11 @@ const AdminLogin = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleLogin(e);
+                    }
+                  }}
                   className="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-14 text-gray-900 font-bold placeholder:text-gray-300 focus:bg-white focus:border-primary/20 focus:outline-none transition-all"
                   placeholder="••••••••"
                   required

@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { CartProvider } from './context/CartContext';
 
 // 사용자 페이지
@@ -19,10 +20,12 @@ import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminAnnouncements } from './pages/admin/AdminAnnouncements';
 import { AdminIngredients } from './pages/admin/AdminIngredients';
 import AdminLogin from './pages/admin/AdminLogin';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
     <CartProvider>
+      <Toaster position="top-center" reverseOrder={false} />
       <Router>
         <Routes>
           {/* 사용자 화면 (모바일) */}
@@ -33,16 +36,20 @@ function App() {
 
           {/* 관리자 화면 (데스크탑) */}
           <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOrderManagement />} />
-            <Route path="history" element={<AdminOrderHistory />} />
-            <Route path="payments" element={<AdminPaymentLogs />} />
-            <Route path="menus" element={<AdminMenuManagement />} />
-            <Route path="reports" element={<AdminSalesReports />} />
-            <Route path="schedules" element={<AdminSchedule />} />
-            <Route path="announcements" element={<AdminAnnouncements />} />
-            <Route path="ingredients" element={<AdminIngredients />} />
-            <Route path="settings" element={<AdminSettings />} />
+
+          {/* 로그인 보호가 필요한 관리자 경로 */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOrderManagement />} />
+              <Route path="history" element={<AdminOrderHistory />} />
+              <Route path="payments" element={<AdminPaymentLogs />} />
+              <Route path="menus" element={<AdminMenuManagement />} />
+              <Route path="reports" element={<AdminSalesReports />} />
+              <Route path="schedules" element={<AdminSchedule />} />
+              <Route path="announcements" element={<AdminAnnouncements />} />
+              <Route path="ingredients" element={<AdminIngredients />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
           </Route>
         </Routes>
       </Router>

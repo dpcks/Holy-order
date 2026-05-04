@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History,
   Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone, Package
@@ -20,6 +21,45 @@ const navItems = [
 
 export const AdminLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[220px] py-1">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center shrink-0">
+            <LogOut size={16} />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-gray-900">로그아웃 확인</p>
+            <p className="text-[12px] text-gray-500 mt-0.5">정말 로그아웃 하시겠습니까?</p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={() => {
+              toast.dismiss(t.id);
+              localStorage.removeItem('adminToken');
+              navigate('/admin/login');
+              toast.success('로그아웃 되었습니다.', { icon: '👋' });
+            }}
+            className="px-3 py-1.5 text-[12px] font-bold text-white bg-red-500 hover:bg-red-600 rounded-md shadow-sm transition-all active:scale-95"
+          >
+            로그아웃
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 6000,
+      position: 'top-center',
+    });
+  };
   const [hasNewOrder, setHasNewOrder] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const pathnameRef = useRef(location.pathname);
@@ -268,7 +308,10 @@ export const AdminLayout = () => {
               </div>
             )}
           </div>
-          <button className={`flex items-center text-white/40 hover:text-white text-[12px] py-1 transition-colors ${isCollapsed ? 'justify-center' : 'gap-2'}`}>
+          <button
+            onClick={handleLogout}
+            className={`flex items-center text-white/40 hover:text-white text-[12px] py-1 transition-colors ${isCollapsed ? 'justify-center' : 'gap-2'}`}
+          >
             <LogOut size={14} />
             {!isCollapsed && <span className="animate-in fade-in">로그아웃</span>}
           </button>
