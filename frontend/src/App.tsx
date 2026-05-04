@@ -18,6 +18,7 @@ import { AdminSchedule } from './pages/admin/AdminSchedule';
 import { AdminSettings } from './pages/admin/AdminSettings';
 import { AdminAnnouncements } from './pages/admin/AdminAnnouncements';
 import { AdminIngredients } from './pages/admin/AdminIngredients';
+import AdminLogin from './pages/admin/AdminLogin';
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/order/status/:id" element={<OrderStatus />} />
 
           {/* 관리자 화면 (데스크탑) */}
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminOrderManagement />} />
             <Route path="history" element={<AdminOrderHistory />} />
