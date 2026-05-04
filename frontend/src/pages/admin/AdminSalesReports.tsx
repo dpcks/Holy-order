@@ -207,9 +207,10 @@ export const AdminSalesReports = () => {
           <div className="flex items-center gap-2">
             {/* 상단 버튼 그룹 */}
             <div className="flex gap-1.5 mr-1">
-              <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
+              {/* TODO: CSV 내보내기 기능 구현 */}
+              {/* <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
                 <Download size={14} />CSV
-              </button>
+              </button> */}
               <button
                 onClick={() => setIsReportModalOpen(true)}
                 className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm"

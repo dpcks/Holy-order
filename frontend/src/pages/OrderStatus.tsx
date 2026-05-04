@@ -235,7 +235,7 @@ export const OrderStatus = () => {
         console.log('🔊 [Audio] 브라우저 오디오 재생 잠금 해제 성공');
         window.removeEventListener('click', unlockAudio);
         window.removeEventListener('touchstart', unlockAudio);
-      }).catch(err => {
+      }).catch(() => {
         console.warn('🔊 [Audio] 언락 대기 중 (사용자 상호작용 필요)');
       });
     };
