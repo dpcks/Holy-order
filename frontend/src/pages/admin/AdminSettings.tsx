@@ -23,8 +23,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../api/client';
-import type { StandardResponse } from '../../api/client';
-import type { SettingResponse } from '../../types';
+import type { SettingResponse, StandardResponse, AdminInfo } from '../../types';
 
 export const AdminSettings = () => {
   const [settings, setSettings] = useState<SettingResponse | null>(null);
@@ -43,7 +42,7 @@ export const AdminSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings');
+      const res = await apiClient.get<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings');
       if (res.success) setSettings(res.data);
     } catch (err) {
       console.error('설정 조회 실패:', err);
@@ -58,7 +57,7 @@ export const AdminSettings = () => {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await apiClient.put<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings', updatedFields);
+      const res = await apiClient.put<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings', updatedFields);
       if (res.success) {
         setSettings(res.data);
         setMessage({ type: 'success', text: '설정이 성공적으로 저장되었습니다.' });
@@ -381,7 +380,7 @@ export const AdminSettings = () => {
                     }
 
                     try {
-                      const res = await apiClient.patch('/admin/me/password', { current_password: currentPwd, new_password: newPassword });
+                      const res = await apiClient.patch<StandardResponse<null>, StandardResponse<null>>('/admin/me/password', { current_password: currentPwd, new_password: newPassword });
                       if (res.success) {
                         toast.success('비밀번호가 안전하게 변경되었습니다.');
                         (document.getElementById('current_password') as HTMLInputElement).value = '';
@@ -406,15 +405,26 @@ export const AdminSettings = () => {
                   </div>
                   <h3 className="font-black text-gray-900">관리자 계정 추가</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
-                    <input 
-                      type="text"
-                      id="new_login_id"
-                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                      placeholder="아이디"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">관리자 성함</label>
+                      <input 
+                        type="text"
+                        id="new_admin_name"
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                        placeholder="이름 입력"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
+                      <input 
+                        type="text"
+                        id="new_login_id"
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                        placeholder="아이디 입력"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
@@ -422,24 +432,31 @@ export const AdminSettings = () => {
                       type="password"
                       id="new_account_password"
                       className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                      placeholder="비밀번호"
+                      placeholder="초기 비밀번호 설정"
                     />
                   </div>
                 </div>
                 <button 
                   onClick={async () => {
+                    const name = (document.getElementById('new_admin_name') as HTMLInputElement).value;
                     const loginId = (document.getElementById('new_login_id') as HTMLInputElement).value;
                     const password = (document.getElementById('new_account_password') as HTMLInputElement).value;
-                    if (!loginId || !password) return toast.error('모든 필드를 입력해 주세요.');
+                    
+                    if (!name || !loginId || !password) return toast.error('모든 필드를 입력해 주세요.');
+                    
                     try {
-                      const res = await apiClient.post('/admin/accounts', { login_id: loginId, password: password });
+                      const res = await apiClient.post<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/accounts', { 
+                        name: name,
+                        login_id: loginId, 
+                        password: password 
+                      });
                       if (res.success) {
-                        toast.success(`${loginId} 계정이 생성되었습니다.`);
+                        toast.success(`${name}(${loginId}) 계정이 생성되었습니다.`);
+                        (document.getElementById('new_admin_name') as HTMLInputElement).value = '';
                         (document.getElementById('new_login_id') as HTMLInputElement).value = '';
                         (document.getElementById('new_account_password') as HTMLInputElement).value = '';
                       }
                     } catch (err: any) {
-                      // apiClient에서 공통 에러 처리를 수행합니다.
                       console.error('계정 생성 실패:', err);
                     }
                   }}

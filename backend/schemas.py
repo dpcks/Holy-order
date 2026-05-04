@@ -246,6 +246,15 @@ class AdminPasswordChange(BaseModel):
 class AdminAccountCreate(BaseModel):
     login_id: str
     password: str
+    name: str
+
+class AdminResponse(BaseModel):
+    id: int
+    login_id: str
+    name: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 class TokenResponse(BaseModel):
     access_token: str

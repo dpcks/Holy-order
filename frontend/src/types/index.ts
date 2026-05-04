@@ -282,3 +282,14 @@ export interface IngredientUpdate {
   memo?: string | null;
   display_order?: number;
 }
+
+// ==========================================
+// 관리자 관련 (Admin)
+// ==========================================
+
+export interface AdminInfo {
+  id: number;
+  login_id: string;
+  name: string;
+  created_at: string;
+}

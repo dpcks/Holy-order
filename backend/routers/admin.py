@@ -736,7 +736,8 @@ def create_admin_account(
     # 2. 계정 생성
     new_admin = models.Admin(
         login_id=data.login_id,
-        password_hash=auth.hash_password(data.password)
+        password_hash=auth.hash_password(data.password),
+        name=data.name
     )
     db.add(new_admin)
     db.commit()
@@ -745,7 +746,19 @@ def create_admin_account(
 
 
 # ────────────────────────────────────────
-# 이벤트/공지 관리 (Announcement Management)
+# 내 정보 관리
+# ────────────────────────────────────────
+
+@router.get("/me", response_model=schemas.StandardResponse[schemas.AdminResponse])
+async def get_my_info(
+    current_admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """현재 로그인된 관리자 정보 조회"""
+    return schemas.StandardResponse(
+        success=True,
+        data=current_admin,
+        message="관리자 정보를 가져왔습니다."
+    )
 # ────────────────────────────────────────
 
 @router.get("/announcements", response_model=schemas.StandardResponse[List[schemas.AnnouncementResponse]])

@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { getWsUrl } from '../../utils/url';
 
+import { apiClient } from '../../api/client';
+import type { AdminInfo, StandardResponse } from '../../types';
+
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
   { to: '/admin/history', label: '주문 내역', icon: History },
@@ -22,6 +25,23 @@ const navItems = [
 export const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
+
+  // 관리자 정보 가져오기
+  const fetchAdminInfo = useCallback(async () => {
+    try {
+      const res = await apiClient.get<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/me');
+      if (res.success) {
+        setAdminInfo(res.data);
+      }
+    } catch (err) {
+      console.error('관리자 정보를 가져오는데 실패했습니다:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAdminInfo();
+  }, [fetchAdminInfo]);
 
   const handleLogout = () => {
     toast((t) => (
@@ -312,13 +332,17 @@ export const AdminLayout = () => {
         {/* 푸터 영역 (관리자 정보) */}
         <div className={`px-4 py-4 border-t border-white/10 flex flex-col gap-3 overflow-hidden ${isCollapsed ? 'items-center' : ''}`}>
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'}`}>
-            <div className="w-8 h-8 bg-primary/20 text-primary border border-primary/30 rounded-lg flex items-center justify-center font-bold text-xs shrink-0">
-              관
+            <div className="w-8 h-8 bg-primary/20 text-primary border border-primary/30 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+              {adminInfo?.name ? adminInfo.name.charAt(0) : '관'}
             </div>
             {!isCollapsed && (
               <div className="min-w-0 animate-in fade-in duration-500">
-                <p className="text-white text-[12px] font-semibold truncate">관리자</p>
-                <p className="text-white/40 text-[10px]">Holy-Order Admin</p>
+                <p className="text-white text-[12px] font-semibold truncate">
+                  {adminInfo ? adminInfo.name : '관리자'}
+                </p>
+                <p className="text-white/40 text-[10px]">
+                  {adminInfo ? `@${adminInfo.login_id}` : 'Holy-Order Admin'}
+                </p>
               </div>
             )}
           </div>
