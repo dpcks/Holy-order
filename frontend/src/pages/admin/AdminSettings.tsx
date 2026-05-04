@@ -36,6 +36,12 @@ export const AdminSettings = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // 신규 계정 추가를 위한 상태
+  const [accName, setAccName] = useState('');
+  const [accLoginId, setAccLoginId] = useState('');
+  const [accPassword, setAccPassword] = useState('');
+  const [accConfirmPassword, setAccConfirmPassword] = useState('');
+
   useEffect(() => {
     fetchSettings();
   }, []);
@@ -411,50 +417,99 @@ export const AdminSettings = () => {
                       <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">관리자 성함</label>
                       <input 
                         type="text"
-                        id="new_admin_name"
                         className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
                         placeholder="이름 입력"
+                        value={accName}
+                        onChange={(e) => setAccName(e.target.value)}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
                       <input 
                         type="text"
-                        id="new_login_id"
                         className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
                         placeholder="아이디 입력"
+                        value={accLoginId}
+                        onChange={(e) => setAccLoginId(e.target.value)}
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
-                    <input 
-                      type="password"
-                      id="new_account_password"
-                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                      placeholder="초기 비밀번호 설정"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
+                      <input 
+                        type="password"
+                        className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${
+                          accPassword && accConfirmPassword 
+                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10') 
+                            : 'focus:ring-black/5'
+                        }`}
+                        placeholder="비밀번호 설정"
+                        value={accPassword}
+                        onChange={(e) => setAccPassword(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">비밀번호 확인</label>
+                      <input 
+                        type="password"
+                        className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${
+                          accPassword && accConfirmPassword 
+                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10') 
+                            : 'focus:ring-black/5'
+                        }`}
+                        placeholder="비밀번호 재입력"
+                        value={accConfirmPassword}
+                        onChange={(e) => setAccConfirmPassword(e.target.value)}
+                      />
+                    </div>
                   </div>
+
+                  {/* 비밀번호 일치 알림 바 */}
+                  {accPassword && accConfirmPassword && (
+                    <div className={`mt-2 h-1.5 rounded-full overflow-hidden transition-all duration-500 ${accPassword === accConfirmPassword ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                      <div 
+                        className={`h-full transition-all duration-500 ${accPassword === accConfirmPassword ? 'w-full bg-emerald-500' : 'w-1/2 bg-red-500'}`}
+                      />
+                    </div>
+                  )}
+                  {accPassword && accConfirmPassword && (
+                    <div className="flex items-center gap-1.5 px-1">
+                      {accPassword === accConfirmPassword ? (
+                        <>
+                          <ShieldCheck size={12} className="text-emerald-500" />
+                          <span className="text-[10px] font-bold text-emerald-600">비밀번호가 일치합니다.</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle size={12} className="text-red-500" />
+                          <span className="text-[10px] font-bold text-red-600">비밀번호가 일치하지 않습니다.</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <button 
                   onClick={async () => {
-                    const name = (document.getElementById('new_admin_name') as HTMLInputElement).value;
-                    const loginId = (document.getElementById('new_login_id') as HTMLInputElement).value;
-                    const password = (document.getElementById('new_account_password') as HTMLInputElement).value;
-                    
-                    if (!name || !loginId || !password) return toast.error('모든 필드를 입력해 주세요.');
+                    if (!accName || !accLoginId || !accPassword || !accConfirmPassword) {
+                      return toast.error('모든 필드를 입력해 주세요.');
+                    }
+                    if (accPassword !== accConfirmPassword) {
+                      return toast.error('비밀번호가 일치하지 않습니다.');
+                    }
                     
                     try {
                       const res = await apiClient.post<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/accounts', { 
-                        name: name,
-                        login_id: loginId, 
-                        password: password 
+                        name: accName,
+                        login_id: accLoginId, 
+                        password: accPassword 
                       });
                       if (res.success) {
-                        toast.success(`${name}(${loginId}) 계정이 생성되었습니다.`);
-                        (document.getElementById('new_admin_name') as HTMLInputElement).value = '';
-                        (document.getElementById('new_login_id') as HTMLInputElement).value = '';
-                        (document.getElementById('new_account_password') as HTMLInputElement).value = '';
+                        toast.success(`${accName}(${accLoginId}) 계정이 생성되었습니다.`);
+                        setAccName('');
+                        setAccLoginId('');
+                        setAccPassword('');
+                        setAccConfirmPassword('');
                       }
                     } catch (err: any) {
                       console.error('계정 생성 실패:', err);
