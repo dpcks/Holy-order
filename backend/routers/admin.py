@@ -701,6 +701,50 @@ def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(ge
 
 
 # ────────────────────────────────────────
+# 관리자 계정 관리 (Admin Account Management)
+# ────────────────────────────────────────
+
+@router.patch("/me/password", response_model=schemas.StandardResponse)
+def change_admin_password(
+    data: schemas.AdminPasswordChange, 
+    db: Session = Depends(get_db), 
+    admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """현재 로그인된 관리자의 비밀번호 변경"""
+    # 1. 현재 비밀번호 검증
+    if not auth.verify_password(data.current_password, admin.password_hash):
+        raise HTTPException(status_code=400, detail="현재 비밀번호가 일치하지 않습니다.")
+    
+    # 2. 새 비밀번호 해싱 및 저장
+    admin.password_hash = auth.hash_password(data.new_password)
+    db.commit()
+    
+    return schemas.StandardResponse(success=True, message="비밀번호가 성공적으로 변경되었습니다.")
+
+@router.post("/accounts", response_model=schemas.StandardResponse)
+def create_admin_account(
+    data: schemas.AdminAccountCreate, 
+    db: Session = Depends(get_db), 
+    admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """신규 관리자 계정 생성"""
+    # 1. 아이디 중복 확인
+    existing = db.query(models.Admin).filter(models.Admin.login_id == data.login_id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="이미 존재하는 아이디입니다.")
+    
+    # 2. 계정 생성
+    new_admin = models.Admin(
+        login_id=data.login_id,
+        password_hash=auth.hash_password(data.password)
+    )
+    db.add(new_admin)
+    db.commit()
+    
+    return schemas.StandardResponse(success=True, message=f"'{data.login_id}' 계정이 생성되었습니다.")
+
+
+# ────────────────────────────────────────
 # 이벤트/공지 관리 (Announcement Management)
 # ────────────────────────────────────────
 

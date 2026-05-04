@@ -239,6 +239,14 @@ class AdminLogin(BaseModel):
     username: str
     password: str
 
+class AdminPasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+class AdminAccountCreate(BaseModel):
+    login_id: str
+    password: str
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

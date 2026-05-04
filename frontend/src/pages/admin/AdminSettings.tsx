@@ -14,8 +14,14 @@ import {
   Save, 
   CheckCircle2, 
   AlertCircle,
-  Smartphone
+  Smartphone,
+  Lock,
+  UserPlus,
+  ShieldCheck,
+  X,
+  ChevronRight
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { apiClient } from '../../api/client';
 import type { StandardResponse } from '../../api/client';
 import type { SettingResponse } from '../../types';
@@ -25,6 +31,7 @@ export const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -129,8 +136,8 @@ export const AdminSettings = () => {
           </section>
 
           <div className="grid grid-cols-2 gap-6 items-start">
-            {/* 2. 결제 계좌 정보 */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col">
+            {/* 2. 결제 계좌 정보 (왼쪽 배치) */}
+            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col h-full">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
                   <CreditCard size={20} />
@@ -184,49 +191,83 @@ export const AdminSettings = () => {
               </div>
             </section>
 
-            {/* 3. 전화번호 필수 입력 여부 제어 - 높이 절반 축소 버전 */}
-            <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden h-fit">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-blue-100/50 transition-colors" />
-              
-              <div className="relative flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                    settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
-                  }`}>
-                    <Smartphone size={18} />
+            {/* 오른쪽 컬럼: 전화번호 설정 + 보안 설정 스택 */}
+            <div className="flex flex-col gap-6 h-full">
+              {/* 3. 전화번호 필수 입력 여부 제어 */}
+              <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-blue-100/50 transition-colors" />
+                
+                <div className="relative flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                      settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
+                    }`}>
+                      <Smartphone size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">전화번호 설정</h2>
+                      <p className="text-[11px] font-bold text-gray-400">필수 여부 조절</p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-[16px] font-black text-gray-900 leading-tight">전화번호 설정</h2>
-                    <p className="text-[11px] font-bold text-gray-400">필수 여부 조절</p>
+
+                  <button 
+                    onClick={() => handleUpdate({ require_phone: !settings.require_phone })}
+                    disabled={saving}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${
+                      settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
+                    }`}
+                  >
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${
+                      settings.require_phone ? 'translate-x-8' : 'translate-x-0'
+                    }`}>
+                      <Smartphone size={12} className={settings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
+                    </div>
+                  </button>
+                </div>
+
+                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${
+                  settings.require_phone 
+                    ? 'bg-blue-50 border-blue-100 text-blue-700' 
+                    : 'bg-gray-50 border-gray-100 text-gray-500'
+                }`}>
+                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 설정</span>
+                  <span className="text-[13px] font-black">
+                    {settings.require_phone ? '필수 입력' : '입력 생략'}
+                  </span>
+                </div>
+              </section>
+
+              {/* 4. 보안 및 계정 관리 진입 카드 */}
+              <section 
+                onClick={() => setIsSecurityModalOpen(true)}
+                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-amber-100/50 transition-colors" />
+                
+                <div className="relative flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                      <ShieldCheck size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">보안 및 계정</h2>
+                      <p className="text-[11px] font-bold text-gray-400">비밀번호 및 계정</p>
+                    </div>
+                  </div>
+                  <div className="w-10 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-amber-500 group-hover:bg-amber-50 transition-all">
+                    <ChevronRight size={16} />
                   </div>
                 </div>
 
-                <button 
-                  onClick={() => handleUpdate({ require_phone: !settings.require_phone })}
-                  disabled={saving}
-                  className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${
-                    settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${
-                    settings.require_phone ? 'translate-x-8' : 'translate-x-0'
-                  }`}>
-                    <Smartphone size={12} className={settings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
-                  </div>
-                </button>
-              </div>
-
-              <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${
-                settings.require_phone 
-                  ? 'bg-blue-50 border-blue-100 text-blue-700' 
-                  : 'bg-gray-50 border-gray-100 text-gray-500'
-              }`}>
-                <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 설정</span>
-                <span className="text-[13px] font-black">
-                  {settings.require_phone ? '필수 입력' : '입력 생략'}
-                </span>
-              </div>
-            </section>
+                <div className="relative w-full p-4 rounded-2xl flex items-center justify-between border border-amber-100 bg-amber-50/50 text-amber-700 transition-all duration-500">
+                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">관리 상태</span>
+                  <span className="text-[13px] font-black flex items-center gap-1.5">
+                    <Lock size={12} />
+                    설정 관리하기
+                  </span>
+                </div>
+              </section>
+            </div>
           </div>
 
           {/* 하단 메시지 알림 */}
@@ -240,6 +281,142 @@ export const AdminSettings = () => {
           )}
         </div>
       </main>
+
+      {/* 보안 설정 모달 */}
+      {isSecurityModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          {/* 배경 블러 처리 */}
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={() => setIsSecurityModalOpen(false)}
+          />
+          
+          {/* 모달 콘텐츠 */}
+          <div className="relative w-full max-w-2xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+            <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner">
+                  <ShieldCheck size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">보안 및 계정 관리</h2>
+                  <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider">Security & Account Control</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSecurityModalOpen(false)}
+                className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-8 overflow-y-auto custom-scrollbar">
+              {/* 비밀번호 변경 섹션 */}
+              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center">
+                    <Lock size={16} />
+                  </div>
+                  <h3 className="font-black text-gray-900">비밀번호 변경</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">현재 비밀번호</label>
+                    <input 
+                      type="password"
+                      id="current_password"
+                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                      placeholder="현재 비밀번호"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호</label>
+                    <input 
+                      type="password"
+                      id="new_password"
+                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                      placeholder="새 비밀번호"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={async () => {
+                    const currentPwd = (document.getElementById('current_password') as HTMLInputElement).value;
+                    const newPwd = (document.getElementById('new_password') as HTMLInputElement).value;
+                    if (!currentPwd || !newPwd) return toast.error('모든 필드를 입력해 주세요.');
+                    try {
+                      const res = await apiClient.patch('/admin/me/password', { current_password: currentPwd, new_password: newPwd });
+                      if (res.success) {
+                        toast.success('비밀번호가 변경되었습니다.');
+                        (document.getElementById('current_password') as HTMLInputElement).value = '';
+                        (document.getElementById('new_password') as HTMLInputElement).value = '';
+                      }
+                    } catch (err: any) { toast.error(err.response?.data?.detail || '변경 실패'); }
+                  }}
+                  className="w-full bg-amber-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                >
+                  비밀번호 업데이트
+                </button>
+              </div>
+
+              {/* 관리자 계정 추가 섹션 */}
+              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center">
+                    <UserPlus size={16} />
+                  </div>
+                  <h3 className="font-black text-gray-900">관리자 계정 추가</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
+                    <input 
+                      type="text"
+                      id="new_login_id"
+                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                      placeholder="아이디"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
+                    <input 
+                      type="password"
+                      id="new_account_password"
+                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                      placeholder="비밀번호"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={async () => {
+                    const loginId = (document.getElementById('new_login_id') as HTMLInputElement).value;
+                    const password = (document.getElementById('new_account_password') as HTMLInputElement).value;
+                    if (!loginId || !password) return toast.error('모든 필드를 입력해 주세요.');
+                    try {
+                      const res = await apiClient.post('/admin/accounts', { login_id: loginId, password: password });
+                      if (res.success) {
+                        toast.success(`${loginId} 계정이 생성되었습니다.`);
+                        (document.getElementById('new_login_id') as HTMLInputElement).value = '';
+                        (document.getElementById('new_account_password') as HTMLInputElement).value = '';
+                      }
+                    } catch (err: any) { toast.error(err.response?.data?.detail || '생성 실패'); }
+                  }}
+                  className="w-full bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                >
+                  새 계정 생성하기
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-gray-50 text-center shrink-0">
+              <p className="text-[11px] text-gray-400 font-medium italic">
+                보안을 위해 비밀번호는 8자 이상, 영문/숫자 조합을 권장합니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
