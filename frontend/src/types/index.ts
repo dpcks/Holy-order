@@ -83,6 +83,20 @@ export interface Order {
 
 
 // ==========================================
+// 관리자 관련 (Admin)
+// ==========================================
+
+export interface AdminUser {
+  id: number;
+  login_id: string;
+  name: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// ==========================================
 // 설정 및 통계 (Settings & Stats)
 // ==========================================
 

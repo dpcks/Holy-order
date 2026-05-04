@@ -248,11 +248,17 @@ class AdminAccountCreate(BaseModel):
     password: str
     name: str
 
+class AdminUpdate(BaseModel):
+    is_active: Optional[bool] = None
+
 class AdminResponse(BaseModel):
     id: int
     login_id: str
     name: str
+    is_active: bool
+    last_login_at: Optional[datetime] = None
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 

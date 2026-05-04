@@ -16,6 +16,13 @@ def login_admin(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     if not admin or not auth.verify_password(form_data.password, admin.password_hash):
         raise HTTPException(status_code=400, detail="아이디 또는 비밀번호가 올바르지 않습니다.")
     
+    if not getattr(admin, "is_active", True):
+        raise HTTPException(status_code=403, detail="비활성화된 계정입니다. 총괄 관리자에게 문의하세요.")
+        
+    # 최근 접속 시각 갱신
+    admin.last_login_at = models.get_seoul_time()
+    db.commit()
+    
     access_token = auth.create_access_token(data={"sub": admin.login_id})
     return schemas.StandardResponse(
         success=True, 
@@ -743,6 +750,33 @@ def create_admin_account(
     db.commit()
     
     return schemas.StandardResponse(success=True, message=f"'{data.login_id}' 계정이 생성되었습니다.")
+
+@router.get("/accounts", response_model=schemas.StandardResponse[List[schemas.AdminResponse]])
+def get_admin_accounts(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
+    """전체 관리자 목록 및 접속 시간 조회"""
+    admins = db.query(models.Admin).order_by(models.Admin.id.asc()).all()
+    return schemas.StandardResponse(success=True, data=admins, message="관리자 목록을 조회했습니다.")
+
+@router.patch("/accounts/{admin_id}", response_model=schemas.StandardResponse)
+def update_admin_account(
+    admin_id: int,
+    data: schemas.AdminUpdate,
+    db: Session = Depends(get_db),
+    admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """관리자 계정 상태 변경 (비활성화 등)"""
+    target_admin = db.query(models.Admin).filter(models.Admin.id == admin_id).first()
+    if not target_admin:
+        raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다.")
+        
+    if data.is_active is not None:
+        # 본인 계정은 비활성화 불가능하도록 보호
+        if not data.is_active and target_admin.id == admin.id:
+            raise HTTPException(status_code=400, detail="현재 로그인된 본인의 계정은 비활성화할 수 없습니다.")
+        target_admin.is_active = data.is_active
+        
+    db.commit()
+    return schemas.StandardResponse(success=True, message=f"'{target_admin.name}'님의 계정 상태가 변경되었습니다.")
 
 
 # ────────────────────────────────────────

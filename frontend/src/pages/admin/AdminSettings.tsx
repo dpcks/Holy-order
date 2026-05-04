@@ -19,11 +19,13 @@ import {
   UserPlus,
   ShieldCheck,
   X,
-  ChevronRight
+  ChevronRight,
+  Users,
+  Clock
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../api/client';
-import type { SettingResponse, StandardResponse, AdminInfo } from '../../types';
+import type { SettingResponse, StandardResponse, AdminInfo, AdminUser } from '../../types';
 
 export const AdminSettings = () => {
   const [settings, setSettings] = useState<SettingResponse | null>(null);
@@ -31,6 +33,7 @@ export const AdminSettings = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   
   // 비밀번호 실시간 검증을 위한 상태
   const [newPassword, setNewPassword] = useState('');
@@ -42,9 +45,42 @@ export const AdminSettings = () => {
   const [accPassword, setAccPassword] = useState('');
   const [accConfirmPassword, setAccConfirmPassword] = useState('');
 
+  // 관리자 목록 상태
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
+
   useEffect(() => {
     fetchSettings();
+    fetchAdmins();
   }, []);
+
+  const fetchAdmins = async () => {
+    try {
+      setLoadingAdmins(true);
+      const res = await apiClient.get<AdminUser[], StandardResponse<AdminUser[]>>('/admin/accounts');
+      if (res.success && res.data) {
+        setAdmins(res.data);
+      }
+    } catch (err) {
+      console.error('관리자 목록 조회 실패:', err);
+    } finally {
+      setLoadingAdmins(false);
+    }
+  };
+
+  const toggleAdminStatus = async (id: number, currentStatus: boolean) => {
+    try {
+      const res = await apiClient.patch<any, StandardResponse<any>>(`/admin/accounts/${id}`, { is_active: !currentStatus });
+      if (res.success) {
+        toast.success(res.message);
+        fetchAdmins(); // 상태 변경 후 목록 새로고침
+      }
+    } catch (err: any) {
+      // client.ts의 전역 에러 핸들러가 토스트를 띄우지만, 커스텀 에러 처리 방지
+      console.error('계정 상태 변경 실패:', err);
+    }
+  };
+
 
   const fetchSettings = async () => {
     try {
@@ -276,6 +312,38 @@ export const AdminSettings = () => {
                   </span>
                 </div>
               </section>
+
+              {/* 5. 관리자 목록 및 현황 진입 카드 */}
+              <section 
+                onClick={() => setIsAdminModalOpen(true)}
+                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
+              >
+                <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-purple-100/50 transition-colors" />
+                
+                <div className="relative flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
+                      <Users size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">관리자 목록</h2>
+                      <p className="text-[11px] font-bold text-gray-400">접속 현황 및 권한</p>
+                    </div>
+                  </div>
+                  <div className="w-10 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-purple-500 group-hover:bg-purple-50 transition-all">
+                    <ChevronRight size={16} />
+                  </div>
+                </div>
+
+                <div className="relative w-full p-4 rounded-2xl flex items-center justify-between border border-purple-100 bg-purple-50/50 text-purple-700 transition-all duration-500">
+                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">등록된 관리자</span>
+                  <span className="text-[13px] font-black flex items-center gap-1.5">
+                    <Users size={12} />
+                    {admins.length}명 보기
+                  </span>
+                </div>
+              </section>
+
             </div>
           </div>
 
@@ -510,6 +578,7 @@ export const AdminSettings = () => {
                         setAccLoginId('');
                         setAccPassword('');
                         setAccConfirmPassword('');
+                        fetchAdmins(); // 신규 추가 후 목록 갱신
                       }
                     } catch (err: any) {
                       console.error('계정 생성 실패:', err);
@@ -530,6 +599,88 @@ export const AdminSettings = () => {
           </div>
         </div>
       )}
+
+      {/* 관리자 목록 모달 */}
+      {isAdminModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+            onClick={() => setIsAdminModalOpen(false)}
+          />
+          
+          <div className="relative w-full max-w-2xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+            <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">관리자 목록</h2>
+                  <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider">Admin Users List</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsAdminModalOpen(false)}
+                className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 flex-1 overflow-y-auto custom-scrollbar">
+              <div className="space-y-4">
+                {loadingAdmins ? (
+                  <div className="py-10 text-center text-sm text-gray-400 font-bold flex flex-col items-center gap-3">
+                    <div className="animate-spin h-6 w-6 rounded-full border-b-2 border-primary" />
+                    목록을 불러오는 중입니다...
+                  </div>
+                ) : admins.map(admin => (
+                  <div key={admin.id} className={`flex items-center justify-between p-4 rounded-3xl border transition-all ${admin.is_active ? 'bg-white border-gray-100 shadow-sm' : 'bg-gray-50 border-gray-200 opacity-70'}`}>
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg ${admin.is_active ? 'bg-gradient-to-br from-purple-500 to-indigo-500 shadow-md' : 'bg-gray-300'}`}>
+                        {admin.name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[15px] font-black text-gray-900">{admin.name}</span>
+                          {!admin.is_active && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">비활성</span>}
+                        </div>
+                        <span className="text-[12px] font-bold text-gray-400">@{admin.login_id}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">최근 접속</span>
+                        <span className="text-[12px] font-bold text-gray-600 flex items-center gap-1.5">
+                          <Clock size={12} className="text-gray-400" />
+                          {admin.last_login_at 
+                            ? new Date(admin.last_login_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                            : '접속 기록 없음'}
+                        </span>
+                      </div>
+                      
+                      <div className="w-[1px] h-8 bg-gray-100" />
+                      
+                      <button 
+                        onClick={() => toggleAdminStatus(admin.id, admin.is_active)}
+                        className={`relative w-12 h-7 rounded-full transition-all duration-300 p-1 focus:outline-none ${
+                          admin.is_active ? 'bg-emerald-500 shadow-inner' : 'bg-gray-200 shadow-inner'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${
+                          admin.is_active ? 'translate-x-5' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
