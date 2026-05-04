@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, User, Eye, EyeOff, Coffee, ChevronRight, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, User, Eye, EyeOff, Coffee, ChevronRight, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 /*

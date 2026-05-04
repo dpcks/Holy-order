@@ -25,39 +25,53 @@ export const AdminLayout = () => {
 
   const handleLogout = () => {
     toast((t) => (
-      <div className="flex flex-col gap-3 min-w-[220px] py-1">
-        <div className="flex items-start gap-3">
-          <div className="w-8 h-8 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center shrink-0">
-            <LogOut size={16} />
+      <div className={`${t.visible ? 'animate-in zoom-in-95 duration-300' : 'animate-out zoom-out-95 duration-200'} flex flex-col gap-5 min-w-[320px] bg-white rounded-[32px] p-8 shadow-2xl border border-gray-100`}>
+        <div className="flex flex-col items-center text-center gap-4">
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center shrink-0 animate-bounce-subtle">
+            <LogOut size={32} />
           </div>
           <div>
-            <p className="text-[14px] font-bold text-gray-900">로그아웃 확인</p>
-            <p className="text-[12px] text-gray-500 mt-0.5">정말 로그아웃 하시겠습니까?</p>
+            <h3 className="text-xl font-black text-gray-900 tracking-tight">고생하셨습니다.🥹</h3>
+            <p className="text-[14px] text-primary font-bold mt-2 leading-relaxed italic px-2">
+              "여호와께서 너의 출입을 지금부터<br />
+              영원까지 지키시리로다"
+            </p>
+            <p className="text-[11px] text-gray-400 mt-1">(시편 121:8)</p>
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-2">
-          <button
-            onClick={() => toast.dismiss(t.id)}
-            className="px-3 py-1.5 text-[12px] font-medium text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-          >
-            취소
-          </button>
+
+        <div className="flex flex-col gap-2 mt-2">
           <button
             onClick={() => {
               toast.dismiss(t.id);
               localStorage.removeItem('adminToken');
               navigate('/admin/login');
-              toast.success('로그아웃 되었습니다.', { icon: '👋' });
+              toast.success('안전하게 로그아웃 되었습니다.', {
+                icon: '👋',
+                style: { borderRadius: '12px', fontSize: '14px', fontWeight: 'bold' }
+              });
             }}
-            className="px-3 py-1.5 text-[12px] font-bold text-white bg-red-500 hover:bg-red-600 rounded-md shadow-sm transition-all active:scale-95"
+            className="w-full py-4 text-[15px] font-black text-white bg-gray-900 hover:bg-black rounded-2xl shadow-lg shadow-gray-200 transition-all active:scale-[0.98]"
           >
-            로그아웃
+            로그아웃 하기
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="w-full py-4 text-[14px] font-bold text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-2xl transition-colors"
+          >
+            취소
           </button>
         </div>
       </div>
     ), {
-      duration: 6000,
+      duration: Infinity, // 사용자가 선택할 때까지 유지
       position: 'top-center',
+      style: {
+        background: 'transparent',
+        boxShadow: 'none',
+        padding: 0,
+        marginTop: '20vh', // 화면 위쪽에서 20% 내려오게 설정 (중앙 느낌)
+      },
     });
   };
   const [hasNewOrder, setHasNewOrder] = useState(false);
