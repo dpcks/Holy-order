@@ -313,7 +313,7 @@ export const AdminSalesReports = () => {
               {/* 상세 요약 그리드 */}
               <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2 overflow-x-auto scrollbar-hide">
                 {Object.entries(stats.trend_data || {})
-                  .filter(([_, d]) => d.count > 0 || period === '주간') // 주간은 비어있어도 구조 파악을 위해 보여줌
+                  .filter(([_, d]) => d.count > 0 || period === '주차별') // 주차별은 비어있어도 구조 파악을 위해 보여줌
                   .map(([k, d]) => (
                     <div key={k} className="bg-gray-50 rounded-xl p-3 border border-gray-100/50 min-w-[80px] shrink-0 flex flex-col items-center text-center">
                       <p className="text-[10px] font-bold text-gray-500 mb-1">{period === '주일' ? `${k}시` : k}</p>

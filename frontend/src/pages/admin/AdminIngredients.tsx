@@ -46,8 +46,8 @@ export const AdminIngredients = () => {
   const fetchData = useCallback(async () => {
     try {
       const [listRes, alertRes] = await Promise.all([
-        apiClient.get<Ingredient[], StandardResponse<Ingredient[]>>('/admin/ingredients'),
-        apiClient.get<Ingredient[], StandardResponse<Ingredient[]>>('/admin/ingredients/alerts'),
+        apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients'),
+        apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients/alerts'),
       ]);
       if (listRes.success && listRes.data) setIngredients(listRes.data);
       if (alertRes.success && alertRes.data) {
@@ -123,7 +123,7 @@ export const AdminIngredients = () => {
       if (editingItem) {
         // 수정
         const updateData: IngredientUpdate = { ...formData };
-        const res = await apiClient.patch<Ingredient, StandardResponse<Ingredient>>(
+        const res = await apiClient.patch<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(
           `/admin/ingredients/${editingItem.id}`, updateData
         );
         if (res.success) {
@@ -131,7 +131,7 @@ export const AdminIngredients = () => {
         }
       } else {
         // 생성
-        const res = await apiClient.post<IngredientCreate, StandardResponse<Ingredient>>(
+        const res = await apiClient.post<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(
           '/admin/ingredients', formData
         );
         if (res.success) {
@@ -153,7 +153,7 @@ export const AdminIngredients = () => {
     if (!confirm(`'${item.name}' 항목을 삭제하시겠습니까?`)) return;
 
     try {
-      const res = await apiClient.delete<StandardResponse<null>>(`/admin/ingredients/${item.id}`);
+      const res = await apiClient.delete<StandardResponse<null>, StandardResponse<null>>(`/admin/ingredients/${item.id}`);
       if (res.success) {
         setMessage({ type: 'success', text: `'${item.name}' 항목이 삭제되었습니다.` });
         await fetchData();
