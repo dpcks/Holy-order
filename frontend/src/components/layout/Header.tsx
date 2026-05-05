@@ -52,7 +52,7 @@ export const Header = ({
               <img
                 src="/img/ptcc_logo.png"
                 alt="평택중앙교회 로고"
-                className="h-14 w-14 object-contain -ml-2"
+                className="h-20 w-20 object-contain -ml-2"
               />
             )}
           </div>
