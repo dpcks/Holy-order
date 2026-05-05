@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -95,6 +95,13 @@ export const AdminLayout = () => {
     });
   };
   const [hasNewOrder, setHasNewOrder] = useState(false);
+
+  // 알림음 on/off 상태 관리 (localStorage와 동기화)
+  const [isSoundEnabled, setIsSoundEnabled] = useState(() => {
+    const saved = localStorage.getItem('adminSoundEnabled');
+    return saved !== 'false'; // 기본값: true (켜진 상태)
+  });
+
   const wsRef = useRef<WebSocket | null>(null);
   const pathnameRef = useRef(location.pathname);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,7 +181,9 @@ export const AdminLayout = () => {
           const data = JSON.parse(event.data);
           // 1. 새 주문이 들어왔을 때만 소리 재생 및 배지 표시
           if (data.type === 'NEW_ORDER') {
-            if (audioRef.current) {
+            // 알림음이 켜져 있을 때만 재생
+            const soundSetting = localStorage.getItem('adminSoundEnabled');
+            if (soundSetting !== 'false' && audioRef.current) {
               audioRef.current.currentTime = 0; // 재생 위치 초기화
               audioRef.current.play().catch(e => console.warn('오디오 재생 실패:', e));
             }
@@ -242,6 +251,19 @@ export const AdminLayout = () => {
   }, []);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+
+  // 알림음 토글 핸들러
+  const handleToggleSound = useCallback((enabled: boolean) => {
+    setIsSoundEnabled(enabled);
+    localStorage.setItem('adminSoundEnabled', String(enabled));
+  }, []);
+
+  // Outlet context로 전달할 값
+  const outletContext = useMemo(() => ({
+    isSoundEnabled,
+    toggleSound: handleToggleSound,
+    audioRef,
+  }), [isSoundEnabled, handleToggleSound]);
 
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden font-sans text-gray-900">
@@ -358,7 +380,7 @@ export const AdminLayout = () => {
 
       {/* 메인 콘텐츠 */}
       <main className="flex-1 overflow-hidden bg-gray-50 flex flex-col">
-        <Outlet />
+        <Outlet context={outletContext} />
       </main>
     </div>
   );
