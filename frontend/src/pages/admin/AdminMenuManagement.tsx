@@ -21,6 +21,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis, restrictToWindowEdges } from '@dnd-kit/modifiers';
 import { apiClient } from '../../api/client';
 import { getWsUrl } from '../../utils/url';
+import { uploadImageToCloudinary } from '../../utils/uploadImage';
 import type { Category, Menu, StandardResponse } from '../../types';
 
 
@@ -249,9 +250,10 @@ export const AdminMenuManagement = () => {
   const [savingId, setSavingId] = useState<number | 'new' | null>(null);
 
   // 토스트 알림 상태
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const showToast = (message: string, type: 'success' | 'info' = 'success') => {
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
   };
@@ -573,12 +575,22 @@ export const AdminMenuManagement = () => {
   //   }
   // };
 
-  // 이미지 업로드 시뮬레이션
+  // Cloudinary 이미지 실제 업로드
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log('업로드 시도:', file.name);
-    alert('이미지 업로드 기능은 현재 준비 중입니다. 임시로 이미지 URL을 사용해 주세요.');
+    
+    setIsUploading(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setEditForm(f => ({ ...f, image_url: url }));
+      showToast('이미지가 성공적으로 업로드되었습니다.');
+    } catch (error) {
+      console.error('업로드 실패:', error);
+      showToast('이미지 업로드에 실패했습니다. 환경변수를 확인해주세요.', 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -717,7 +729,7 @@ export const AdminMenuManagement = () => {
                     </label>
                   </div>
                   <div className="flex-1">
-                    <p className="text-[11px] text-gray-400 mb-2">추후 Cloudinary 연동 예정입니다. 현재는 URL을 직접 입력해 주세요.</p>
+                    <p className="text-[11px] text-gray-400 mb-2">업로드 버튼을 눌러 이미지를 추가하거나 URL을 직접 입력하세요.</p>
                     <input
                       placeholder="이미지 URL을 입력하세요"
                       value={editForm.image_url}

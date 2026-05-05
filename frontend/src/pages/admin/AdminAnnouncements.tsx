@@ -7,9 +7,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
-  X, PartyPopper, Bell, Calendar, ChevronDown
+  X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { uploadImageToCloudinary } from '../../utils/uploadImage';
 import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
 import type { Announcement, AnnouncementReportResponse, StandardResponse } from '../../types';
@@ -31,6 +32,7 @@ export const AdminAnnouncements = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportData, setReportData] = useState<AnnouncementReportResponse | null>(null);
   const [reportTarget, setReportTarget] = useState<Announcement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -132,6 +134,23 @@ export const AdminAnnouncements = () => {
     } catch (err: any) {
       const errorMsg = err.response?.data?.detail || '처리 중 오류가 발생했습니다.';
       showToast(errorMsg, 'error');
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const url = await uploadImageToCloudinary(file);
+      setFormData(p => ({ ...p, image_url: url }));
+      showToast('이미지가 성공적으로 업로드되었습니다.', 'success');
+    } catch (error) {
+      console.error('업로드 실패:', error);
+      showToast('이미지 업로드에 실패했습니다. 환경변수를 확인해주세요.', 'error');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -351,10 +370,31 @@ export const AdminAnnouncements = () => {
                   placeholder="이벤트 상세 설명" />
               </div>
               <div>
-                <label className="text-[12px] font-bold text-gray-600 mb-1 block">이미지 URL</label>
-                <input value={formData.image_url} onChange={(e) => setFormData(p => ({ ...p, image_url: e.target.value }))}
-                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
-                  placeholder="https://..." />
+                <label className="text-[12px] font-bold text-gray-600 mb-2 block">배너 이미지 (옵션)</label>
+                <div className="flex gap-4">
+                  <div className="w-20 h-20 rounded-2xl bg-gray-100 border border-dashed border-gray-300 flex items-center justify-center overflow-hidden shrink-0 relative group">
+                    {formData.image_url ? (
+                      <img src={formData.image_url} alt="preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon size={20} className="text-gray-300" />
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                        <div className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
+                    <label className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                      <span className="text-[10px] text-white font-bold">업로드</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isUploading} />
+                    </label>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[11px] text-gray-400 mb-2">클릭하여 이미지를 업로드하거나 기존 이미지 URL을 입력하세요.</p>
+                    <input value={formData.image_url} onChange={(e) => setFormData(p => ({ ...p, image_url: e.target.value }))}
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
+                      placeholder="https://..." />
+                  </div>
+                </div>
               </div>
               {formData.is_event_mode && (
                 <>

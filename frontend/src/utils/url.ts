@@ -5,12 +5,17 @@ URL 및 네트워크 관련 유틸리티 함수들을 정의합니다.
 */
 
 export const getWsUrl = (): string => {
+  // 1. 환경변수가 존재할 경우 최우선 사용 (Vercel 프로덕션 환경 등)
+  if (import.meta.env.VITE_WS_URL) {
+    return import.meta.env.VITE_WS_URL;
+  }
+
   const { hostname, protocol } = window.location;
   
-  // 1. WebSocket 프로토콜 결정 (HTTPS -> wss, HTTP -> ws)
+  // 2. WebSocket 프로토콜 결정 (HTTPS -> wss, HTTP -> ws)
   const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
   
-  // 2. 개발 환경 여부 판단
+  // 3. 개발 환경 여부 판단
   // - localhost
   // - .local (mDNS, Mac/iOS 로컬 호스트네임)
   // - IP 주소 형식 (192.168.x.x 등)
@@ -19,13 +24,9 @@ export const getWsUrl = (): string => {
     hostname.endsWith('.local') || 
     /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
     
-  // 3. 포트 결정
-  // 로컬 개발 환경에서는 백엔드가 8000 포트에서 실행됨을 가정
-  const wsPort = isLocal ? ':8000' : '';
+  // 4. 로컬 환경인 경우 포트 8000으로 연결 (Docker/Localhost 개발)
+  // 운영 환경인 경우 동일 호스트 사용
+  const targetHost = isLocal ? `${hostname}:8000` : window.location.host;
   
-  // 4. 환경 변수가 명시적으로 지정된 경우 우선 사용
-  const envWsUrl = import.meta.env.VITE_WS_URL;
-  if (envWsUrl) return envWsUrl;
-  
-  return `${wsProtocol}//${hostname}${wsPort}/ws`;
+  return `${wsProtocol}//${targetHost}/ws`;
 };
