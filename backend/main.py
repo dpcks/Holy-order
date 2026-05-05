@@ -49,3 +49,37 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+# -----------------------------------------------------
+# 임시 데이터베이스 관리 엔드포인트 (테스트용 비밀 스위치)
+# -----------------------------------------------------
+import seed
+from database import SessionLocal
+
+@app.get("/api/v1/dev/seed")
+def seed_database():
+    db = SessionLocal()
+    try:
+        seed.create_admin_if_not_exists(db)
+        seed.create_settings_if_not_exists(db)
+        import models
+        if db.query(models.Category).count() == 0:
+            seed.seed_test_data(db)
+        return {"success": True, "message": "테스트 데이터가 성공적으로 주입되었습니다! 이제 관리자 로그인이 가능합니다."}
+    except Exception as e:
+        return {"success": False, "message": f"오류 발생: {str(e)}"}
+    finally:
+        db.close()
+
+@app.get("/api/v1/dev/clear")
+def clear_database():
+    db = SessionLocal()
+    try:
+        seed.clear_test_data(db)
+        seed.create_admin_if_not_exists(db)
+        seed.create_settings_if_not_exists(db)
+        return {"success": True, "message": "테스트 데이터가 깔끔하게 삭제되었습니다. (최고 관리자 계정은 유지됨)"}
+    except Exception as e:
+        return {"success": False, "message": f"오류 발생: {str(e)}"}
+    finally:
+        db.close()
