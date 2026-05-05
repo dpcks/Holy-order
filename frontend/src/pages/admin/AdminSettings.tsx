@@ -269,7 +269,7 @@ export const AdminSettings = () => {
                     </div>
                     <div>
                       <h2 className="text-[16px] font-black text-gray-900 leading-tight">전화번호 설정</h2>
-                      <p className="text-[11px] font-bold text-gray-400">필수 여부 조절</p>
+                      <p className="text-[11px] font-bold text-gray-400">주문시 전화번호 필수 여부 조절</p>
                     </div>
                   </div>
 
