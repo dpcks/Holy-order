@@ -6,13 +6,13 @@
 */
 
 import { useState, useEffect } from 'react';
-import { 
-  Settings as SettingsIcon, 
-  Store, 
-  Power, 
-  CreditCard, 
-  Save, 
-  CheckCircle2, 
+import {
+  Settings as SettingsIcon,
+  Store,
+  Power,
+  CreditCard,
+  Save,
+  CheckCircle2,
   AlertCircle,
   Smartphone,
   Lock,
@@ -21,7 +21,8 @@ import {
   X,
   ChevronRight,
   Users,
-  Clock
+  Clock,
+  Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { apiClient } from '../../api/client';
@@ -34,7 +35,7 @@ export const AdminSettings = () => {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
-  
+
   // 비밀번호 실시간 검증을 위한 상태
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -49,7 +50,7 @@ export const AdminSettings = () => {
   // 관리자 목록 상태
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [loadingAdmins, setLoadingAdmins] = useState(false);
-  
+
   // 현재 로그인된 관리자 정보 상태
   const [currentAdmin, setCurrentAdmin] = useState<AdminInfo | null>(null);
 
@@ -111,20 +112,16 @@ export const AdminSettings = () => {
 
   const handleUpdate = async (updatedFields: Partial<SettingResponse>) => {
     if (!settings) return;
-    
+
     setSaving(true);
-    setMessage(null);
     try {
       const res = await apiClient.put<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings', updatedFields);
       if (res.success) {
         setSettings(res.data);
-        setMessage({ type: 'success', text: '설정이 성공적으로 저장되었습니다.' });
-        // 3초 후 메시지 제거
-        setTimeout(() => setMessage(null), 3000);
+        toast.success('설정이 성공적으로 저장되었습니다.');
       }
     } catch (err) {
       console.error('설정 저장 실패:', err);
-      setMessage({ type: 'error', text: '설정 저장 중 오류가 발생했습니다.' });
     } finally {
       setSaving(false);
     }
@@ -150,16 +147,15 @@ export const AdminSettings = () => {
 
       <main className="flex-1 overflow-auto p-8 custom-scrollbar">
         <div className="max-w-4xl mx-auto space-y-6">
-          
+
           {/* 1. 영업 상태 제어 (가장 중요) */}
           <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-primary/10 transition-colors" />
-            
+
             <div className="relative flex items-center justify-between">
               <div className="flex items-center gap-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                  settings.is_open ? 'bg-emerald-50 text-emerald-500 shadow-emerald-100 shadow-xl' : 'bg-red-50 text-red-500 shadow-red-100 shadow-xl'
-                }`}>
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${settings.is_open ? 'bg-emerald-50 text-emerald-500 shadow-emerald-100 shadow-xl' : 'bg-red-50 text-red-500 shadow-red-100 shadow-xl'
+                  }`}>
                   <Store size={28} />
                 </div>
                 <div>
@@ -169,26 +165,23 @@ export const AdminSettings = () => {
               </div>
 
               {/* 프리미엄 토글 스위치 */}
-              <button 
+              <button
                 onClick={() => handleUpdate({ is_open: !settings.is_open })}
                 disabled={saving}
-                className={`relative w-24 h-12 rounded-full transition-all duration-500 p-1.5 focus:outline-none focus:ring-4 focus:ring-black/5 ${
-                  settings.is_open ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gray-200 shadow-inner'
-                }`}
+                className={`relative w-24 h-12 rounded-full transition-all duration-500 p-1.5 focus:outline-none focus:ring-4 focus:ring-black/5 ${settings.is_open ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gray-200 shadow-inner'
+                  }`}
               >
-                <div className={`w-9 h-9 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${
-                  settings.is_open ? 'translate-x-12' : 'translate-x-0'
-                }`}>
+                <div className={`w-9 h-9 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${settings.is_open ? 'translate-x-12' : 'translate-x-0'
+                  }`}>
                   <Power size={18} className={settings.is_open ? 'text-emerald-500' : 'text-gray-300'} />
                 </div>
               </button>
             </div>
 
-            <div className={`mt-6 p-4 rounded-2xl flex items-center gap-3 border transition-all duration-500 ${
-              settings.is_open 
-                ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                : 'bg-red-50 border-red-100 text-red-700'
-            }`}>
+            <div className={`mt-6 p-4 rounded-2xl flex items-center gap-3 border transition-all duration-500 ${settings.is_open
+              ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+              : 'bg-red-50 border-red-100 text-red-700'
+              }`}>
               <div className={`w-2 h-2 rounded-full animate-pulse ${settings.is_open ? 'bg-emerald-500' : 'bg-red-500'}`} />
               <span className="text-[13px] font-black uppercase tracking-widest">
                 현재 상태: {settings.is_open ? '영업 중 (주문 가능)' : '영업 종료 (안내 화면 표시)'}
@@ -209,45 +202,56 @@ export const AdminSettings = () => {
               <div className="space-y-5">
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">은행명</label>
-                  <input 
+                  <input
                     type="text"
                     value={settings.bank_name || ''}
-                    onChange={(e) => setSettings({...settings, bank_name: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                    onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
+                    disabled={currentAdmin?.role !== 'MASTER'}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예: 카카오뱅크"
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">계좌번호</label>
-                  <input 
+                  <input
                     type="text"
                     value={settings.account_number || ''}
-                    onChange={(e) => setSettings({...settings, account_number: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                    onChange={(e) => setSettings({ ...settings, account_number: e.target.value })}
+                    disabled={currentAdmin?.role !== 'MASTER'}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="하이픈(-) 포함 입력"
                   />
                 </div>
                 <div>
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">예금주</label>
-                  <input 
+                  <input
                     type="text"
                     value={settings.account_holder || ''}
-                    onChange={(e) => setSettings({...settings, account_holder: e.target.value})}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                    onChange={(e) => setSettings({ ...settings, account_holder: e.target.value })}
+                    disabled={currentAdmin?.role !== 'MASTER'}
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예금주 명칭"
                   />
                 </div>
-                <button 
-                  onClick={() => handleUpdate({ 
-                    bank_name: settings.bank_name, 
-                    account_number: settings.account_number, 
-                    account_holder: settings.account_holder 
-                  })}
-                  disabled={saving}
-                  className="w-full bg-black text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
+                <button
+                  onClick={() => {
+                    if (currentAdmin?.role !== 'MASTER') {
+                      return toast.error('계좌 정보 수정 권한이 없습니다.');
+                    }
+                    handleUpdate({
+                      bank_name: settings.bank_name,
+                      account_number: settings.account_number,
+                      account_holder: settings.account_holder
+                    });
+                  }}
+                  disabled={saving || currentAdmin?.role !== 'MASTER'}
+                  className={`w-full py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all mt-2 ${currentAdmin?.role !== 'MASTER'
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-black text-white hover:bg-gray-800 active:scale-[0.98]'
+                    }`}
                 >
                   <Save size={18} />
-                  계좌 정보 저장
+                  {currentAdmin?.role !== 'MASTER' ? 'MASTER 전용' : '계좌 정보 저장'}
                 </button>
               </div>
             </section>
@@ -257,12 +261,11 @@ export const AdminSettings = () => {
               {/* 3. 전화번호 필수 입력 여부 제어 */}
               <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0">
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-blue-100/50 transition-colors" />
-                
+
                 <div className="relative flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${
-                      settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
-                    }`}>
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
+                      }`}>
                       <Smartphone size={18} />
                     </div>
                     <div>
@@ -271,26 +274,23 @@ export const AdminSettings = () => {
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     onClick={() => handleUpdate({ require_phone: !settings.require_phone })}
                     disabled={saving}
-                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${
-                      settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
-                    }`}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
+                      }`}
                   >
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${
-                      settings.require_phone ? 'translate-x-8' : 'translate-x-0'
-                    }`}>
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${settings.require_phone ? 'translate-x-8' : 'translate-x-0'
+                      }`}>
                       <Smartphone size={12} className={settings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
                     </div>
                   </button>
                 </div>
 
-                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${
-                  settings.require_phone 
-                    ? 'bg-blue-50 border-blue-100 text-blue-700' 
-                    : 'bg-gray-50 border-gray-100 text-gray-500'
-                }`}>
+                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${settings.require_phone
+                  ? 'bg-blue-50 border-blue-100 text-blue-700'
+                  : 'bg-gray-50 border-gray-100 text-gray-500'
+                  }`}>
                   <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 설정</span>
                   <span className="text-[13px] font-black">
                     {settings.require_phone ? '필수 입력' : '입력 생략'}
@@ -299,12 +299,12 @@ export const AdminSettings = () => {
               </section>
 
               {/* 4. 보안 및 계정 관리 진입 카드 */}
-              <section 
+              <section
                 onClick={() => setIsSecurityModalOpen(true)}
                 className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-amber-100/50 transition-colors" />
-                
+
                 <div className="relative flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
@@ -330,12 +330,12 @@ export const AdminSettings = () => {
               </section>
 
               {/* 5. 관리자 목록 및 현황 진입 카드 */}
-              <section 
+              <section
                 onClick={() => setIsAdminModalOpen(true)}
                 className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-purple-100/50 transition-colors" />
-                
+
                 <div className="relative flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
@@ -362,16 +362,6 @@ export const AdminSettings = () => {
 
             </div>
           </div>
-
-          {/* 하단 메시지 알림 */}
-          {message && (
-            <div className={`p-5 rounded-3xl flex items-center justify-center gap-3 animate-in slide-in-from-bottom-2 ${
-              message.type === 'success' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-            }`}>
-              {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-              <span className="text-[14px] font-black">{message.text}</span>
-            </div>
-          )}
         </div>
       </main>
 
@@ -379,11 +369,11 @@ export const AdminSettings = () => {
       {isSecurityModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
           {/* 배경 블러 처리 */}
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsSecurityModalOpen(false)}
           />
-          
+
           {/* 모달 콘텐츠 */}
           <div className="relative w-full max-w-5xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
             <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
@@ -396,7 +386,7 @@ export const AdminSettings = () => {
                   <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider">Security & Account Control</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsSecurityModalOpen(false)}
                 className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 transition-all"
               >
@@ -424,7 +414,7 @@ export const AdminSettings = () => {
                 <div className="space-y-4 flex-1">
                   <div className="space-y-2">
                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">현재 비밀번호</label>
-                    <input 
+                    <input
                       type="password"
                       id="current_password"
                       className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
@@ -434,7 +424,7 @@ export const AdminSettings = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호</label>
-                      <input 
+                      <input
                         type="password"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
@@ -444,7 +434,7 @@ export const AdminSettings = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">새 비밀번호 확인</label>
-                      <input 
+                      <input
                         type="password"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -452,9 +442,8 @@ export const AdminSettings = () => {
                         placeholder="한번 더 입력"
                       />
                       {confirmPassword && (
-                        <div className={`text-[11px] font-bold px-2 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 ${
-                          newPassword === confirmPassword ? 'text-emerald-500' : 'text-red-500'
-                        }`}>
+                        <div className={`text-[11px] font-bold px-2 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 ${newPassword === confirmPassword ? 'text-emerald-500' : 'text-red-500'
+                          }`}>
                           {newPassword === confirmPassword ? (
                             <><CheckCircle2 size={12} /> 비밀번호가 일치합니다</>
                           ) : (
@@ -465,10 +454,10 @@ export const AdminSettings = () => {
                     </div>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={async () => {
                     const currentPwd = (document.getElementById('current_password') as HTMLInputElement).value;
-                    
+
                     if (!currentPwd || !newPassword || !confirmPassword) {
                       return toast.error('모든 필드를 입력해 주세요.');
                     }
@@ -498,134 +487,146 @@ export const AdminSettings = () => {
               {/* 오른쪽: 관리자 계정 추가 섹션 (MASTER 전용) */}
               {currentAdmin?.role === 'MASTER' ? (
                 <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center">
-                    <UserPlus size={16} />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center">
+                      <UserPlus size={16} />
+                    </div>
+                    <h3 className="font-black text-gray-900">관리자 계정 추가</h3>
                   </div>
-                  <h3 className="font-black text-gray-900">관리자 계정 추가</h3>
-                </div>
-                <div className="space-y-4 flex-1">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">관리자 성함</label>
-                      <input 
-                        type="text"
-                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                        placeholder="이름 입력"
-                        value={accName}
-                        onChange={(e) => setAccName(e.target.value)}
-                      />
+                  <div className="space-y-4 flex-1">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">관리자 성함</label>
+                        <input
+                          type="text"
+                          className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                          placeholder="이름 입력"
+                          value={accName}
+                          onChange={(e) => setAccName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
+                        <input
+                          type="text"
+                          className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
+                          placeholder="아이디 입력"
+                          value={accLoginId}
+                          onChange={(e) => setAccLoginId(e.target.value)}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">신규 아이디</label>
-                      <input 
-                        type="text"
-                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none"
-                        placeholder="아이디 입력"
-                        value={accLoginId}
-                        onChange={(e) => setAccLoginId(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">계정 권한</label>
-                    <select
-                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none appearance-none cursor-pointer"
-                      value={accRole}
-                      onChange={(e) => setAccRole(e.target.value as 'MASTER' | 'ADMIN')}
-                    >
-                      <option value="ADMIN">ADMIN (매장 운영 / 일반 봉사자)</option>
-                      <option value="MASTER">MASTER (최고 관리자 / 설정 변경 가능)</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
-                      <input 
-                        type="password"
-                        className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${
-                          accPassword && accConfirmPassword 
-                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10') 
-                            : 'focus:ring-black/5'
-                        }`}
-                        placeholder="비밀번호 설정"
-                        value={accPassword}
-                        onChange={(e) => setAccPassword(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">비밀번호 확인</label>
-                      <input 
-                        type="password"
-                        className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${
-                          accPassword && accConfirmPassword 
-                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10') 
-                            : 'focus:ring-black/5'
-                        }`}
-                        placeholder="비밀번호 재입력"
-                        value={accConfirmPassword}
-                        onChange={(e) => setAccConfirmPassword(e.target.value)}
-                      />
-                    </div>
-                  </div>
+                      <div className="flex items-center gap-1.5 px-1 relative group w-max">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest cursor-help">계정 권한</label>
+                        <div className="text-gray-400 hover:text-indigo-500 cursor-help transition-colors">
+                          <Info size={12} />
+                        </div>
 
-                  {/* 비밀번호 일치 알림 바 */}
-                  {accPassword && accConfirmPassword && (
-                    <div className={`mt-2 h-1.5 rounded-full overflow-hidden transition-all duration-500 ${accPassword === accConfirmPassword ? 'bg-emerald-50' : 'bg-red-50'}`}>
-                      <div 
-                        className={`h-full transition-all duration-500 ${accPassword === accConfirmPassword ? 'w-full bg-emerald-500' : 'w-1/2 bg-red-500'}`}
-                      />
+                        {/* 툴팁 (마우스 호버 시 표시) */}
+                        <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] rounded-xl shadow-xl z-50 animate-in fade-in zoom-in-95 pointer-events-none">
+                          <div className="space-y-2">
+                            <p className="leading-relaxed"><span className="text-amber-400 font-bold tracking-wider">MASTER:</span> 시스템 설정(계좌, 계정생성 등) 변경 및 모든 관리자 계정 생성/관리 가능</p>
+                            <p className="leading-relaxed"><span className="text-blue-400 font-bold tracking-wider">ADMIN:</span> 주문 상태 관리, 재고 현황 파악 등 일반적인 매장 운영 기능만 사용 가능</p>
+                          </div>
+                          <div className="absolute left-6 -bottom-1 w-2 h-2 bg-gray-900/95 transform rotate-45" />
+                        </div>
+                      </div>
+                      <select
+                        className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none appearance-none cursor-pointer"
+                        value={accRole}
+                        onChange={(e) => setAccRole(e.target.value as 'MASTER' | 'ADMIN')}
+                      >
+                        <option value="ADMIN">ADMIN (매장 운영 / 일반 봉사자)</option>
+                        <option value="MASTER">MASTER (최고 관리자 / 설정 변경 가능)</option>
+                      </select>
                     </div>
-                  )}
-                  {accPassword && accConfirmPassword && (
-                    <div className="flex items-center gap-1.5 px-1">
-                      {accPassword === accConfirmPassword ? (
-                        <>
-                          <ShieldCheck size={12} className="text-emerald-500" />
-                          <span className="text-[10px] font-bold text-emerald-600">비밀번호가 일치합니다.</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertCircle size={12} className="text-red-500" />
-                          <span className="text-[10px] font-bold text-red-600">비밀번호가 일치하지 않습니다.</span>
-                        </>
-                      )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">초기 비밀번호</label>
+                        <input
+                          type="password"
+                          className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${accPassword && accConfirmPassword
+                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10')
+                            : 'focus:ring-black/5'
+                            }`}
+                          placeholder="비밀번호 설정"
+                          value={accPassword}
+                          onChange={(e) => setAccPassword(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">비밀번호 확인</label>
+                        <input
+                          type="password"
+                          className={`w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 transition-all outline-none ${accPassword && accConfirmPassword
+                            ? (accPassword === accConfirmPassword ? 'focus:ring-emerald-500/10' : 'focus:ring-red-500/10')
+                            : 'focus:ring-black/5'
+                            }`}
+                          placeholder="비밀번호 재입력"
+                          value={accConfirmPassword}
+                          onChange={(e) => setAccConfirmPassword(e.target.value)}
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
-                <button 
-                  onClick={async () => {
-                    if (!accName || !accLoginId || !accPassword || !accConfirmPassword) {
-                      return toast.error('모든 필드를 입력해 주세요.');
-                    }
-                    if (accPassword !== accConfirmPassword) {
-                      return toast.error('비밀번호가 일치하지 않습니다.');
-                    }
-                    
-                    try {
-                      const res = await apiClient.post<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/accounts', { 
-                        name: accName,
-                        login_id: accLoginId, 
-                        password: accPassword,
-                        role: accRole
-                      });
-                      if (res.success) {
-                        toast.success(`${accName}(${accLoginId}) 계정이 생성되었습니다.`);
-                        setAccName('');
-                        setAccLoginId('');
-                        setAccPassword('');
-                        setAccConfirmPassword('');
-                        fetchAdmins(); // 신규 추가 후 목록 갱신
+
+                    {/* 비밀번호 일치 알림 바 */}
+                    {accPassword && accConfirmPassword && (
+                      <div className={`mt-2 h-1.5 rounded-full overflow-hidden transition-all duration-500 ${accPassword === accConfirmPassword ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                        <div
+                          className={`h-full transition-all duration-500 ${accPassword === accConfirmPassword ? 'w-full bg-emerald-500' : 'w-1/2 bg-red-500'}`}
+                        />
+                      </div>
+                    )}
+                    {accPassword && accConfirmPassword && (
+                      <div className="flex items-center gap-1.5 px-1">
+                        {accPassword === accConfirmPassword ? (
+                          <>
+                            <ShieldCheck size={12} className="text-emerald-500" />
+                            <span className="text-[10px] font-bold text-emerald-600">비밀번호가 일치합니다.</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={12} className="text-red-500" />
+                            <span className="text-[10px] font-bold text-red-600">비밀번호가 일치하지 않습니다.</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!accName || !accLoginId || !accPassword || !accConfirmPassword) {
+                        return toast.error('모든 필드를 입력해 주세요.');
                       }
-                    } catch (err: any) {
-                      console.error('계정 생성 실패:', err);
-                    }
-                  }}
-                  className="w-full mt-auto bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
-                >
-                  새 계정 생성하기
-                </button>
-              </div>
+                      if (accPassword !== accConfirmPassword) {
+                        return toast.error('비밀번호가 일치하지 않습니다.');
+                      }
+
+                      try {
+                        const res = await apiClient.post<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/accounts', {
+                          name: accName,
+                          login_id: accLoginId,
+                          password: accPassword,
+                          role: accRole
+                        });
+                        if (res.success) {
+                          toast.success(`${accName}(${accLoginId}) 계정이 생성되었습니다.`);
+                          setAccName('');
+                          setAccLoginId('');
+                          setAccPassword('');
+                          setAccConfirmPassword('');
+                          fetchAdmins(); // 신규 추가 후 목록 갱신
+                        }
+                      } catch (err: any) {
+                        console.error('계정 생성 실패:', err);
+                      }
+                    }}
+                    className="w-full mt-auto bg-indigo-500 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-500/20"
+                  >
+                    새 계정 생성하기
+                  </button>
+                </div>
               ) : (
                 <div className="space-y-6 bg-gray-50 p-8 rounded-[32px] border border-gray-100 shadow-inner flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-gray-200 text-gray-400 rounded-3xl flex items-center justify-center mb-2 shadow-inner">
@@ -634,15 +635,15 @@ export const AdminSettings = () => {
                   <div>
                     <h3 className="font-black text-gray-900 text-lg tracking-tight">접근 제한됨</h3>
                     <p className="text-[13px] text-gray-500 font-bold mt-2 leading-relaxed">
-                      새로운 관리자 계정을 추가하려면<br/>
-                      <span className="text-gray-800">MASTER 권한</span>을 가진 계정으로<br/>
+                      새로운 관리자 계정을 추가하려면<br />
+                      <span className="text-gray-800">MASTER 권한</span>을 가진 계정으로<br />
                       로그인해야 합니다.
                     </p>
                   </div>
                 </div>
               )}
             </div>
-            
+
             <div className="p-6 bg-gray-50 text-center shrink-0">
               <p className="text-[11px] text-gray-400 font-medium italic">
                 보안을 위해 비밀번호는 8자 이상, 영문/숫자 조합을 권장합니다.
@@ -655,11 +656,11 @@ export const AdminSettings = () => {
       {/* 관리자 목록 모달 */}
       {isAdminModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div 
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setIsAdminModalOpen(false)}
           />
-          
+
           <div className="relative w-full max-w-2xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
             <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
               <div className="flex items-center gap-4">
@@ -671,7 +672,7 @@ export const AdminSettings = () => {
                   <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider">Admin Users List</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setIsAdminModalOpen(false)}
                 className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 transition-all"
               >
@@ -703,30 +704,28 @@ export const AdminSettings = () => {
                         <span className="text-[12px] font-bold text-gray-400">@{admin.login_id}</span>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-6">
                       <div className="flex flex-col items-end">
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">최근 접속</span>
                         <span className="text-[12px] font-bold text-gray-600 flex items-center gap-1.5">
                           <Clock size={12} className="text-gray-400" />
-                          {admin.last_login_at 
-                            ? new Date(admin.last_login_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                          {admin.last_login_at
+                            ? new Date(admin.last_login_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                             : '접속 기록 없음'}
                         </span>
                       </div>
-                      
+
                       <div className="w-[1px] h-8 bg-gray-100" />
-                      
-                      <button 
+
+                      <button
                         onClick={() => toggleAdminStatus(admin.id, admin.is_active)}
                         disabled={currentAdmin?.role !== 'MASTER'}
-                        className={`relative w-12 h-7 rounded-full transition-all duration-300 p-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                          admin.is_active ? 'bg-emerald-500 shadow-inner' : 'bg-gray-200 shadow-inner'
-                        }`}
+                        className={`relative w-12 h-7 rounded-full transition-all duration-300 p-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${admin.is_active ? 'bg-emerald-500 shadow-inner' : 'bg-gray-200 shadow-inner'
+                          }`}
                       >
-                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${
-                          admin.is_active ? 'translate-x-5' : 'translate-x-0'
-                        }`} />
+                        <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-300 ${admin.is_active ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
                       </button>
                     </div>
                   </div>
