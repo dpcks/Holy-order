@@ -12,10 +12,10 @@ interface HeaderProps {
   rightElement?: ReactNode;
 }
 
-export const Header = ({ 
-  title = 'Holy-Order', 
-  showBack = false, 
-  showCart = true, 
+export const Header = ({
+  title = 'Holy-Order',
+  showBack = false,
+  showCart = true,
   showSearch = false,
   onSearchChange,
   rightElement
@@ -44,17 +44,23 @@ export const Header = ({
       {!isSearching ? (
         <>
           <div className="flex-1 flex items-center">
-            {showBack && (
+            {showBack ? (
               <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-800">
                 <ChevronLeft size={24} />
               </button>
+            ) : (
+              <img
+                src="/img/ptcc_logo.png"
+                alt="평택중앙교회 로고"
+                className="h-14 w-14 object-contain -ml-2"
+              />
             )}
           </div>
-          
+
           <div className="flex-1 flex justify-center">
             <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">{title}</h1>
           </div>
-          
+
           <div className="flex-1 flex items-center justify-end gap-1">
             {showSearch && (
               <button onClick={handleSearchToggle} className="p-2 text-gray-800">
@@ -62,8 +68,8 @@ export const Header = ({
               </button>
             )}
             {showCart && (
-              <button 
-                onClick={() => navigate('/cart')} 
+              <button
+                onClick={() => navigate('/cart')}
                 className="p-2 -mr-2 relative text-gray-800"
               >
                 <ShoppingCart size={22} />
@@ -80,7 +86,7 @@ export const Header = ({
       ) : (
         <div className="flex-1 flex items-center bg-gray-100 rounded-full px-3 py-1.5 h-10 animate-in fade-in slide-in-from-right-4 duration-200">
           <Search size={18} className="text-gray-400 mr-2" />
-          <input 
+          <input
             autoFocus
             type="text"
             value={searchQuery}

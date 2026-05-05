@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2 } from 'lucide-react';
+import { useOutletContext } from 'react-router-dom';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { getWsUrl } from '../../utils/url';
 import type { StandardResponse } from '../../api/client';
@@ -72,7 +73,15 @@ const OptionBadges = ({ text }: { text: string | null }) => {
   );
 };
 
+// AdminLayout에서 전달받는 context 타입
+type AdminOutletContext = {
+  isSoundEnabled: boolean;
+  toggleSound: (enabled: boolean) => void;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+};
+
 export const AdminOrderManagement = () => {
+  const { isSoundEnabled, toggleSound, audioRef } = useOutletContext<AdminOutletContext>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [stats, setStats] = useState<DashboardStats>({ total_orders: 0, total_sales: 0 });
   const [loading, setLoading] = useState(true);
@@ -308,8 +317,32 @@ export const AdminOrderManagement = () => {
           <button
             onClick={fetchOrders}
             className="p-3 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-primary transition-all bg-gray-50 border border-gray-100"
+            aria-label="주문 새로고침"
+            tabIndex={0}
           >
             <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+          </button>
+          {/* 알림음 on/off 토글 버튼 */}
+          <button
+            onClick={() => {
+              const next = !isSoundEnabled;
+              toggleSound(next);
+              // on으로 전환할 때 알림음 재생하여 켜졌음을 알림
+              if (next && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.warn('오디오 재생 실패:', e));
+              }
+            }}
+            className={`p-3 rounded-xl transition-all border ${
+              isSoundEnabled
+                ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+                : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 hover:text-gray-600'
+            }`}
+            aria-label={isSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
+            tabIndex={0}
+            title={isSoundEnabled ? '알림음 ON (클릭하여 끄기)' : '알림음 OFF (클릭하여 켜기)'}
+          >
+            {isSoundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
           </button>
         </div>
       </header>
