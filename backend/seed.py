@@ -1,172 +1,141 @@
 import os
 import sys
-from datetime import datetime, date
+import argparse
+from datetime import datetime
 
-# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 임포트 에러 방지
+# backend 디렉토리를 path에 추가하여 모듈 임포트 가능하게 함
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from database import SessionLocal, engine
-from models import Base, Category, Menu, MenuOption, Setting, Admin, User
+import models
+import auth
 
-# ────────────────────────────────────────────────────────────────────────────────
-# 옵션 이름 상수 - 프론트엔드의 동적 매핑 로직(TEMP_OPTION_NAMES, CUP_OPTION_NAMES)과
-# 반드시 일치해야 합니다. 변경 시 frontend/src/pages/MenuDetail.tsx도 함께 확인하세요.
-# ────────────────────────────────────────────────────────────────────────────────
-TEMP_OPTION_ICE = "ICE"
-TEMP_OPTION_HOT = "HOT"
-CUP_OPTION_TUMBLER = "텀블러"
-CUP_OPTION_DISPOSABLE = "일회용컵"
+def create_admin_if_not_exists(db):
+    """기본 관리자 계정(admin/1234) 생성"""
+    admin = db.query(models.Admin).filter(models.Admin.login_id == "admin").first()
+    if not admin:
+        new_admin = models.Admin(
+            login_id="admin",
+            password_hash=auth.hash_password("1234"),
+            name="최고관리자",
+            role="MASTER",
+            is_active=True
+        )
+        db.add(new_admin)
+        print("✅ 초기 관리자 계정(admin/1234)이 생성되었습니다.")
+    else:
+        print("ℹ️ 초기 관리자 계정이 이미 존재합니다.")
 
-
-def seed_data():
-    db = SessionLocal()
-    try:
-        # 테이블 생성 (없을 경우를 대비)
-        Base.metadata.create_all(bind=engine)
-
-        # 1. 초기화 확인
-        if db.query(Category).first() is not None:
-            print("데이터가 이미 존재합니다. 시딩을 건너뜁니다.")
-            return
-
-        print("더미 데이터 생성을 시작합니다...")
-
-        # 2. 시스템 설정 생성
-        setting = Setting(
+def create_settings_if_not_exists(db):
+    """기본 시스템 설정 생성"""
+    setting = db.query(models.Setting).first()
+    if not setting:
+        setting = models.Setting(
             is_open=True,
-            notice="환영합니다! 예배 후 맛있는 커피 한 잔 어떠세요? ☕️",
-            open_time="10:00",
-            close_time="13:30"
+            bank_name="카카오뱅크",
+            account_number="3333-01-1234567",
+            account_holder="평택중앙교회"
         )
         db.add(setting)
+        print("✅ 기본 시스템 설정이 생성되었습니다.")
 
-        # 3. 관리자 계정 생성
-        import auth
-        admin = Admin(
-            login_id="admin",
-            password_hash=auth.hash_password("admin"),
-            name="카페 관리자"
-        )
-        db.add(admin)
+def seed_test_data(db):
+    """가짜 테스트 데이터 삽입"""
+    print("⏳ 테스트 데이터를 삽입합니다...")
+    
+    # 1. 카테고리 생성
+    coffee_cat = models.Category(name="커피 (Coffee)", display_order=0)
+    beverage_cat = models.Category(name="음료 (Beverage)", display_order=1)
+    db.add_all([coffee_cat, beverage_cat])
+    db.flush()
 
-        # 4. 테스트용 유저 생성
-        test_user = User(
-            name="홍길동",
-            phone="01012345678",
-            duty="성도"
-        )
-        db.add(test_user)
+    # 2. 메뉴 생성
+    americano = models.Menu(category_id=coffee_cat.id, name="아메리카노", price=1500, description="에티오피아 원두로 내린 신선한 아메리카노", is_available=True)
+    latte = models.Menu(category_id=coffee_cat.id, name="카페라떼", price=2000, description="고소한 우유와 에스프레소의 만남", is_available=True)
+    ade = models.Menu(category_id=beverage_cat.id, name="청포도 에이드", price=2500, description="상큼한 청포도와 탄산수", is_available=True)
+    db.add_all([americano, latte, ade])
+    db.flush()
+
+    # 3. 메뉴 옵션 추가
+    db.add(models.MenuOption(menu_id=americano.id, name="ICE", extra_price=0))
+    db.add(models.MenuOption(menu_id=americano.id, name="HOT", extra_price=0))
+    db.add(models.MenuOption(menu_id=americano.id, name="샷 추가", extra_price=500))
+    db.add(models.MenuOption(menu_id=latte.id, name="ICE", extra_price=0))
+    db.add(models.MenuOption(menu_id=latte.id, name="HOT", extra_price=0))
+
+    # 4. 가짜 주문 데이터 생성
+    order1 = models.Order(
+        order_number=101,
+        user_name_snapshot="홍길동",
+        user_phone_snapshot="010-1234-5678",
+        user_duty_snapshot="청년",
+        total_price=3000,
+        payment_method="TRANSFER",
+        status="PENDING",
+        order_date=datetime.now().date(),
+        special_instructions="얼음 많이 주세요!"
+    )
+    db.add(order1)
+    db.flush()
+
+    # 주문 아이템 추가
+    db.add(models.OrderItem(
+        order_id=order1.id,
+        menu_name_snapshot="아메리카노",
+        menu_price_snapshot=1500,
+        quantity=2,
+        sub_total=3000,
+        options_snapshot={"온도": "ICE"}
+    ))
+
+    db.commit()
+    print("✅ 메뉴 및 주문 테스트 데이터 세팅 완료!")
+
+def clear_test_data(db):
+    """관리자 계정과 설정을 제외한 모든 데이터 삭제"""
+    print("⏳ 테스트 데이터를 싹 지웁니다...")
+    try:
+        # 외래키 무결성을 위해 순서대로 삭제
+        db.query(models.PaymentLog).delete()
+        db.query(models.OrderItem).delete()
+        db.query(models.Order).delete()
+        db.query(models.MenuOption).delete()
+        db.query(models.Menu).delete()
+        db.query(models.Category).delete()
+        db.query(models.VolunteerSchedule).delete()
+        db.query(models.Volunteer).delete()
         db.commit()
-
-        # 5. 카테고리 생성
-        cat_coffee = Category(name="커피", display_order=1)
-        cat_beverage = Category(name="음료", display_order=2)
-        cat_tea = Category(name="티", display_order=3)
-        cat_dessert = Category(name="디저트", display_order=4)
-
-        db.add_all([cat_coffee, cat_beverage, cat_tea, cat_dessert])
-        db.commit()
-        db.refresh(cat_coffee)
-        db.refresh(cat_beverage)
-        db.refresh(cat_tea)
-        db.refresh(cat_dessert)
-
-        # ─────────────────────────────────────────────────────────────────────
-        # 6. 메뉴 생성
-        # 옵션 규칙:
-        #   - 온도가 있는 메뉴: ICE, HOT 옵션 추가
-        #   - 모든 메뉴: 텀블러, 일회용컵 옵션 추가
-        # ─────────────────────────────────────────────────────────────────────
-
-        def add_standard_options(menu_id: int, has_temperature: bool = True):
-            """모든 메뉴에 공통으로 적용되는 옵션 생성 헬퍼 함수"""
-            options = []
-            if has_temperature:
-                options.append(MenuOption(menu_id=menu_id, name=TEMP_OPTION_ICE, extra_price=0))
-                options.append(MenuOption(menu_id=menu_id, name=TEMP_OPTION_HOT, extra_price=0))
-            options.append(MenuOption(menu_id=menu_id, name=CUP_OPTION_TUMBLER, extra_price=0))
-            options.append(MenuOption(menu_id=menu_id, name=CUP_OPTION_DISPOSABLE, extra_price=0))
-            return options
-
-        # [커피] 아메리카노
-        americano = Menu(
-            category_id=cat_coffee.id,
-            name="아메리카노",
-            price=2000,
-            description="에티오피아 원두의 산미와 고소함이 어우러진 커피"
-        )
-        db.add(americano)
-        db.commit()
-        db.refresh(americano)
-        db.add_all(add_standard_options(americano.id))
-
-        # [커피] 카페라떼
-        latte = Menu(
-            category_id=cat_coffee.id,
-            name="카페라떼",
-            price=2500,
-            description="신선한 우유가 들어간 부드러운 라떼"
-        )
-        db.add(latte)
-        db.commit()
-        db.refresh(latte)
-        db.add_all(add_standard_options(latte.id))
-
-        # [음료] 복숭아 아이스티 (ICE 전용 - 온도 선택 없음)
-        iced_tea = Menu(
-            category_id=cat_beverage.id,
-            name="복숭아 아이스티",
-            price=2000,
-            description="달콤한 복숭아 향이 가득한 시원한 아이스티 (ICE 전용)"
-        )
-        db.add(iced_tea)
-        db.commit()
-        db.refresh(iced_tea)
-        # 아이스티는 온도 선택 없이 컵 종류만 제공
-        db.add_all(add_standard_options(iced_tea.id, has_temperature=False))
-
-        # [티] 유자차
-        yuja_tea = Menu(
-            category_id=cat_tea.id,
-            name="유자차",
-            price=2500,
-            description="비타민 C가 풍부하고 달콤한 유자차"
-        )
-        db.add(yuja_tea)
-        db.commit()
-        db.refresh(yuja_tea)
-        db.add_all(add_standard_options(yuja_tea.id))
-
-        # [디저트] 초코 쿠키 (옵션 없음)
-        cookie = Menu(
-            category_id=cat_dessert.id,
-            name="초코 스모어 쿠키",
-            price=3000,
-            description="초콜릿 칩과 마시멜로우가 들어간 쫀득한 쿠키"
-        )
-        db.add(cookie)
-
-        # [디저트] 치즈 케이크 (옵션 없음)
-        cake = Menu(
-            category_id=cat_dessert.id,
-            name="뉴욕 치즈 케이크",
-            price=4500,
-            description="진한 치즈의 풍미를 느낄 수 있는 조각 케이크"
-        )
-        db.add(cake)
-
-        db.commit()
-        print("더미 데이터 생성이 완료되었습니다! ✅")
-        print(f"  카테고리: {db.query(Category).count()}개")
-        print(f"  메뉴: {db.query(Menu).count()}개")
-        print(f"  옵션: {db.query(MenuOption).count()}개")
-
+        print("✅ 테스트 데이터가 깔끔하게 삭제되었습니다. (관리자 계정은 유지됨)")
     except Exception as e:
         db.rollback()
-        print(f"에러 발생: {e}")
+        print(f"❌ 데이터 삭제 중 오류 발생: {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Holy-Order DB Seed Tool")
+    parser.add_argument("--seed", action="store_true", help="테스트 데이터와 기본 관리자를 생성합니다.")
+    parser.add_argument("--clear", action="store_true", help="테스트 데이터를 삭제하고 초기 상태로 되돌립니다.")
+    args = parser.parse_args()
+
+    models.Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+
+    try:
+        if args.seed:
+            create_admin_if_not_exists(db)
+            create_settings_if_not_exists(db)
+            # 카테고리가 비어있을 때만 테스트 데이터 삽입
+            if db.query(models.Category).count() == 0:
+                seed_test_data(db)
+            else:
+                print("ℹ️ 이미 데이터가 존재하여 테스트 데이터 삽입을 건너뜁니다. (초기화하려면 --clear 사용)")
+        elif args.clear:
+            clear_test_data(db)
+            create_admin_if_not_exists(db)
+            create_settings_if_not_exists(db)
+        else:
+            parser.print_help()
     finally:
         db.close()
 
-
 if __name__ == "__main__":
-    seed_data()
+    main()
