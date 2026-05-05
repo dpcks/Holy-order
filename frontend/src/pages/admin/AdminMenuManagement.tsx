@@ -251,7 +251,6 @@ export const AdminMenuManagement = () => {
 
   // 토스트 알림 상태
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
     setToast({ message, type });
@@ -579,8 +578,6 @@ export const AdminMenuManagement = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    setIsUploading(true);
     try {
       const url = await uploadImageToCloudinary(file);
       setEditForm(f => ({ ...f, image_url: url }));
@@ -589,7 +586,7 @@ export const AdminMenuManagement = () => {
       console.error('업로드 실패:', error);
       showToast('이미지 업로드에 실패했습니다. 환경변수를 확인해주세요.', 'error');
     } finally {
-      setIsUploading(false);
+
     }
   };
 

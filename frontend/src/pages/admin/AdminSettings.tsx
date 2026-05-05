@@ -32,7 +32,6 @@ export const AdminSettings = () => {
   const [settings, setSettings] = useState<SettingResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
