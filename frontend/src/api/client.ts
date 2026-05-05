@@ -87,9 +87,9 @@ apiClient.interceptors.response.use(
       console.error('[API Error]:', error.message);
     }
 
-    // 사용자 피드백 (Toast 시스템 적용)
+    // 사용자 피드백 (Toast 시스템 적용, 중복 방지를 위해 id 부여)
     if (typeof window !== 'undefined') {
-      toast.error(message);
+      toast.error(message, { id: message });
     }
 
     return Promise.reject(error);

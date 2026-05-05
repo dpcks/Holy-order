@@ -44,6 +44,7 @@ export const AdminSettings = () => {
   const [accLoginId, setAccLoginId] = useState('');
   const [accPassword, setAccPassword] = useState('');
   const [accConfirmPassword, setAccConfirmPassword] = useState('');
+  const [accRole, setAccRole] = useState<'MASTER' | 'ADMIN'>('ADMIN');
 
   // 관리자 목록 상태
   const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -494,8 +495,9 @@ export const AdminSettings = () => {
                 </button>
               </div>
 
-              {/* 오른쪽: 관리자 계정 추가 섹션 */}
-              <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col">
+              {/* 오른쪽: 관리자 계정 추가 섹션 (MASTER 전용) */}
+              {currentAdmin?.role === 'MASTER' ? (
+                <div className="space-y-6 bg-white p-8 rounded-[32px] border border-gray-100 shadow-sm flex flex-col">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-indigo-50 text-indigo-500 rounded-lg flex items-center justify-center">
                     <UserPlus size={16} />
@@ -524,6 +526,17 @@ export const AdminSettings = () => {
                         onChange={(e) => setAccLoginId(e.target.value)}
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">계정 권한</label>
+                    <select
+                      className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none appearance-none cursor-pointer"
+                      value={accRole}
+                      onChange={(e) => setAccRole(e.target.value as 'MASTER' | 'ADMIN')}
+                    >
+                      <option value="ADMIN">ADMIN (매장 운영 / 일반 봉사자)</option>
+                      <option value="MASTER">MASTER (최고 관리자 / 설정 변경 가능)</option>
+                    </select>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -593,7 +606,8 @@ export const AdminSettings = () => {
                       const res = await apiClient.post<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/accounts', { 
                         name: accName,
                         login_id: accLoginId, 
-                        password: accPassword 
+                        password: accPassword,
+                        role: accRole
                       });
                       if (res.success) {
                         toast.success(`${accName}(${accLoginId}) 계정이 생성되었습니다.`);
@@ -612,6 +626,21 @@ export const AdminSettings = () => {
                   새 계정 생성하기
                 </button>
               </div>
+              ) : (
+                <div className="space-y-6 bg-gray-50 p-8 rounded-[32px] border border-gray-100 shadow-inner flex flex-col items-center justify-center text-center">
+                  <div className="w-16 h-16 bg-gray-200 text-gray-400 rounded-3xl flex items-center justify-center mb-2 shadow-inner">
+                    <ShieldCheck size={32} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-gray-900 text-lg tracking-tight">접근 제한됨</h3>
+                    <p className="text-[13px] text-gray-500 font-bold mt-2 leading-relaxed">
+                      새로운 관리자 계정을 추가하려면<br/>
+                      <span className="text-gray-800">MASTER 권한</span>을 가진 계정으로<br/>
+                      로그인해야 합니다.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="p-6 bg-gray-50 text-center shrink-0">
@@ -666,6 +695,9 @@ export const AdminSettings = () => {
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-[15px] font-black text-gray-900">{admin.name}</span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded font-black uppercase tracking-wider ${admin.role === 'MASTER' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                            {admin.role}
+                          </span>
                           {!admin.is_active && <span className="text-[9px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-bold uppercase">비활성</span>}
                         </div>
                         <span className="text-[12px] font-bold text-gray-400">@{admin.login_id}</span>
@@ -687,7 +719,8 @@ export const AdminSettings = () => {
                       
                       <button 
                         onClick={() => toggleAdminStatus(admin.id, admin.is_active)}
-                        className={`relative w-12 h-7 rounded-full transition-all duration-300 p-1 focus:outline-none ${
+                        disabled={currentAdmin?.role !== 'MASTER'}
+                        className={`relative w-12 h-7 rounded-full transition-all duration-300 p-1 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
                           admin.is_active ? 'bg-emerald-500 shadow-inner' : 'bg-gray-200 shadow-inner'
                         }`}
                       >

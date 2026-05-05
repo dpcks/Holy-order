@@ -50,3 +50,12 @@ def get_current_admin(token: str = Depends(oauth2_scheme), db: Session = Depends
     if admin is None:
         raise credentials_exception
     return admin
+
+def get_current_master(admin: models.Admin = Depends(get_current_admin)) -> models.Admin:
+    """MASTER 권한을 가진 관리자만 허용"""
+    if admin.role != "MASTER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="해당 기능을 사용할 권한이 없습니다. 최고 관리자(MASTER) 계정으로 로그인해 주세요."
+        )
+    return admin

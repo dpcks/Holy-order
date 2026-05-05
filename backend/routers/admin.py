@@ -732,9 +732,9 @@ def change_admin_password(
 def create_admin_account(
     data: schemas.AdminAccountCreate, 
     db: Session = Depends(get_db), 
-    admin: models.Admin = Depends(auth.get_current_admin)
+    admin: models.Admin = Depends(auth.get_current_master)
 ):
-    """신규 관리자 계정 생성"""
+    """신규 관리자 계정 생성 (MASTER 전용)"""
     # 1. 아이디 중복 확인
     existing = db.query(models.Admin).filter(models.Admin.login_id == data.login_id).first()
     if existing:
@@ -744,7 +744,8 @@ def create_admin_account(
     new_admin = models.Admin(
         login_id=data.login_id,
         password_hash=auth.hash_password(data.password),
-        name=data.name
+        name=data.name,
+        role=data.role
     )
     db.add(new_admin)
     db.commit()
@@ -762,9 +763,9 @@ def update_admin_account(
     admin_id: int,
     data: schemas.AdminUpdate,
     db: Session = Depends(get_db),
-    admin: models.Admin = Depends(auth.get_current_admin)
+    admin: models.Admin = Depends(auth.get_current_master)
 ):
-    """관리자 계정 상태 변경 (비활성화 등)"""
+    """관리자 계정 상태 및 권한 변경 (MASTER 전용)"""
     target_admin = db.query(models.Admin).filter(models.Admin.id == admin_id).first()
     if not target_admin:
         raise HTTPException(status_code=404, detail="계정을 찾을 수 없습니다.")
@@ -774,6 +775,12 @@ def update_admin_account(
         if not data.is_active and target_admin.id == admin.id:
             raise HTTPException(status_code=400, detail="현재 로그인된 본인의 계정은 비활성화할 수 없습니다.")
         target_admin.is_active = data.is_active
+        
+    if data.role is not None:
+        # 본인 계정의 MASTER 권한 박탈 방지
+        if data.role != "MASTER" and target_admin.id == admin.id:
+            raise HTTPException(status_code=400, detail="자신의 최고 관리자(MASTER) 권한은 해제할 수 없습니다.")
+        target_admin.role = data.role
         
     db.commit()
     return schemas.StandardResponse(success=True, message=f"'{target_admin.name}'님의 계정 상태가 변경되었습니다.")

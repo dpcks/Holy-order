@@ -247,14 +247,17 @@ class AdminAccountCreate(BaseModel):
     login_id: str
     password: str
     name: str
+    role: str = "ADMIN"
 
 class AdminUpdate(BaseModel):
     is_active: Optional[bool] = None
+    role: Optional[str] = None
 
 class AdminResponse(BaseModel):
     id: int
     login_id: str
     name: str
+    role: str
     is_active: bool
     last_login_at: Optional[datetime] = None
     created_at: datetime

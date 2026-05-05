@@ -90,6 +90,7 @@ export interface AdminUser {
   id: number;
   login_id: string;
   name: string;
+  role: 'MASTER' | 'ADMIN';
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
@@ -305,5 +306,6 @@ export interface AdminInfo {
   id: number;
   login_id: string;
   name: string;
+  role: 'MASTER' | 'ADMIN';
   created_at: string;
 }
