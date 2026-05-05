@@ -67,7 +67,9 @@ def seed_database():
             seed.seed_test_data(db)
         return {"success": True, "message": "테스트 데이터가 성공적으로 주입되었습니다! 이제 관리자 로그인이 가능합니다."}
     except Exception as e:
-        return {"success": False, "message": f"오류 발생: {str(e)}"}
+        import traceback
+        error_trace = traceback.format_exc()
+        return {"success": False, "message": f"오류 발생: {str(e)}\n\n{error_trace}"}
     finally:
         db.close()
 
