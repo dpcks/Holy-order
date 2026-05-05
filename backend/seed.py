@@ -73,7 +73,7 @@ def seed_test_data(db):
         payment_method="TRANSFER",
         status="PENDING",
         order_date=datetime.now().date(),
-        special_instructions="얼음 많이 주세요!"
+        request="얼음 많이 주세요!"
     )
     db.add(order1)
     db.flush()
@@ -85,7 +85,7 @@ def seed_test_data(db):
         menu_price_snapshot=1500,
         quantity=2,
         sub_total=3000,
-        options_snapshot={"온도": "ICE"}
+        options_text="ICE"
     ))
 
     db.commit()
