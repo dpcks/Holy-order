@@ -601,7 +601,7 @@ export const AdminAnnouncements = () => {
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-4 text-center">
                 <p className="text-[13px] font-bold text-gray-700 leading-relaxed break-keep">
                   총 <strong className="text-amber-700">{reportData.total_items}개</strong>의 항목이 제공되었으며,
-                  <br />가치 환산 총액은 <strong className="text-amber-700">{reportData.original_price_sum.toLocaleString()}원</strong>입니다.
+                  <br />주문 총액은 <strong className="text-amber-700">{reportData.original_price_sum.toLocaleString()}원</strong>입니다.
                 </p>
               </div>
             </div>
