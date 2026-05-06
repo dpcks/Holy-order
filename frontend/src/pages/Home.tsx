@@ -2,24 +2,23 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee, PartyPopper, Gift } from 'lucide-react';
 import { Header } from '../components/layout/Header';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
-import type { Category, StandardResponse, Menu, Announcement } from '../types';
+import type { Menu, Category, StandardResponse, Announcement } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const queryClient = useQueryClient();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
     const saved = sessionStorage.getItem('lastActiveCategoryId');
     return saved ? Number(saved) : null;
   });
   const [activeOrders, setActiveOrders] = useState<{ id: string, orderNumber: number }[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [shopSettings, setShopSettings] = useState<{ is_open: boolean, notice?: string } | null>(null);
-  const [activeEvent, setActiveEvent] = useState<Announcement | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
 
   // 토스트 상태
@@ -34,44 +33,53 @@ export const Home = () => {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryCountRef = useRef(0);
 
-  const fetchData = useCallback(async () => {
-    try {
-      // 1. 영업 설정 정보 가져오기
-      const settingsRes = await apiClient.get<any, StandardResponse<any>>('/settings');
-      if (settingsRes.success) {
-        setShopSettings(settingsRes.data);
-      }
-
-      // 2. 메뉴 정보 가져오기
-      const response = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
-      if (response.success && response.data) {
-        setCategories(response.data);
-        // 기존 선택된 카테고리가 목록에 있는지 확인
-        const isValid = response.data.some(c => c.id === activeCategoryId);
-        if (response.data.length > 0 && (!activeCategoryId || !isValid)) {
-          setActiveCategoryId(response.data[0].id);
-        }
-      }
-
-      // 3. 활성 이벤트 조회
-      const eventRes = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
-      if (eventRes.success && eventRes.data) {
-        setActiveEvent(eventRes.data);
-        // 세션당 1회만 웰컴 모달 표시
-        const modalShown = sessionStorage.getItem(`event_modal_${eventRes.data.id}`);
-        if (!modalShown) {
-          setShowWelcomeModal(true);
-          sessionStorage.setItem(`event_modal_${eventRes.data.id}`, 'true');
-        }
-      } else {
-        setActiveEvent(null);
-      }
-    } catch (error) {
-      console.error('Failed to fetch data', error);
-    } finally {
-      setLoading(false);
+  // [React Query] 데이터 조회
+  const { data: shopSettings } = useQuery({
+    queryKey: QK.settings.main,
+    queryFn: async () => {
+      const res = await apiClient.get<any, StandardResponse<any>>('/settings');
+      return res.success ? res.data : null;
     }
-  }, []); // activeCategoryId 의존성 제거 (불필요한 재생성 방지)
+  });
+
+  const { data: categories = [], isLoading: loadingCategories } = useQuery({
+    queryKey: QK.categories.all,
+    queryFn: async () => {
+      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/categories');
+      return (res.success && res.data) ? res.data : [];
+    }
+  });
+
+  const { data: activeEvent } = useQuery({
+    queryKey: QK.announcements.active,
+    queryFn: async () => {
+      const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
+      return (res.success && res.data) ? res.data : null;
+    }
+  });
+
+  // 카테고리 로드 시 초기 선택 로직
+  useEffect(() => {
+    if (categories.length > 0) {
+      const isValid = categories.some(c => c.id === activeCategoryId);
+      if (!activeCategoryId || !isValid) {
+        setActiveCategoryId(categories[0].id);
+      }
+    }
+  }, [categories, activeCategoryId]);
+
+  // 이벤트 로드 시 웰컴 모달 로직
+  useEffect(() => {
+    if (activeEvent) {
+      const modalShown = sessionStorage.getItem(`event_modal_${activeEvent.id}`);
+      if (!modalShown) {
+        setShowWelcomeModal(true);
+        sessionStorage.setItem(`event_modal_${activeEvent.id}`, 'true');
+      }
+    }
+  }, [activeEvent]);
+
+  const loading = loadingCategories;
 
   // WebSocket 연결 함수
   const connectWebSocket = useCallback(() => {
@@ -90,10 +98,18 @@ export const Home = () => {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        // 메뉴 또는 이벤트 관련 업데이트가 있으면 데이터를 다시 불러옴
-        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED', 'ANNOUNCEMENT_UPDATED'].includes(data.type)) {
-          console.log(`🔔 [WebSocket] ${data.type} 감지, 리로드 중...`);
-          fetchData();
+        // 메뉴 또는 이벤트 관련 업데이트가 있으면 데이터를 무효화하여 리페치 유도
+        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED'].includes(data.type)) {
+          console.log(`🔔 [WebSocket] ${data.type} 감지, 메뉴 무효화 중...`);
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
+        }
+        if (data.type === 'ANNOUNCEMENT_UPDATED') {
+          console.log(`🔔 [WebSocket] ${data.type} 감지, 공지사항 무효화 중...`);
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
+        }
+        if (data.type === 'SETTINGS_UPDATED') {
+          console.log(`🔔 [WebSocket] ${data.type} 감지, 설정 무효화 중...`);
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
         }
       } catch (e) {
         console.error('Failed to parse WS message', e);
@@ -110,21 +126,20 @@ export const Home = () => {
     };
 
     ws.onerror = () => ws.close();
-  }, [fetchData]);
+  }, [queryClient]);
 
   useEffect(() => {
     // 진행 중인 주문들 확인
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
 
-    fetchData();
     connectWebSocket();
 
     return () => {
       if (wsRef.current) wsRef.current.close();
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
     };
-  }, [fetchData, connectWebSocket]);
+  }, [connectWebSocket]);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
@@ -240,9 +255,8 @@ export const Home = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategoryId(cat.id)}
-                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${
-                  activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
-                }`}
+                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
+                  }`}
               >
                 {cat.name}
                 {activeCategoryId === cat.id && (

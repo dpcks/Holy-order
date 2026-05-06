@@ -1,7 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Calendar, X, Building2, Wallet, Landmark } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
@@ -12,11 +15,20 @@ import { format, addDays, startOfYesterday, endOfYesterday, startOfMonth, endOfM
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
+// 테이블 로우 스켈레톤
+const TableRowSkeleton = () => (
+  <tr className="border-b border-gray-50">
+    <td className="py-5 pl-2"><Skeleton className="h-5 w-8" /></td>
+    <td className="py-5"><Skeleton className="h-5 w-24" /></td>
+    <td className="py-5"><Skeleton className="h-5 w-16" /></td>
+    <td className="py-5"><Skeleton className="h-6 w-12" /></td>
+    <td className="py-5"><div className="flex items-center gap-2"><Skeleton circle className="h-8 w-8" /><Skeleton className="h-5 w-16" /></div></td>
+    <td className="py-5"><Skeleton className="h-6 w-20" /></td>
+    <td className="py-5 pr-2"><Skeleton className="h-4 w-32" /></td>
+  </tr>
+);
+
 export const AdminPaymentLogs = () => {
-  const [logs, setLogs] = useState<PaymentLog[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,41 +73,37 @@ export const AdminPaymentLogs = () => {
     }
   ]);
 
-  const fetchLogs = useCallback(async () => {
-    setLoading(true);
-    try {
-      const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
-      const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
+  // [React Query] 입금 내역 조회 - 필터 변경 시 자동 리페치
+  const filterParams = {
+    page, limit, paymentMethod: paymentMethodFilter, search: searchQuery,
+    startDate: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '',
+    endDate: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '',
+  };
 
+  const { data: logsData, isLoading: loading } = useQuery({
+    queryKey: QK.payments.list(page, filterParams),
+    queryFn: async () => {
       let url = `/admin/payments/logs?page=${page}&limit=${limit}`;
-      if (sDate) url += `&start_date=${sDate}`;
-      if (eDate) url += `&end_date=${eDate}`;
+      if (filterParams.startDate) url += `&start_date=${filterParams.startDate}`;
+      if (filterParams.endDate) url += `&end_date=${filterParams.endDate}`;
       if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
       if (searchQuery) {
-        // 검색어가 숫자인 경우 order_id로 검색 시도, 아니면 sender_name
         if (/^\d+$/.test(searchQuery)) {
           url += `&order_id=${searchQuery}`;
         } else {
           url += `&sender_name=${searchQuery}`;
         }
       }
-
       const res = await apiClient.get<PaymentLogListResponse, StandardResponse<PaymentLogListResponse>>(url);
-      if (res.success && res.data) {
-        setLogs(res.data.items);
-        setTotalCount(res.data.total_count);
-        setTotalPages(res.data.total_pages);
-      }
-    } catch (err) {
-      console.error('입금 로그 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, dateRange, paymentMethodFilter, searchQuery]);
+      return (res.success && res.data) ? res.data : null;
+    },
+    staleTime: 1000 * 60, // 1분 캐시
+    placeholderData: (prev) => prev,
+  });
 
-  useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+  const logs = logsData?.items ?? [];
+  const totalCount = logsData?.total_count ?? 0;
+  const totalPages = logsData?.total_pages ?? 0;
 
   // 날짜 선택기 외부 클릭 시 닫기
   useEffect(() => {
@@ -217,7 +225,7 @@ export const AdminPaymentLogs = () => {
                       닫기
                     </button>
                     <button
-                      onClick={() => { setShowDatePicker(false); fetchLogs(); }}
+                      onClick={() => { setShowDatePicker(false); }}
                       className="px-4 py-2 text-[12px] font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
                     >
                       적용하기
@@ -268,11 +276,7 @@ export const AdminPaymentLogs = () => {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <tr>
-                <td colSpan={7} className="py-20 text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                </td>
-              </tr>
+              Array.from({ length: 10 }).map((_, i) => <TableRowSkeleton key={i} />)
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-20 text-center text-gray-400 font-bold">

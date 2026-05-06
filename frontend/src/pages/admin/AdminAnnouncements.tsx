@@ -4,13 +4,16 @@
  * - 이벤트 활성화/비활성화
  * - 정산 리포트 모달
  */
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
   X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { uploadImageToCloudinary } from '../../utils/uploadImage';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
 import type { Announcement, AnnouncementReportResponse, StandardResponse } from '../../types';
@@ -21,9 +24,22 @@ const EVENT_TYPES = ['칠순감사', '결혼감사', '출산감사', '임직감�
 // 직분 옵션 (Cart.tsx와 동일)
 const DUTY_OPTIONS = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
 
+// 공지 카드 스켈레톤
+const AnnouncementSkeleton = () => (
+  <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm space-y-3">
+    <div className="flex justify-between">
+      <div className="space-y-2 flex-1">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-3 w-24" />
+      </div>
+      <div className="flex gap-1"><Skeleton className="h-8 w-8 rounded-lg" /><Skeleton className="h-8 w-8 rounded-lg" /><Skeleton className="h-8 w-8 rounded-lg" /></div>
+    </div>
+    <Skeleton className="h-3 w-16" />
+  </div>
+);
+
 export const AdminAnnouncements = () => {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   // 모달 상태
@@ -45,18 +61,52 @@ export const AdminAnnouncements = () => {
     setToast({ message, type });
   };
 
-  const fetchAnnouncements = useCallback(async () => {
-    try {
+  // [React Query] 공지/이벤트 목록 조회
+  const { data: announcements = [], isLoading: loading } = useQuery({
+    queryKey: QK.announcements.list,
+    queryFn: async () => {
       const res = await apiClient.get<Announcement[], StandardResponse<Announcement[]>>('/admin/announcements');
-      if (res.success && res.data) setAnnouncements(res.data);
-    } catch (err) {
-      console.error('이벤트 목록 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return (res.success && res.data) ? res.data : [];
+    },
+  });
 
-  useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);
+  // [React Query] 저장(CRUD) Mutation
+  const submitMutation = useMutation({
+    mutationFn: async ({ editingItem, payload }: { editingItem: Announcement | null; payload: object }) => {
+      if (editingItem) {
+        return apiClient.patch<any, StandardResponse<any>>(`/admin/announcements/${editingItem.id}`, payload);
+      } else {
+        return apiClient.post<any, StandardResponse<any>>('/admin/announcements', payload);
+      }
+    },
+    onSuccess: (_, { editingItem }) => {
+      showToast(editingItem ? '이벤트가 수정되었습니다.' : '이벤트가 생성되었습니다.', 'success');
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
+      setShowFormModal(false);
+    },
+    onError: (err: any) => showToast(err.response?.data?.detail || '처리 중 오류가 발생했습니다.', 'error'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => apiClient.delete<any, StandardResponse<any>>(`/admin/announcements/${id}`),
+    onSuccess: () => {
+      showToast('이벤트가 삭제되었습니다.', 'success');
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
+    },
+    onError: (err: any) => showToast(err.response?.data?.detail || '삭제에 실패했습니다.', 'error'),
+  });
+
+  const toggleActiveMutation = useMutation({
+    mutationFn: async (item: Announcement) => {
+      const endpoint = item.is_active ? 'deactivate' : 'activate';
+      return apiClient.post<any, StandardResponse<any>>(`/admin/announcements/${item.id}/${endpoint}`, {});
+    },
+    onSuccess: (_, item) => {
+      showToast(item.is_active ? '이벤트가 종료되었습니다.' : '이벤트가 활성화되었습니다.', 'success');
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
+    },
+    onError: (err: any) => showToast(err.response?.data?.detail || '상태 변경에 실패했습니다.', 'error'),
+  });
 
   const handleOpenCreate = () => {
     setEditingItem(null);
@@ -86,55 +136,28 @@ export const AdminAnnouncements = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title.trim()) {
-      showToast('제목을 입력해주세요.', 'error');
-      return;
-    }
-
+    if (!formData.title.trim()) { showToast('제목을 입력해주세요.', 'error'); return; }
     if (formData.is_event_mode) {
-      if (!formData.sponsor_name.trim()) {
-        showToast('후원자 성함을 입력해주세요.', 'error');
-        return;
-      }
-      if (!formData.event_type) {
-        showToast('이벤트 유형을 선택해주세요.', 'error');
-        return;
-      }
+      if (!formData.sponsor_name.trim()) { showToast('후원자 성함을 입력해주세요.', 'error'); return; }
+      if (!formData.event_type) { showToast('이벤트 유형을 선택해주세요.', 'error'); return; }
     }
-
     if (formData.starts_at && formData.ends_at) {
       if (new Date(formData.starts_at) > new Date(formData.ends_at)) {
-        showToast('시작일시가 종료일시보다 늦을 수 없습니다.', 'error');
-        return;
+        showToast('시작일시가 종료일시보다 늦을 수 없습니다.', 'error'); return;
       }
     }
-
-    try {
-      const payload = {
-        ...formData,
-        starts_at: formData.starts_at || null,
-        ends_at: formData.ends_at || null,
-        content: formData.content || null,
-        banner_text: formData.banner_text || null,
-        image_url: formData.image_url || null,
-        sponsor_name: formData.sponsor_name || null,
-        sponsor_duty: formData.sponsor_duty || null,
-        event_type: formData.event_type || null,
-      };
-
-      if (editingItem) {
-        await apiClient.patch<any, StandardResponse<any>>(`/admin/announcements/${editingItem.id}`, payload);
-        showToast('이벤트가 수정되었습니다.', 'success');
-      } else {
-        await apiClient.post<any, StandardResponse<any>>('/admin/announcements', payload);
-        showToast('이벤트가 생성되었습니다.', 'success');
-      }
-      setShowFormModal(false);
-      fetchAnnouncements();
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || '처리 중 오류가 발생했습니다.';
-      showToast(errorMsg, 'error');
-    }
+    const payload = {
+      ...formData,
+      starts_at: formData.starts_at || null,
+      ends_at: formData.ends_at || null,
+      content: formData.content || null,
+      banner_text: formData.banner_text || null,
+      image_url: formData.image_url || null,
+      sponsor_name: formData.sponsor_name || null,
+      sponsor_duty: formData.sponsor_duty || null,
+      event_type: formData.event_type || null,
+    };
+    submitMutation.mutate({ editingItem, payload });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,26 +179,11 @@ export const AdminAnnouncements = () => {
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('정말 삭제하시겠습니까?')) return;
-    try {
-      await apiClient.delete<any, StandardResponse<any>>(`/admin/announcements/${id}`);
-      showToast('이벤트가 삭제되었습니다.', 'success');
-      fetchAnnouncements();
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || '삭제에 실패했습니다.';
-      showToast(errorMsg, 'error');
-    }
+    deleteMutation.mutate(id);
   };
 
   const handleToggleActive = async (item: Announcement) => {
-    try {
-      const endpoint = item.is_active ? 'deactivate' : 'activate';
-      await apiClient.post<any, StandardResponse<any>>(`/admin/announcements/${item.id}/${endpoint}`, {});
-      showToast(item.is_active ? '이벤트가 종료되었습니다.' : '이벤트가 활성화되었습니다.', 'success');
-      fetchAnnouncements();
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.detail || '상태 변경에 실패했습니다.';
-      showToast(errorMsg, 'error');
-    }
+    toggleActiveMutation.mutate(item);
   };
 
   const handleShowReport = async (item: Announcement) => {
@@ -249,8 +257,8 @@ export const AdminAnnouncements = () => {
 
         {/* 이벤트 목록 */}
         {loading ? (
-          <div className="flex justify-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          <div className="grid gap-4">
+            {Array.from({ length: 3 }).map((_, i) => <AnnouncementSkeleton key={i} />)}
           </div>
         ) : announcements.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400">
@@ -431,21 +439,8 @@ export const AdminAnnouncements = () => {
                   </div>
                 </>
               )}
-              {/* <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[12px] font-bold text-gray-600 mb-1 block">시작일시</label>
-                  <input type="datetime-local" value={formData.starts_at} onChange={(e) => setFormData(p => ({ ...p, starts_at: e.target.value }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
-                </div>
-                <div>
-                  <label className="text-[12px] font-bold text-gray-600 mb-1 block">종료일시</label>
-                  <input type="datetime-local" value={formData.ends_at} onChange={(e) => setFormData(p => ({ ...p, ends_at: e.target.value }))}
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200" />
-                </div>
-              </div> */}
               {/* 아이패드 WebKit 팽창 버그 우회를 위해 날짜(date)와 시간(time) 입력창을 분리 */}
               <div className="flex flex-col gap-4">
-
                 {/* 시작일시 분리형 */}
                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
                   <label className="text-[12px] font-bold text-gray-600 mb-2 block">시작일시</label>
@@ -495,7 +490,6 @@ export const AdminAnnouncements = () => {
                     />
                   </div>
                 </div>
-
               </div>
               <label className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl cursor-pointer">
                 <input type="checkbox" checked={formData.is_event_mode} onChange={(e) => setFormData(p => ({ ...p, is_event_mode: e.target.checked }))}

@@ -1,20 +1,19 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coffee, PartyPopper, Copy, Check, Home, ChevronRight, ChevronLeft, Wallet } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
-import type { Order, SettingResponse, ActiveOrder, StandardResponse } from '../types';
+import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [setting, setSetting] = useState<SettingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
-  const [activeEvent, setActiveEvent] = useState<any>(null);
 
   // iOS 알림 관련 상태
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
@@ -29,7 +28,7 @@ export const OrderStatus = () => {
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
   const [wsStatus, setWsStatus] = useState<WsStatus>('DISCONNECTED');
-  
+
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -41,46 +40,53 @@ export const OrderStatus = () => {
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
 
-  const fetchData = useCallback(async (showLoading = false) => {
-    if (showLoading) setLoading(true);
-    try {
-      const [orderRes, settingRes, eventRes] = await Promise.all([
-        id ? apiClient.get<Order, StandardResponse<Order>>(`/orders/status/${id}`) : Promise.resolve(null),
-        apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings'),
-        apiClient.get<any, StandardResponse<any>>('/announcements/active'),
-      ]);
-      
-      if (orderRes?.success) {
-        setOrder(orderRes.data);
-        
-        // 수령 완료 시 (COMPLETED) 로컬 스토리지의 활성 주문 목록에서 자동으로 제거
-        if (orderRes.data.status === 'COMPLETED') {
-          const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
-          const filteredOrders = orders.filter((o: ActiveOrder) => String(o.id) !== String(id));
-          localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
-          
-          setActiveOrders(filteredOrders);
+  // [React Query] 데이터 조회
+  const { data: order, isLoading: loadingOrder } = useQuery({
+    queryKey: QK.orders.statusForUser(Number(id)),
+    queryFn: async () => {
+      if (!id) return null;
+      const res = await apiClient.get<Order, StandardResponse<Order>>(`/orders/status/${id}`);
+      return res.success ? res.data : null;
+    },
+    enabled: !!id,
+    refetchInterval: wsStatus !== 'CONNECTED' ? 10000 : false, // 연결 끊겼을 때만 폴링
+  });
 
-          if (filteredOrders.length > 0) {
-            console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
-            navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
-          } else {
-            navigate('/', { replace: true });
-          }
-        }
-      }
-      if (settingRes?.success) {
-        setSetting(settingRes.data);
-      }
-      if (eventRes?.success) {
-        setActiveEvent(eventRes.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch order status', error);
-    } finally {
-      if (showLoading) setLoading(false);
+  const { data: setting } = useQuery({
+    queryKey: QK.settings.main,
+    queryFn: async () => {
+      const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings');
+      return res.success ? res.data : null;
     }
-  }, [id, navigate]);
+  });
+
+  const { data: activeEvent } = useQuery({
+    queryKey: QK.announcements.active,
+    queryFn: async () => {
+      const res = await apiClient.get<Announcement, StandardResponse<Announcement>>('/announcements/active');
+      return (res.success && res.data) ? res.data : null;
+    }
+  });
+
+  const loading = loadingOrder;
+
+  // 주문 상태 완료(COMPLETED) 시 자동 관리 로직
+  useEffect(() => {
+    if (order?.status === 'COMPLETED' && id) {
+      const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
+      const filteredOrders = orders.filter((o: ActiveOrder) => String(o.id) !== String(id));
+      localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
+
+      setActiveOrders(filteredOrders);
+
+      if (filteredOrders.length > 0) {
+        console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
+        navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [order?.status, id, navigate]);
 
   // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
   const connectWebSocket = useCallback(() => {
@@ -124,8 +130,8 @@ export const OrderStatus = () => {
         if (data.type === 'ping') return;
 
         if (data.type === 'ORDER_UPDATED') {
-          // 1. 현재 보고 있는 주문 정보 갱신
-          fetchData(false);
+          // 1. 현재 보고 있는 주문 정보 갱신을 위해 쿼리 무효화
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
 
           // 2. 만약 다른 내 주문의 상태가 변경되었다면 해당 주문으로 자동 이동
           if (String(data.order_id) !== String(id)) {
@@ -133,10 +139,18 @@ export const OrderStatus = () => {
             const isMyOrder = orders.some((o: any) => String(o.id) === String(data.order_id));
             
             if (isMyOrder) {
-              console.log(`🚀 [Auto-Nav] 주문 #${data.order_id} 상태 변경 감지! 페이지를 이동합니다.`);
+              console.log(`🚀 [Auto-Nav] 내 주문 #${data.order_id} 상태 변경 감지! 이동 중...`);
               navigate(`/order/status/${data.order_id}`);
             }
           }
+        }
+        
+        if (data.type === 'SETTINGS_UPDATED') {
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
+        }
+        
+        if (data.type === 'ANNOUNCEMENT_UPDATED') {
+          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
         }
       } catch (e) {
         console.error('Failed to parse WS message', e);
@@ -152,14 +166,9 @@ export const OrderStatus = () => {
         return;
       }
 
-      console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}). 추적 폴백 활성화...`);
+      console.log(`❌ [WebSocket] 연결 종료 (Clean: ${event.wasClean}).`);
       setWsStatus('DISCONNECTED');
       
-      // 사용자용 페이지는 좀 더 빈번하게 폴링 (10초)
-      if (!pollingTimerRef.current) {
-        pollingTimerRef.current = setInterval(() => fetchData(false), 10000);
-      }
-
       const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
       reconnectTimerRef.current = setTimeout(() => {
         retryCountRef.current += 1;
@@ -168,20 +177,15 @@ export const OrderStatus = () => {
     };
 
     ws.onerror = () => ws.close();
-  }, [fetchData]);
+  }, [id, navigate, queryClient]);
 
   useEffect(() => {
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
     
-    // 신규 주문으로 변경 시 이전 데이터 초기화
-    setOrder(null);
-    fetchData(true);
     connectWebSocket();
 
     // 알림음 설정 (로컬 파일 우선)
-    // TODO: public/mp3/ready.mp3 파일이 존재하지 않으면 에러가 발생할 수 있습니다.
-    // 기존 대체 URL: https://t1.daumcdn.net/kakaopay/tesla/20210105/sounds/pebble.mp3
     audioRef.current = new Audio('/mp3/ready.mp3');
     audioRef.current.load();
 
@@ -197,10 +201,12 @@ export const OrderStatus = () => {
     }
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN)) {
-        console.log('📱 [Visibility] 화면 활성화 - 주문 상태 즉시 갱신');
-        fetchData(false);
-        connectWebSocket();
+      if (document.visibilityState === 'visible') {
+        console.log('📱 [Visibility] 화면 활성화 - 상태 갱신');
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          connectWebSocket();
+        }
       }
     };
 
@@ -212,7 +218,7 @@ export const OrderStatus = () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
-  }, [fetchData, connectWebSocket]);
+  }, [connectWebSocket, queryClient]);
 
   // iOS 안내 배너 노출 타이밍 제어
   useEffect(() => {

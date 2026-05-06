@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
 
@@ -80,14 +83,66 @@ type AdminOutletContext = {
   audioRef: React.RefObject<HTMLAudioElement | null>;
 };
 
+// 주문 카드 스켈레톤
+const OrderCardSkeleton = () => (
+  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5">
+    <div className="flex justify-between items-center">
+      <Skeleton className="h-8 w-20" />
+      <Skeleton className="h-5 w-16" />
+    </div>
+    <div className="space-y-2">
+      <Skeleton className="h-6 w-32" />
+      <Skeleton className="h-4 w-24" />
+    </div>
+    <div className="space-y-3">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </div>
+    <div className="pt-4 border-t border-gray-50 flex gap-3">
+      <Skeleton className="h-12 flex-1 rounded-2xl" />
+    </div>
+  </div>
+);
+
 export const AdminOrderManagement = () => {
+  const queryClient = useQueryClient();
   const { isSoundEnabled, toggleSound, audioRef } = useOutletContext<AdminOutletContext>();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [stats, setStats] = useState<DashboardStats>({ total_orders: 0, total_sales: 0 });
-  const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [now, setNow] = useState<number>(Date.now());
+
+  // [React Query] 주문 보드 데이터 조회
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: QK.orders.board,
+    queryFn: async () => {
+      const res = await apiClient.get<Order[], StandardResponse<Order[]>>('/admin/orders/board');
+      setLastUpdated(new Date());
+      return (res.success && res.data) ? res.data : [];
+    },
+    staleTime: 0, // 주문 현황은 항상 최신이어야 함 (WebSocket이 보완)
+  });
+
+  // [React Query] 대시보드 통계 조회
+  const { data: stats = { total_orders: 0, total_sales: 0 } } = useQuery({
+    queryKey: QK.stats.summary,
+    queryFn: async () => {
+      const res = await apiClient.get<DashboardStats, StandardResponse<DashboardStats>>('/admin/stats');
+      return (res.success && res.data) ? res.data : { total_orders: 0, total_sales: 0 };
+    },
+    staleTime: 1000 * 60, // 통계는 1분 정도 캐시 가능
+  });
+
+  // [React Query] Mutations
+  const statusMutation = useMutation({
+    mutationFn: ({ orderId, nextStatus }: { orderId: number; nextStatus: string }) =>
+      apiClient.patch(`/admin/orders/${orderId}/status`, { status: nextStatus }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.stats });
+    },
+  });
+
+  const loading = loadingOrders;
+  const updatingId = statusMutation.isPending ? (statusMutation.variables as any)?.orderId : null;
 
   // WebSocket 상태 관리
   type WsStatus = 'CONNECTED' | 'RECONNECTING' | 'DISCONNECTED';
@@ -99,27 +154,10 @@ export const AdminOrderManagement = () => {
   const retryCountRef = useRef(0);
   const isUnmountingRef = useRef(false);
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [boardRes, statsRes] = await Promise.all([
-        apiClient.get<Order[], StandardResponse<Order[]>>('/admin/orders/board'),
-        apiClient.get<DashboardStats, StandardResponse<DashboardStats>>('/admin/stats')
-      ]);
-
-      if (boardRes.success && boardRes.data) {
-        setOrders(boardRes.data);
-      }
-      if (statsRes.success && statsRes.data) {
-        setStats(statsRes.data);
-      }
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error('주문 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchOrders = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
+    queryClient.invalidateQueries({ queryKey: QK_DOMAIN.stats });
+  }, [queryClient]);
 
   // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
   const connectWebSocket = useCallback(() => {
@@ -262,28 +300,12 @@ export const AdminOrderManagement = () => {
   }, []);
 
   const handleStatusChange = async (orderId: number, nextStatus: string) => {
-    setUpdatingId(orderId);
-    try {
-      await apiClient.patch(`/admin/orders/${orderId}/status`, { status: nextStatus });
-      await fetchOrders();
-    } catch (err) {
-      alert('상태 변경에 실패했습니다.');
-    } finally {
-      setUpdatingId(null);
-    }
+    statusMutation.mutate({ orderId, nextStatus });
   };
 
   const handleCancel = async (orderId: number) => {
     if (!confirm('정말 주문을 취소하시겠습니까?')) return;
-    setUpdatingId(orderId);
-    try {
-      await apiClient.patch(`/admin/orders/${orderId}/status`, { status: 'CANCELLED' });
-      await fetchOrders();
-    } catch (err) {
-      alert('취소 처리에 실패했습니다.');
-    } finally {
-      setUpdatingId(null);
-    }
+    statusMutation.mutate({ orderId, nextStatus: 'CANCELLED' });
   };
 
   return (
@@ -364,7 +386,10 @@ export const AdminOrderManagement = () => {
                 </div>
 
                 <div className="flex flex-col gap-5 overflow-y-auto pr-2 custom-scrollbar">
-                  {colOrders.length === 0 ? (
+                  {loading ? (
+                    // 스켈레톤 로더
+                    Array.from({ length: 3 }).map((_, i) => <OrderCardSkeleton key={i} />)
+                  ) : colOrders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 bg-white/50 rounded-3xl border-2 border-dashed border-gray-100 text-gray-300">
                       <CheckCircle size={48} strokeWidth={1} className="mb-3 opacity-20" />
                       <p className="text-[14px] font-bold">진행 중인 주문 없음</p>

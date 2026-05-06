@@ -1,7 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { ReportStats, StandardResponse } from '../../types';
 
 // CSS 진행 바 컴포넌트
@@ -52,7 +55,20 @@ const DonutChart = ({ data }: { data: { label: string; value: number; color: str
   );
 };
 
-// 동적 트렌드 바 차트 (주일, 주차별, 월별 지원)
+// 스켈레톤 컴포넌트들
+const KpiCardSkeleton = () => (
+  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-3">
+    <div className="flex items-center gap-2"><Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-20" /></div>
+    <div className="space-y-1"><Skeleton className="h-7 w-24" /><Skeleton className="h-3 w-16" /></div>
+  </div>
+);
+
+const ChartSkeleton = () => (
+  <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 h-full flex flex-col space-y-4">
+    <Skeleton className="h-5 w-32" />
+    <Skeleton className="flex-1 w-full" />
+  </div>
+);
 const TrendChart = ({ data, periodType }: { data: Record<string, { count: number, revenue: number }>, periodType: '주일' | '주차별' | '월별' }) => {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
@@ -136,11 +152,8 @@ const groupDuty = (duty_breakdown: Record<string, number>) => {
 };
 
 export const AdminSalesReports = () => {
-  const [stats, setStats] = useState<ReportStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'주일' | '주차별' | '월별'>('주일');
   const [selectedDate, setSelectedDate] = useState(() => {
-    // 기본값: 현재 로컬 시간 기준 YYYY-MM-DD
     const today = new Date();
     const offset = today.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(today.getTime() - offset)).toISOString().split('T')[0];
@@ -166,21 +179,20 @@ export const AdminSalesReports = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      try {
-        const typeMap = { '주일': 'daily', '주차별': 'weekly', '월별': 'monthly' };
-        const res = await apiClient.get<ReportStats, StandardResponse<ReportStats>>(`/admin/stats?type=${typeMap[period]}&date=${selectedDate}`);
-        if (res.success) setStats(res.data);
-      } catch (err) {
-        console.error('통계 조회 실패:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
-  }, [period, selectedDate]);
+  // [React Query] 매운 통계 조회
+  // period, selectedDate가 queryKey에 포함되어 필터 변경 시 자동 리페치
+  // 한 번 조회한 데이터는 5분간 캐시되어 돌아와도 즉시 표시
+  const typeMap = { '주일': 'daily', '주차별': 'weekly', '월별': 'monthly' } as const;
+  const { data: stats, isLoading: loading } = useQuery({
+    queryKey: QK.stats.sales(typeMap[period], selectedDate),
+    queryFn: async () => {
+      const res = await apiClient.get<ReportStats, StandardResponse<ReportStats>>(
+        `/admin/stats?type=${typeMap[period]}&date=${selectedDate}`
+      );
+      return res.success ? res.data : null;
+    },
+    staleTime: 1000 * 60, // 매출 통계는 1분 캐시 (3시간대보다 자주 바뀌므로 짧게 설정)
+  });
 
   const bankTransferTotal = stats?.payment_method_sales?.BANK_TRANSFER || 0;
   const cashTotal = stats?.payment_method_sales?.CASH || 0;
@@ -242,13 +254,17 @@ export const AdminSalesReports = () => {
       </header>
 
       <div className="flex-1 p-6 grid grid-cols-3 gap-5 auto-rows-min relative min-h-[500px]">
-        {loading && (
-          <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-10 flex items-center justify-center rounded-xl">
-            <div className="animate-spin h-8 w-8 rounded-full border-b-2 border-primary" />
-          </div>
-        )}
-
-        {!stats && !loading ? (
+        {loading ? (
+          <>
+            <div className="col-span-3 grid grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
+            </div>
+            <div className="col-span-1 h-48"><ChartSkeleton /></div>
+            <div className="col-span-2 h-48"><ChartSkeleton /></div>
+            <div className="col-span-2 h-64"><ChartSkeleton /></div>
+            <div className="col-span-1 h-64"><ChartSkeleton /></div>
+          </>
+        ) : !stats ? (
           <div className="col-span-3 flex items-center justify-center text-gray-400 py-20">통계를 불러올 수 없습니다.</div>
         ) : stats ? (
           <>

@@ -5,28 +5,41 @@
 자동 차감이나 레시피 연동 없이, 관리자가 수동으로 재고를 관리하는 데 초점을 맞춥니다.
 */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Package, Plus, Search, AlertTriangle, Pencil, Trash2,
   X, Save, ChevronDown
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { StandardResponse, Ingredient, IngredientCreate, IngredientUpdate } from '../../types';
 
 // 카테고리 옵션 목록
 const CATEGORY_OPTIONS = ['재료', '소모품'] as const;
 
+// 테이블 로우 스켈레톤
+const TableRowSkeleton = () => (
+  <tr className="border-b border-gray-50">
+    <td className="px-6 py-5"><Skeleton className="h-5 w-24" /></td>
+    <td className="px-6 py-5"><Skeleton className="h-6 w-16 rounded-full" /></td>
+    <td className="px-6 py-5"><div className="flex justify-center gap-1"><Skeleton className="h-5 w-8" /><Skeleton className="h-4 w-6" /></div></td>
+    <td className="px-6 py-5 text-center"><Skeleton className="h-5 w-12 mx-auto" /></td>
+    <td className="px-6 py-5"><Skeleton className="h-6 w-16 rounded-full" /></td>
+    <td className="px-6 py-5"><Skeleton className="h-4 w-20" /></td>
+    <td className="px-6 py-5"><div className="flex justify-center gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></div></td>
+  </tr>
+);
+
 export const AdminIngredients = () => {
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [lowStockItems, setLowStockItems] = useState<Ingredient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('전체');
 
   // 모달 상태
   const [showModal, setShowModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
-  const [saving, setSaving] = useState(false);
 
   // 폼 상태
   const [formData, setFormData] = useState<IngredientCreate>({
@@ -42,32 +55,63 @@ export const AdminIngredients = () => {
   // 메시지 상태
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // 데이터 조회
-  const fetchData = useCallback(async () => {
-    try {
-      const [listRes, alertRes] = await Promise.all([
-        apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients'),
-        apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients/alerts'),
-      ]);
-      if (listRes.success && listRes.data) setIngredients(listRes.data);
-      if (alertRes.success && alertRes.data) {
-        // 상단 카드에는 '위험(20% 이하)' 상태인 항목만 표시
-        const criticalItems = alertRes.data.filter(item => {
-          const ratio = item.current_stock / item.alert_threshold;
-          return item.alert_threshold > 0 && (ratio <= 0.2 || item.current_stock === 0);
-        });
-        setLowStockItems(criticalItems);
-      }
-    } catch (err) {
-      console.error('재고 데이터 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // [React Query] 재고 목록 조회
+  const { data: ingredients = [], isLoading: loading } = useQuery({
+    queryKey: QK.ingredients.list,
+    queryFn: async () => {
+      const res = await apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients');
+      return (res.success && res.data) ? res.data : [];
+    },
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  // [React Query] 저재고 알림 목록 조회
+  const { data: rawAlerts = [] } = useQuery({
+    queryKey: QK.ingredients.alerts,
+    queryFn: async () => {
+      const res = await apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients/alerts');
+      return (res.success && res.data) ? res.data : [];
+    },
+  });
+
+  const lowStockItems = rawAlerts.filter(item => {
+    const ratio = item.current_stock / item.alert_threshold;
+    return item.alert_threshold > 0 && (ratio <= 0.2 || item.current_stock === 0);
+  });
+
+  // [React Query] 저장(CRUD) Mutation
+  const saveMutation = useMutation({
+    mutationFn: async ({ editingItem, formData }: { editingItem: Ingredient | null; formData: IngredientCreate }) => {
+      if (editingItem) {
+        const updateData: IngredientUpdate = { ...formData };
+        return apiClient.patch<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(`/admin/ingredients/${editingItem.id}`, updateData);
+      } else {
+        return apiClient.post<StandardResponse<Ingredient>, StandardResponse<Ingredient>>('/admin/ingredients', formData);
+      }
+    },
+    onSuccess: (res, { editingItem, formData }) => {
+      if (res.success) {
+        setMessage({ type: 'success', text: `'${formData.name}' 항목이 ${editingItem ? '수정' : '추가'}되었습니다.` });
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.ingredients });
+        handleCloseModal();
+      }
+    },
+    onError: () => setMessage({ type: 'error', text: '저장 중 오류가 발생했습니다.' }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (item: Ingredient) => {
+      return apiClient.delete<StandardResponse<null>, StandardResponse<null>>(`/admin/ingredients/${item.id}`);
+    },
+    onSuccess: (res, item) => {
+      if (res.success) {
+        setMessage({ type: 'success', text: `'${item.name}' 항목이 삭제되었습니다.` });
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.ingredients });
+      }
+    },
+    onError: () => setMessage({ type: 'error', text: '삭제 중 오류가 발생했습니다.' }),
+  });
+
+  const saving = saveMutation.isPending;
 
   // 메시지 자동 제거
   useEffect(() => {
@@ -111,57 +155,20 @@ export const AdminIngredients = () => {
     setEditingItem(null);
   };
 
-  // 저장 (생성/수정)
+  // 저장 (ONSUCCESS는 useMutation 내부에서 코르한 이유로
+  // mutationFn에서는 editingItem을 주입해야 함)
   const handleSave = async () => {
     if (!formData.name.trim()) {
       setMessage({ type: 'error', text: '품목명을 입력해주세요.' });
       return;
     }
-
-    setSaving(true);
-    try {
-      if (editingItem) {
-        // 수정
-        const updateData: IngredientUpdate = { ...formData };
-        const res = await apiClient.patch<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(
-          `/admin/ingredients/${editingItem.id}`, updateData
-        );
-        if (res.success) {
-          setMessage({ type: 'success', text: `'${formData.name}' 항목이 수정되었습니다.` });
-        }
-      } else {
-        // 생성
-        const res = await apiClient.post<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(
-          '/admin/ingredients', formData
-        );
-        if (res.success) {
-          setMessage({ type: 'success', text: `'${formData.name}' 항목이 추가되었습니다.` });
-        }
-      }
-      handleCloseModal();
-      await fetchData();
-    } catch (err) {
-      console.error('저장 실패:', err);
-      setMessage({ type: 'error', text: '저장 중 오류가 발생했습니다.' });
-    } finally {
-      setSaving(false);
-    }
+    saveMutation.mutate({ editingItem, formData });
   };
 
   // 삭제
   const handleDelete = async (item: Ingredient) => {
     if (!confirm(`'${item.name}' 항목을 삭제하시겠습니까?`)) return;
-
-    try {
-      const res = await apiClient.delete<StandardResponse<null>, StandardResponse<null>>(`/admin/ingredients/${item.id}`);
-      if (res.success) {
-        setMessage({ type: 'success', text: `'${item.name}' 항목이 삭제되었습니다.` });
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('삭제 실패:', err);
-      setMessage({ type: 'error', text: '삭제 중 오류가 발생했습니다.' });
-    }
+    deleteMutation.mutate(item);
   };
 
   // 검색 및 카테고리 필터링
@@ -276,9 +283,9 @@ export const AdminIngredients = () => {
           {/* 재고 목록 테이블 */}
           <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 overflow-hidden">
             {loading ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              </div>
+              <tbody className="divide-y divide-gray-50">
+                {Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} />)}
+              </tbody>
             ) : filteredIngredients.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-gray-400">
                 <Package size={48} className="mb-3 opacity-30" />

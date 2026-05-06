@@ -5,13 +5,16 @@
 등록된 봉사자 마스터 명단에서 선택하여 배치하는 직관적인 UI를 제공합니다.
 */
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save,
   FileText, CheckCircle2, AlertCircle, Users, X, Trash2,
   Quote, Sparkles
 } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { StandardResponse, VolunteerSchedule, Volunteer } from '../../types';
 import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
@@ -21,99 +24,113 @@ import {
   addMonths, subMonths
 } from 'date-fns';
 import { getDailyVerse } from '../../utils/bibleVerses';
-import type { BibleVerse } from '../../utils/bibleVerses';
 
+
+// 캘린더 날짜 칸 스켈레톤
+const DaySkeleton = () => (
+  <div className="p-3 lg:p-4 border-r border-b border-gray-50 flex flex-col h-full space-y-2">
+    <Skeleton className="h-5 w-6" />
+    <div className="flex flex-wrap gap-1">
+      <Skeleton className="h-4 w-10" />
+      <Skeleton className="h-4 w-8" />
+    </div>
+  </div>
+);
+
+// 봉사자 버튼 스켈레톤
+const VolunteerSkeleton = () => (
+  <Skeleton className="h-12 w-full rounded-2xl" />
+);
 
 export const AdminSchedule = () => {
+  const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
+  // 스케줄은 사이드바 편집 중 실시간으로 수정되므로 로컬 state로 유지
   const [schedules, setSchedules] = useState<VolunteerSchedule[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [savingDate, setSavingDate] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const [dailyVerse, setDailyVerse] = useState<BibleVerse | null>(null);
+  const [dailyVerse] = useState(() => getDailyVerse());
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
   };
 
-  // 마스터 봉사자 명단 상태
-  const [masterVolunteers, setMasterVolunteers] = useState<Volunteer[]>([]);
   const [isEditingMaster, setIsEditingMaster] = useState(false);
   const [newVolunteerName, setNewVolunteerName] = useState('');
-  const [isAddingVolunteer, setIsAddingVolunteer] = useState(false);
 
   const calendarDays = useMemo(() => {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
-
     return eachDayOfInterval({ start: startDate, end: endDate });
   }, [currentDate]);
 
-  const fetchSchedules = useCallback(async () => {
-    if (calendarDays.length === 0) return;
+  // 현재 달력 범위 계산
+  const startDate = format(calendarDays[0], 'yyyy-MM-dd');
+  const endDate = format(calendarDays[calendarDays.length - 1], 'yyyy-MM-dd');
 
-    try {
-      const startDate = format(calendarDays[0], 'yyyy-MM-dd');
-      const endDate = format(calendarDays[calendarDays.length - 1], 'yyyy-MM-dd');
-
+  // [React Query] 봉사 스케줄 조회 (범위가 바뀌면 자동 리페치)
+  const { data: fetchedSchedules, isLoading: loadingSchedules } = useQuery({
+    queryKey: QK.schedules.list({ start: startDate, end: endDate }),
+    queryFn: async () => {
       const res = await apiClient.get<VolunteerSchedule[], StandardResponse<VolunteerSchedule[]>>(
         `/admin/schedules?start_date=${startDate}&end_date=${endDate}`
       );
-      if (res.success && res.data) {
-        setSchedules(res.data);
-      }
-    } catch (err) {
-      console.error('스케줄 조회 실패:', err);
-    }
-  }, [calendarDays]);
+      return (res.success && res.data) ? res.data : [];
+    },
+    // 서버 데이터가 오면 로컬 편집 state 동기화
+    placeholderData: [],
+  });
 
-  const fetchMasterVolunteers = useCallback(async () => {
-    try {
+  // fetchedSchedules가 바뀌면 로컬 편집 state 초기화
+  if (fetchedSchedules && fetchedSchedules !== schedules) {
+    // 사이드바가 닫혀있을 때만 동기화 (편집 중 덮어쓰기 방지)
+    if (!selectedDate) setSchedules(fetchedSchedules);
+  }
+
+  // [React Query] 봉사자 마스터 목록 조회 (5분 캐시)
+  const { data: masterVolunteers = [], isLoading: loadingVolunteers } = useQuery({
+    queryKey: QK.volunteers.all,
+    queryFn: async () => {
       const res = await apiClient.get<Volunteer[], StandardResponse<Volunteer[]>>('/admin/volunteers');
-      if (res.success && res.data) {
-        setMasterVolunteers(res.data);
-      }
-    } catch (err) {
-      console.error('봉사자 명단 조회 실패:', err);
-    }
-  }, []);
+      return (res.success && res.data) ? res.data : [];
+    },
+  });
 
-  useEffect(() => {
-    setDailyVerse(getDailyVerse());
-    fetchSchedules();
-    fetchMasterVolunteers();
-  }, [fetchSchedules, fetchMasterVolunteers]);
+  // [React Query] 봉사자 추가 Mutation
+  const addVolunteerMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name });
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.volunteers });
+      setNewVolunteerName('');
+    },
+  });
+
+  // [React Query] 봉사자 삭제 Mutation
+  const deleteVolunteerMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiClient.delete<null, StandardResponse<null>>(`/admin/volunteers/${id}`);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.volunteers });
+    },
+  });
 
   const handleAddVolunteerMaster = async () => {
-    if (!newVolunteerName.trim() || isAddingVolunteer) return;
-
-    setIsAddingVolunteer(true);
-    try {
-      const res = await apiClient.post<Volunteer, StandardResponse<Volunteer>>('/admin/volunteers', { name: newVolunteerName.trim() });
-      if (res.success && res.data) {
-        setMasterVolunteers(prev => [...prev, res.data]);
-        setNewVolunteerName('');
-      }
-    } catch (err: any) {
-      console.error('봉사자 추가 실패:', err);
-    } finally {
-      setIsAddingVolunteer(false);
-    }
+    if (!newVolunteerName.trim() || addVolunteerMutation.isPending) return;
+    addVolunteerMutation.mutate(newVolunteerName.trim());
   };
 
   const handleDeleteVolunteerMaster = async (id: number) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
-    try {
-      const res = await apiClient.delete<null, StandardResponse<null>>(`/admin/volunteers/${id}`);
-      if (res.success) {
-        setMasterVolunteers(prev => prev.filter(v => v.id !== id));
-      }
-    } catch (err) {
-      console.error('봉사자 삭제 실패:', err);
-    }
+    deleteVolunteerMutation.mutate(id);
   };
 
   const parseDate = (dateStr: string) => {
@@ -185,7 +202,8 @@ export const AdminSchedule = () => {
         setSelectedDate(null);
         setMessage(null);
         showToast('스케줄이 성공적으로 저장되었습니다.', 'success');
-        fetchSchedules();
+        // 해당 범위 스케줄 캐시 무효화 → 자동 리페치
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.schedules });
       }
     } catch (err) {
       console.error('저장 실패:', err);
@@ -271,7 +289,9 @@ export const AdminSchedule = () => {
 
             {/* 날짜 그리드 */}
             <div className={`flex-1 grid grid-cols-7 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
-              {calendarDays.map((day) => {
+              {loadingSchedules ? (
+                Array.from({ length: 35 }).map((_, i) => <DaySkeleton key={i} />)
+              ) : calendarDays.map((day) => {
                 const dateStr = format(day, 'yyyy-MM-dd');
                 const isSun = day.getDay() === 0;
                 const isCurrentMonth = isSameMonth(day, currentDate);
@@ -385,16 +405,16 @@ export const AdminSchedule = () => {
                         value={newVolunteerName}
                         onChange={(e) => setNewVolunteerName(e.target.value)}
                         placeholder="새 봉사자 이름"
-                        disabled={isAddingVolunteer}
+                        disabled={addVolunteerMutation.isPending}
                         className="flex-1 bg-gray-50 border-none rounded-xl px-4 py-2 text-sm font-bold focus:ring-2 focus:ring-black transition-all disabled:opacity-50"
                         onKeyDown={(e) => e.key === 'Enter' && handleAddVolunteerMaster()}
                       />
                       <button
                         onClick={handleAddVolunteerMaster}
-                        disabled={isAddingVolunteer}
+                        disabled={addVolunteerMutation.isPending}
                         className="bg-black text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-800 transition-all disabled:opacity-50 flex items-center justify-center min-w-[60px]"
                       >
-                        {isAddingVolunteer ? (
+                        {isEditingMaster ? (
                           <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                         ) : (
                           '추가'
@@ -417,7 +437,9 @@ export const AdminSchedule = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
-                    {masterVolunteers.length > 0 ? (
+                    {loadingVolunteers ? (
+                      Array.from({ length: 6 }).map((_, i) => <VolunteerSkeleton key={i} />)
+                    ) : masterVolunteers.length > 0 ? (
                       masterVolunteers.map(v => {
                         const isSelected = currentNames.includes(v.name);
                         return (
