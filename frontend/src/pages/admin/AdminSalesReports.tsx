@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { ReportStats, StandardResponse } from '../../types';
 
@@ -152,6 +153,7 @@ const groupDuty = (duty_breakdown: Record<string, number>) => {
 };
 
 export const AdminSalesReports = () => {
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState<'주일' | '주차별' | '월별'>('주일');
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -164,6 +166,18 @@ export const AdminSalesReports = () => {
   const [reportActualCash, setReportActualCash] = useState('');
   const [reportMemo, setReportMemo] = useState('');
   const reportRef = useRef<HTMLDivElement>(null);
+
+  // [WebSocket] 주문 발생 시 통계 실시간 갱신
+  useEffect(() => {
+    const ws = new WebSocket(getWsUrl());
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'NEW_ORDER' || data.type === 'ORDER_UPDATED') {
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.stats });
+      }
+    };
+    return () => ws.close();
+  }, [queryClient]);
 
   const handleDownloadReport = async () => {
     if (!reportRef.current) return;

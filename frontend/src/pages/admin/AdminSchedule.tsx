@@ -5,7 +5,7 @@
 등록된 봉사자 마스터 명단에서 선택하여 배치하는 직관적인 UI를 제공합니다.
 */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save,
   FileText, CheckCircle2, AlertCircle, Users, X, Trash2,

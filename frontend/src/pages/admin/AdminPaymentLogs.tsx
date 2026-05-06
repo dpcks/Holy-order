@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Calendar, X, Building2, Wallet, Landmark } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
-import { QK, QK_DOMAIN } from '../../api/queryKeys';
+import { QK, QK_DOMAIN, type PaymentLogFilters } from '../../api/queryKeys';
+import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
-import type { PaymentLog, StandardResponse, PaymentLogListResponse } from '../../types';
+import type { StandardResponse, PaymentLogListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
 import { DateRangePicker } from 'react-date-range';
@@ -29,6 +30,7 @@ const TableRowSkeleton = () => (
 );
 
 export const AdminPaymentLogs = () => {
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,6 +47,19 @@ export const AdminPaymentLogs = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // [WebSocket] 실시간 결제 정보 동기화
+  useEffect(() => {
+    const ws = new WebSocket(getWsUrl());
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      // 결제 승인(APPROVED)이나 주문 업데이트 시 입금 로그 갱신
+      if (data.type === 'ORDER_UPDATED' || data.type === 'NEW_PAYMENT') {
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.payments });
+      }
+    };
+    return () => ws.close();
+  }, [queryClient]);
 
   const isMobile = windowWidth < 1280; // 아이패드 프로 포함을 위해 상향
 
@@ -74,26 +89,32 @@ export const AdminPaymentLogs = () => {
   ]);
 
   // [React Query] 입금 내역 조회 - 필터 변경 시 자동 리페치
-  const filterParams = {
-    page, limit, paymentMethod: paymentMethodFilter, search: searchQuery,
-    startDate: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '',
-    endDate: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '',
+  const filterParams: PaymentLogFilters = {
+    start_date: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : undefined,
+    end_date: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : undefined,
+    payment_method: (paymentMethodFilter as any) || undefined,
+    sender_name: searchQuery || undefined,
   };
 
   const { data: logsData, isLoading: loading } = useQuery({
     queryKey: QK.payments.list(page, filterParams),
-    queryFn: async () => {
-      let url = `/admin/payments/logs?page=${page}&limit=${limit}`;
-      if (filterParams.startDate) url += `&start_date=${filterParams.startDate}`;
-      if (filterParams.endDate) url += `&end_date=${filterParams.endDate}`;
-      if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
-      if (searchQuery) {
-        if (/^\d+$/.test(searchQuery)) {
-          url += `&order_id=${searchQuery}`;
+    queryFn: async ({ queryKey }) => {
+      const [,, currentPage, filters] = queryKey as [string, string, number, PaymentLogFilters];
+      
+      let url = `/admin/payments/logs?page=${currentPage}&limit=${limit}`;
+      if (filters.start_date) url += `&start_date=${filters.start_date}`;
+      if (filters.end_date) url += `&end_date=${filters.end_date}`;
+      if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
+      
+      if (filters.sender_name) {
+        // 검색어가 숫자인 경우 order_id로, 아니면 sender_name으로 처리
+        if (/^\d+$/.test(filters.sender_name)) {
+          url += `&order_id=${filters.sender_name}`;
         } else {
-          url += `&sender_name=${searchQuery}`;
+          url += `&sender_name=${encodeURIComponent(filters.sender_name)}`;
         }
       }
+      
       const res = await apiClient.get<PaymentLogListResponse, StandardResponse<PaymentLogListResponse>>(url);
       return (res.success && res.data) ? res.data : null;
     },
