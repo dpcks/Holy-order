@@ -699,7 +699,18 @@ export const AdminSettings = () => {
                         <span className="text-[12px] font-bold text-gray-600 flex items-center gap-1.5">
                           <Clock size={12} className="text-gray-400" />
                           {admin.last_login_at
-                            ? new Date(admin.last_login_at).toLocaleString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            ? (() => {
+                                // 9시간이 빠른 경우(데이터가 이미 KST인 경우)를 대비해 Z를 제거하고 파싱
+                                const d = new Date(admin.last_login_at.replace('Z', ''));
+                                return d.toLocaleString('ko-KR', { 
+                                  timeZone: 'Asia/Seoul',
+                                  month: 'long', 
+                                  day: 'numeric', 
+                                  hour: '2-digit', 
+                                  minute: '2-digit',
+                                  hour12: false
+                                });
+                              })()
                             : '접속 기록 없음'}
                         </span>
                       </div>
