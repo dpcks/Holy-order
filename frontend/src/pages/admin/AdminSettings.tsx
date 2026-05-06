@@ -25,13 +25,14 @@ import {
   Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { apiClient } from '../../api/client';
 import type { SettingResponse, StandardResponse, AdminInfo, AdminUser } from '../../types';
 
 export const AdminSettings = () => {
-  const [settings, setSettings] = useState<SettingResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const [localSettings, setLocalSettings] = useState<SettingResponse | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
@@ -46,88 +47,75 @@ export const AdminSettings = () => {
   const [accConfirmPassword, setAccConfirmPassword] = useState('');
   const [accRole, setAccRole] = useState<'MASTER' | 'ADMIN'>('ADMIN');
 
-  // 관리자 목록 상태
-  const [admins, setAdmins] = useState<AdminUser[]>([]);
-  const [loadingAdmins, setLoadingAdmins] = useState(false);
-
-  // 현재 로그인된 관리자 정보 상태
-  const [currentAdmin, setCurrentAdmin] = useState<AdminInfo | null>(null);
-
-  useEffect(() => {
-    fetchSettings();
-    fetchAdmins();
-    fetchCurrentAdmin();
-  }, []);
-
-  const fetchCurrentAdmin = async () => {
-    try {
-      const res = await apiClient.get<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/me');
-      if (res.success) {
-        setCurrentAdmin(res.data);
-      }
-    } catch (err) {
-      console.error('현재 관리자 정보 조회 실패:', err);
-    }
-  };
-
-  const fetchAdmins = async () => {
-    try {
-      setLoadingAdmins(true);
-      const res = await apiClient.get<AdminUser[], StandardResponse<AdminUser[]>>('/admin/accounts');
-      if (res.success && res.data) {
-        setAdmins(res.data);
-      }
-    } catch (err) {
-      console.error('관리자 목록 조회 실패:', err);
-    } finally {
-      setLoadingAdmins(false);
-    }
-  };
-
-  const toggleAdminStatus = async (id: number, currentStatus: boolean) => {
-    try {
-      const res = await apiClient.patch<any, StandardResponse<any>>(`/admin/accounts/${id}`, { is_active: !currentStatus });
-      if (res.success) {
-        toast.success(res.message);
-        fetchAdmins(); // 상태 변경 후 목록 새로고침
-      }
-    } catch (err: any) {
-      // client.ts의 전역 에러 핸들러가 토스트를 띄우지만, 커스텀 에러 처리 방지
-      console.error('계정 상태 변경 실패:', err);
-    }
-  };
-
-
-  const fetchSettings = async () => {
-    try {
+  // [React Query] 데이터 조회
+  const { data: settings, isLoading: loadingSettings } = useQuery({
+    queryKey: QK.settings.all,
+    queryFn: async () => {
       const res = await apiClient.get<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings');
-      if (res.success) setSettings(res.data);
-    } catch (err) {
-      console.error('설정 조회 실패:', err);
-    } finally {
-      setLoading(false);
+      return res.success ? res.data : null;
     }
-  };
+  });
 
-  const handleUpdate = async (updatedFields: Partial<SettingResponse>) => {
-    if (!settings) return;
+  const { data: admins = [], isLoading: loadingAdmins } = useQuery({
+    queryKey: QK.admins.list,
+    queryFn: async () => {
+      const res = await apiClient.get<AdminUser[], StandardResponse<AdminUser[]>>('/admin/accounts');
+      return (res.success && res.data) ? res.data : [];
+    }
+  });
 
-    setSaving(true);
-    try {
-      const res = await apiClient.put<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings', updatedFields);
+  const { data: currentAdmin } = useQuery({
+    queryKey: QK.admins.me,
+    queryFn: async () => {
+      const res = await apiClient.get<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/me');
+      return res.success ? res.data : null;
+    }
+  });
+
+  // 서버 데이터와 로컬 상태 동기화
+  useEffect(() => {
+    if (settings && !localSettings) {
+      setLocalSettings(settings);
+    }
+  }, [settings, localSettings]);
+
+  // [React Query] Mutations
+  const updateSettingsMutation = useMutation({
+    mutationFn: (updatedFields: Partial<SettingResponse>) =>
+      apiClient.put<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings', updatedFields),
+    onSuccess: (res) => {
       if (res.success) {
-        setSettings(res.data);
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
+        setLocalSettings(res.data);
         toast.success('설정이 성공적으로 저장되었습니다.');
       }
-    } catch (err) {
-      console.error('설정 저장 실패:', err);
-    } finally {
-      setSaving(false);
     }
+  });
+
+  const toggleAdminStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
+      apiClient.patch<any, StandardResponse<any>>(`/admin/accounts/${id}`, { is_active }),
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.admins });
+        toast.success(res.message);
+      }
+    }
+  });
+
+  const handleUpdate = (updatedFields: Partial<SettingResponse>) => {
+    updateSettingsMutation.mutate(updatedFields);
   };
 
+  const toggleAdminStatus = (id: number, currentStatus: boolean) => {
+    toggleAdminStatusMutation.mutate({ id, is_active: !currentStatus });
+  };
+
+  const loading = loadingSettings;
+  const saving = updateSettingsMutation.isPending;
+
   if (loading) return <div className="flex h-full items-center justify-center"><div className="animate-spin h-8 w-8 rounded-full border-b-2 border-primary" /></div>;
-  if (!settings) return <div className="flex h-full items-center justify-center text-gray-400">설정 정보를 불러올 수 없습니다.</div>;
+  if (!settings || !localSettings) return <div className="flex h-full items-center justify-center text-gray-400">설정 정보를 불러올 수 없습니다.</div>;
 
   return (
     <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
@@ -153,7 +141,7 @@ export const AdminSettings = () => {
 
             <div className="relative flex items-center justify-between">
               <div className="flex items-center gap-5">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${settings.is_open ? 'bg-emerald-50 text-emerald-500 shadow-emerald-100 shadow-xl' : 'bg-red-50 text-red-500 shadow-red-100 shadow-xl'
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-500 ${localSettings.is_open ? 'bg-emerald-50 text-emerald-500 shadow-emerald-100 shadow-xl' : 'bg-red-50 text-red-500 shadow-red-100 shadow-xl'
                   }`}>
                   <Store size={28} />
                 </div>
@@ -165,25 +153,25 @@ export const AdminSettings = () => {
 
               {/* 프리미엄 토글 스위치 */}
               <button
-                onClick={() => handleUpdate({ is_open: !settings.is_open })}
+                onClick={() => handleUpdate({ is_open: !localSettings.is_open })}
                 disabled={saving}
-                className={`relative w-24 h-12 rounded-full transition-all duration-500 p-1.5 focus:outline-none focus:ring-4 focus:ring-black/5 ${settings.is_open ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gray-200 shadow-inner'
+                className={`relative w-24 h-12 rounded-full transition-all duration-500 p-1.5 focus:outline-none focus:ring-4 focus:ring-black/5 ${localSettings.is_open ? 'bg-emerald-500 shadow-lg shadow-emerald-500/30' : 'bg-gray-200 shadow-inner'
                   }`}
               >
-                <div className={`w-9 h-9 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${settings.is_open ? 'translate-x-12' : 'translate-x-0'
+                <div className={`w-9 h-9 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.is_open ? 'translate-x-12' : 'translate-x-0'
                   }`}>
-                  <Power size={18} className={settings.is_open ? 'text-emerald-500' : 'text-gray-300'} />
+                  <Power size={18} className={localSettings.is_open ? 'text-emerald-500' : 'text-gray-300'} />
                 </div>
               </button>
             </div>
 
-            <div className={`mt-6 p-4 rounded-2xl flex items-center gap-3 border transition-all duration-500 ${settings.is_open
+            <div className={`mt-6 p-4 rounded-2xl flex items-center gap-3 border transition-all duration-500 ${localSettings.is_open
               ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
               : 'bg-red-50 border-red-100 text-red-700'
               }`}>
-              <div className={`w-2 h-2 rounded-full animate-pulse ${settings.is_open ? 'bg-emerald-500' : 'bg-red-500'}`} />
+              <div className={`w-2 h-2 rounded-full animate-pulse ${localSettings.is_open ? 'bg-emerald-500' : 'bg-red-500'}`} />
               <span className="text-[13px] font-black uppercase tracking-widest">
-                현재 상태: {settings.is_open ? '영업 중 (주문 가능)' : '영업 종료 (안내 화면 표시)'}
+                현재 상태: {localSettings.is_open ? '영업 중 (주문 가능)' : '영업 종료 (안내 화면 표시)'}
               </span>
             </div>
           </section>
@@ -203,8 +191,8 @@ export const AdminSettings = () => {
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">은행명</label>
                   <input
                     type="text"
-                    value={settings.bank_name || ''}
-                    onChange={(e) => setSettings({ ...settings, bank_name: e.target.value })}
+                    value={localSettings.bank_name || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, bank_name: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
                     className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예: 카카오뱅크"
@@ -214,8 +202,8 @@ export const AdminSettings = () => {
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">계좌번호</label>
                   <input
                     type="text"
-                    value={settings.account_number || ''}
-                    onChange={(e) => setSettings({ ...settings, account_number: e.target.value })}
+                    value={localSettings.account_number || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, account_number: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
                     className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="하이픈(-) 포함 입력"
@@ -225,8 +213,8 @@ export const AdminSettings = () => {
                   <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">예금주</label>
                   <input
                     type="text"
-                    value={settings.account_holder || ''}
-                    onChange={(e) => setSettings({ ...settings, account_holder: e.target.value })}
+                    value={localSettings.account_holder || ''}
+                    onChange={(e) => setLocalSettings({ ...localSettings, account_holder: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
                     className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예금주 명칭"
@@ -238,9 +226,9 @@ export const AdminSettings = () => {
                       return toast.error('계좌 정보 수정 권한이 없습니다.');
                     }
                     handleUpdate({
-                      bank_name: settings.bank_name,
-                      account_number: settings.account_number,
-                      account_holder: settings.account_holder
+                      bank_name: localSettings.bank_name,
+                      account_number: localSettings.account_number,
+                      account_holder: localSettings.account_holder
                     });
                   }}
                   disabled={saving || currentAdmin?.role !== 'MASTER'}
@@ -263,36 +251,36 @@ export const AdminSettings = () => {
 
                 <div className="relative flex items-center justify-between mb-6">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${settings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${localSettings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
                       }`}>
                       <Smartphone size={18} />
                     </div>
                     <div>
                       <h2 className="text-[16px] font-black text-gray-900 leading-tight">전화번호 설정</h2>
-                      <p className="text-[11px] font-bold text-gray-400">주문시 전화번호 필수 여부 조절</p>
+                      <p className="text-[11px] font-bold text-gray-400">주문시 전화번호 필수입력 여부 조절</p>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => handleUpdate({ require_phone: !settings.require_phone })}
+                    onClick={() => handleUpdate({ require_phone: !localSettings.require_phone })}
                     disabled={saving}
-                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${settings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${localSettings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
                       }`}
                   >
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${settings.require_phone ? 'translate-x-8' : 'translate-x-0'
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.require_phone ? 'translate-x-8' : 'translate-x-0'
                       }`}>
-                      <Smartphone size={12} className={settings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
+                      <Smartphone size={12} className={localSettings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
                     </div>
                   </button>
                 </div>
 
-                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${settings.require_phone
+                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${localSettings.require_phone
                   ? 'bg-blue-50 border-blue-100 text-blue-700'
                   : 'bg-gray-50 border-gray-100 text-gray-500'
                   }`}>
                   <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 설정</span>
                   <span className="text-[13px] font-black">
-                    {settings.require_phone ? '필수 입력' : '입력 생략'}
+                    {localSettings.require_phone ? '필수 입력' : '입력 생략'}
                   </span>
                 </div>
               </section>
@@ -455,7 +443,8 @@ export const AdminSettings = () => {
                 </div>
                 <button
                   onClick={async () => {
-                    const currentPwd = (document.getElementById('current_password') as HTMLInputElement).value;
+                    const currentPwdInput = document.getElementById('current_password') as HTMLInputElement;
+                    const currentPwd = currentPwdInput?.value;
 
                     if (!currentPwd || !newPassword || !confirmPassword) {
                       return toast.error('모든 필드를 입력해 주세요.');
@@ -469,7 +458,7 @@ export const AdminSettings = () => {
                       const res = await apiClient.patch<StandardResponse<null>, StandardResponse<null>>('/admin/me/password', { current_password: currentPwd, new_password: newPassword });
                       if (res.success) {
                         toast.success('비밀번호가 안전하게 변경되었습니다.');
-                        (document.getElementById('current_password') as HTMLInputElement).value = '';
+                        if (currentPwdInput) currentPwdInput.value = '';
                         setNewPassword('');
                         setConfirmPassword('');
                       }
@@ -615,7 +604,7 @@ export const AdminSettings = () => {
                           setAccLoginId('');
                           setAccPassword('');
                           setAccConfirmPassword('');
-                          fetchAdmins(); // 신규 추가 후 목록 갱신
+                          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.admins });
                         }
                       } catch (err: any) {
                         console.error('계정 생성 실패:', err);
@@ -737,4 +726,3 @@ export const AdminSettings = () => {
     </div>
   );
 };
-

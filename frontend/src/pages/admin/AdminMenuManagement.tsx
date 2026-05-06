@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { Search, Plus, Pencil, X, Check, Trash2, Image as ImageIcon, GripVertical, EyeOff } from 'lucide-react';
+import { Skeleton } from '../../components/ui/Skeleton';
 import {
   DndContext,
   closestCenter,
@@ -117,7 +120,22 @@ const SortableCategoryItem = ({
   );
 };
 
-// 드래그 가능한 메뉴 카드 컴포넌트
+// 메뉴 카드 스켈레톤
+const MenuCardSkeleton = () => (
+  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <Skeleton className="aspect-video w-full rounded-none" />
+    <div className="p-4 space-y-3">
+      <div className="flex justify-between">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-8 w-8 rounded-xl" />
+      </div>
+      <Skeleton className="h-4 w-16" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-10 w-full rounded-xl" />
+      <Skeleton className="h-10 w-full rounded-xl" />
+    </div>
+  </div>
+);
 const SortableMenuCard = ({
   menu,
   onDelete,
@@ -233,10 +251,64 @@ const SortableMenuCard = ({
 };
 
 export const AdminMenuManagement = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const queryClient = useQueryClient();
   const [activeCategory, setActiveCategory] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+
+  // [React Query] 카테고리 및 메뉴 조회
+  const { data: categories = [], isLoading: loading } = useQuery({
+    queryKey: QK.categories.all,
+    queryFn: async () => {
+      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/admin/categories');
+      return (res.success && res.data) ? res.data : [];
+    },
+  });
+
+  // [React Query] Mutations
+  const categoryReorderMutation = useMutation({
+    mutationFn: (categoryIds: number[]) => apiClient.patch('/admin/categories/reorder', { category_ids: categoryIds }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
+  });
+
+  const menuReorderMutation = useMutation({
+    mutationFn: (menuIds: number[]) => apiClient.patch('/admin/menus/reorder', { menu_ids: menuIds }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
+  });
+
+  const saveMenuMutation = useMutation({
+    mutationFn: async ({ editingMenu, payload }: { editingMenu: AdminMenu | null; payload: any }) => {
+      if (editingMenu) return apiClient.patch(`/admin/menus/${editingMenu.id}`, payload);
+      return apiClient.post('/admin/menus', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.menus });
+      setIsMenuModalOpen(false);
+    },
+  });
+
+  const deleteMenuMutation = useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/admin/menus/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
+  });
+
+  const toggleAvailabilityMutation = useMutation({
+    mutationFn: ({ id, isAvailable }: { id: number; isAvailable: boolean }) =>
+      apiClient.patch(`/admin/menus/${id}`, { is_available: isAvailable }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.menus });
+    },
+  });
+
+  const categoryMutation = useMutation({
+    mutationFn: async ({ id, payload, action }: { id?: number; payload?: any; action: 'patch' | 'post' | 'delete' }) => {
+      if (action === 'patch') return apiClient.patch(`/admin/categories/${id}`, payload);
+      if (action === 'delete') return apiClient.delete(`/admin/categories/${id}`);
+      return apiClient.post('/admin/categories', payload);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
+  });
 
   // 모달 상태
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
@@ -247,7 +319,7 @@ export const AdminMenuManagement = () => {
   const [editForm, setEditForm] = useState<EditForm>({
     name: '', price: '', description: '', category_id: 0, image_url: '', options: []
   });
-  const [savingId, setSavingId] = useState<number | 'new' | null>(null);
+  const [savingId] = useState<number | 'new' | null>(null);
 
   // 토스트 알림 상태
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -291,21 +363,8 @@ export const AdminMenuManagement = () => {
     if (over && active.id !== over.id) {
       const oldIndex = categories.findIndex((c) => c.id === active.id);
       const newIndex = categories.findIndex((c) => c.id === over.id);
-
       const newOrder = arrayMove(categories, oldIndex, newIndex);
-
-      // 즉시 UI 반영 (Optimistic Update)
-      setCategories(newOrder);
-
-      // 서버 전송
-      try {
-        await apiClient.patch('/admin/categories/reorder', {
-          category_ids: newOrder.map(c => c.id)
-        });
-      } catch (err) {
-        console.error('순서 변경 실패:', err);
-        fetchMenus(); // 실패 시 원복
-      }
+      categoryReorderMutation.mutate(newOrder.map(c => c.id));
     }
   };
 
@@ -314,42 +373,18 @@ export const AdminMenuManagement = () => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    // 현재 표시 중인 메뉴 리스트에서 위치 변경
     const oldIndex = displayedMenus.findIndex(m => m.id === active.id);
     const newIndex = displayedMenus.findIndex(m => m.id === over.id);
-
     const newOrder = arrayMove(displayedMenus, oldIndex, newIndex);
 
-    // UI 즉시 업데이트를 위해 categories 상태 구조에 맞게 반영
-    if (typeof activeCategory === 'number') {
-      setCategories(prev => prev.map(cat =>
-        cat.id === activeCategory ? { ...cat, menus: newOrder } : cat
-      ));
-    }
-
-    try {
-      await apiClient.patch('/admin/menus/reorder', {
-        menu_ids: newOrder.map(m => m.id)
-      });
-    } catch (err) {
-      console.error('메뉴 순서 변경 실패:', err);
-      fetchMenus();
-    }
+    menuReorderMutation.mutate(newOrder.map(m => m.id));
   };
 
 
-  const fetchMenus = useCallback(async () => {
-    try {
-      const res = await apiClient.get<Category[], StandardResponse<Category[]>>('/admin/categories');
-      if (res.success && res.data) {
-        setCategories(res.data);
-      }
-    } catch (err) {
-      console.error('메뉴 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchMenus = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
+    queryClient.invalidateQueries({ queryKey: QK_DOMAIN.menus });
+  }, [queryClient]);
 
   // WebSocket 연결 함수 (지수 백오프 및 폴링 폴백 포함)
   const connectWebSocket = useCallback(() => {
@@ -412,7 +447,6 @@ export const AdminMenuManagement = () => {
 
   useEffect(() => {
     isUnmountingRef.current = false;
-    fetchMenus();
     connectWebSocket();
 
     const handleVisibilityChange = () => {
@@ -433,7 +467,7 @@ export const AdminMenuManagement = () => {
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
-  }, [fetchMenus, connectWebSocket]);
+  }, [connectWebSocket]);
 
   const allMenus: AdminMenu[] = categories.flatMap(c =>
     c.menus.map(m => ({ ...m, categoryName: c.name, categoryId: c.id }))
@@ -502,61 +536,35 @@ export const AdminMenuManagement = () => {
       return;
     }
 
-    setSavingId(editingMenu ? editingMenu.id : 'new');
-    try {
-      const payload = {
-        name: editForm.name,
-        price: Number(editForm.price),
-        description: editForm.description || null,
-        category_id: editForm.category_id,
-        image_url: editForm.image_url || null,
-        options: editForm.options.filter(o => o.name.trim() !== '')
-      };
+    const payload = {
+      name: editForm.name,
+      price: Number(editForm.price),
+      description: editForm.description || null,
+      category_id: editForm.category_id,
+      image_url: editForm.image_url || null,
+      options: editForm.options.filter(o => o.name.trim() !== '')
+    };
 
-      if (editingMenu) {
-        await apiClient.patch(`/admin/menus/${editingMenu.id}`, payload);
-      } else {
-        await apiClient.post('/admin/menus', payload);
-      }
-
-      await fetchMenus();
-      setIsMenuModalOpen(false);
-    } catch (err) {
-      console.error('메뉴 저장 실패:', err);
-      alert('저장에 실패했습니다.');
-    } finally {
-      setSavingId(null);
-    }
+    saveMenuMutation.mutate({ editingMenu, payload });
   };
 
   // 메뉴 삭제
   const handleDeleteMenu = async (id: number) => {
     if (!confirm('정말로 이 메뉴를 삭제하시겠습니까? 관련 데이터가 모두 삭제됩니다.')) return;
-
-    setSavingId(id);
-    try {
-      await apiClient.delete(`/admin/menus/${id}`);
-      await fetchMenus();
-    } catch {
-      alert('삭제에 실패했습니다.');
-    } finally {
-      setSavingId(null);
-    }
+    deleteMenuMutation.mutate(id);
   };
 
   // 판매 상태 토글
   const handleToggleAvailability = async (menu: AdminMenu) => {
-    setSavingId(menu.id);
     const newStatus = !menu.is_available;
-    try {
-      await apiClient.patch(`/admin/menus/${menu.id}`, { is_available: newStatus });
-      await fetchMenus();
-      showToast(`'${menu.name}' 메뉴가 ${newStatus ? '판매 중' : '품절'} 상태로 변경되었습니다.`, 'info');
-    } catch {
-      alert('상태 변경에 실패했습니다.');
-    } finally {
-      setSavingId(null);
-    }
+    toggleAvailabilityMutation.mutate(
+      { id: menu.id, isAvailable: newStatus },
+      {
+        onSuccess: () => {
+          showToast(`'${menu.name}' 메뉴가 ${newStatus ? '판매 중' : '품절'} 상태로 변경되었습니다.`, 'info');
+        }
+      }
+    );
   };
 
   // 노출 상태 토글
@@ -664,8 +672,8 @@ export const AdminMenuManagement = () => {
       {/* 메뉴 그리드 */}
       <div className="flex-1 overflow-y-auto p-6">
         {loading ? (
-          <div className="flex justify-center items-center h-40">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-6">
+            {Array.from({ length: 10 }).map((_, i) => <MenuCardSkeleton key={i} />)}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-6">
@@ -871,10 +879,10 @@ export const AdminMenuManagement = () => {
               </div>
               <button
                 onClick={handleSaveMenu}
-                disabled={savingId !== null}
+                disabled={saveMenuMutation.isPending}
                 className="flex-[2] py-3.5 text-[14px] font-bold text-white bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                {savingId !== null ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={18} />}
+                {saveMenuMutation.isPending ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Check size={18} />}
                 {editingMenu ? '정보 수정하기' : '새 메뉴 등록하기'}
               </button>
             </div>
@@ -913,30 +921,21 @@ export const AdminMenuManagement = () => {
                         index={idx}
                         onRename={async (id, name) => {
                           if (name === cat.name) return;
-                          await apiClient.patch(`/admin/categories/${id}`, { name });
-                          fetchMenus();
+                          categoryMutation.mutate({ id, payload: { name }, action: 'patch' });
                         }}
                         onDelete={async (id) => {
                           if (!confirm('카테고리를 삭제하시겠습니까? (메뉴가 있으면 삭제 불가)')) return;
-                          try {
-                            await apiClient.delete(`/admin/categories/${id}`);
-                            fetchMenus();
-                          } catch (err: any) {
-                            alert(err.response?.data?.detail || '삭제 실패');
-                          }
+                          categoryMutation.mutate({ id, action: 'delete' }, {
+                            onError: (err: any) => alert(err.response?.data?.detail || '삭제 실패')
+                          });
                         }}
                         onToggleActive={async (id, currentStatus) => {
-                          try {
-                            const cat = categories.find(c => c.id === id);
-                            const newStatus = !currentStatus;
-                            await apiClient.patch(`/admin/categories/${id}`, { is_active: newStatus });
-                            fetchMenus();
-                            if (cat) {
+                          const newStatus = !currentStatus;
+                          categoryMutation.mutate({ id, payload: { is_active: newStatus }, action: 'patch' }, {
+                            onSuccess: () => {
                               showToast(`'${cat.name}' 카테고리가 ${newStatus ? '노출' : '숨김'} 상태로 변경되었습니다.`, 'success');
                             }
-                          } catch {
-                            alert('상태 변경 실패');
-                          }
+                          });
                         }}
                       />
                     ))}
@@ -957,9 +956,9 @@ export const AdminMenuManagement = () => {
                   onClick={async () => {
                     const input = document.getElementById('new-category-input') as HTMLInputElement;
                     if (!input.value) return;
-                    await apiClient.post('/admin/categories', { name: input.value, display_order: categories.length });
-                    input.value = '';
-                    fetchMenus();
+                    categoryMutation.mutate({ payload: { name: input.value, display_order: categories.length }, action: 'post' }, {
+                      onSuccess: () => { input.value = ''; }
+                    });
                   }}
                   className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
                 >추가</button>

@@ -6,7 +6,8 @@ import {
   Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone, Package
 } from 'lucide-react';
 import { getWsUrl } from '../../utils/url';
-
+import { useQuery } from '@tanstack/react-query';
+import { QK } from '../../api/queryKeys';
 import { apiClient } from '../../api/client';
 import type { AdminInfo, StandardResponse } from '../../types';
 
@@ -25,23 +26,14 @@ const navItems = [
 export const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
-
-  // 관리자 정보 가져오기
-  const fetchAdminInfo = useCallback(async () => {
-    try {
+  // [React Query] 관리자 정보 가져오기
+  const { data: adminInfo } = useQuery({
+    queryKey: QK.auth.me,
+    queryFn: async () => {
       const res = await apiClient.get<StandardResponse<AdminInfo>, StandardResponse<AdminInfo>>('/admin/me');
-      if (res.success) {
-        setAdminInfo(res.data);
-      }
-    } catch (err) {
-      console.error('관리자 정보를 가져오는데 실패했습니다:', err);
+      return res.success ? res.data : null;
     }
-  }, []);
-
-  useEffect(() => {
-    fetchAdminInfo();
-  }, [fetchAdminInfo]);
+  });
 
   const handleLogout = () => {
     toast((t) => (

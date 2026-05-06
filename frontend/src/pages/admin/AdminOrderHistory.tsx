@@ -1,7 +1,10 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
+import { QK, type OrderHistoryFilters } from '../../api/queryKeys';
+import { Skeleton } from '../../components/ui/Skeleton';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
@@ -54,13 +57,21 @@ const formatPhone = (phone: string | null) => {
   return phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3');
 };
 
+// 테이블 로우 스켈레톤
+const TableRowSkeleton = () => (
+  <tr className="border-b border-gray-50">
+    <td className="py-5 pl-4"><Skeleton className="h-5 w-10" /></td>
+    <td className="py-5"><div className="space-y-1"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-10" /></div></td>
+    <td className="py-5"><div className="space-y-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-32" /></div></td>
+    <td className="py-5"><Skeleton className="h-5 w-20" /></td>
+    <td className="py-5 hidden md:table-cell"><Skeleton className="h-5 w-12" /></td>
+    <td className="py-5"><Skeleton className="h-6 w-16" /></td>
+    <td className="py-5 pr-4 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+  </tr>
+);
 export const AdminOrderHistory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialOrderId = searchParams.get('order_id');
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -69,8 +80,8 @@ export const AdminOrderHistory = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 필터 상태
-  const [statusFilter, setStatusFilter] = useState('');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<OrderHistoryFilters['status'] | ''>('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<OrderHistoryFilters['payment_method'] | ''>('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -109,41 +120,44 @@ export const AdminOrderHistory = () => {
     }
   ]);
 
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
-    try {
-      const sDate = dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : '';
-      const eDate = dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : '';
+  // [React Query] 주문 내역 조회
+  // filterParams를 OrderHistoryFilters 타입에 맞게 구성
+  const filterParams: OrderHistoryFilters = {
+    status: statusFilter || undefined,
+    payment_method: paymentMethodFilter || undefined,
+    search: focusedOrderId || searchQuery || undefined,
+    start_date: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : undefined,
+    end_date: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : undefined,
+  };
 
-      let url = `/admin/orders/history?page=${page}&limit=${limit}`;
-      if (statusFilter) url += `&status=${statusFilter}`;
-      if (paymentMethodFilter) url += `&payment_method=${paymentMethodFilter}`;
-
-      // 특정 주문 ID로 조회 중일 때는 날짜 필터 무시
-      if (focusedOrderId) {
-        url += `&search=${focusedOrderId}`;
+  const { data: historyData, isLoading: loading } = useQuery({
+    queryKey: QK.orders.history(page, filterParams),
+    queryFn: async ({ queryKey }) => {
+      // QK.orders.history 구조: ['orders', 'history', page, filters]
+      const [,, currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
+      
+      let url = `/admin/orders/history?page=${currentPage}&limit=${limit}`;
+      if (filters.status) url += `&status=${filters.status}`;
+      if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
+      
+      // 검색어 처리: focusedOrderId가 있으면 그것만, 없으면 일반 검색어
+      if (filters.search) {
+        url += `&search=${encodeURIComponent(filters.search)}`;
       } else {
-        if (sDate) url += `&start_date=${sDate}`;
-        if (eDate) url += `&end_date=${eDate}`;
-        if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+        if (filters.start_date) url += `&start_date=${filters.start_date}`;
+        if (filters.end_date) url += `&end_date=${filters.end_date}`;
       }
 
       const res = await apiClient.get<OrderListResponse, StandardResponse<OrderListResponse>>(url);
-      if (res.success && res.data) {
-        setOrders(res.data.items);
-        setTotalCount(res.data.total_count);
-        setTotalPages(res.data.total_pages);
-      }
-    } catch (err) {
-      console.error('히스토리 조회 실패:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [page, limit, dateRange, statusFilter, paymentMethodFilter, searchQuery, focusedOrderId]);
+      return (res.success && res.data) ? res.data : null;
+    },
+    staleTime: 1000 * 60, // 1분 캐시
+    placeholderData: (prev) => prev, 
+  });
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const orders = historyData?.items ?? [];
+  const totalCount = historyData?.total_count ?? 0;
+  const totalPages = historyData?.total_pages ?? 0;
 
   // 날짜 선택기 외부 클릭 시 닫기
   useEffect(() => {
@@ -286,7 +300,7 @@ export const AdminOrderHistory = () => {
                       닫기
                     </button>
                     <button
-                      onClick={() => { setShowDatePicker(false); fetchHistory(); }}
+                      onClick={() => { setShowDatePicker(false); }}
                       className="px-4 py-2 text-[12px] font-bold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors"
                     >
                       적용하기
@@ -302,7 +316,7 @@ export const AdminOrderHistory = () => {
             <Filter size={15} className="text-gray-400 ml-1" />
             <select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              onChange={(e) => { setStatusFilter(e.target.value as OrderHistoryFilters['status'] | ''); setPage(1); }}
               className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 pr-2 cursor-pointer"
             >
               <option value="">전체 상태</option>
@@ -352,14 +366,9 @@ export const AdminOrderHistory = () => {
           </thead>
           <tbody className="divide-y divide-gray-50">
             {loading ? (
-              <tr>
-                <td colSpan={6} className="py-32 text-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                    <p className="text-sm text-gray-400 font-medium">데이터를 불러오는 중...</p>
-                  </div>
-                </td>
-              </tr>
+              Array.from({ length: 10 }).map((_, i) => (
+                <TableRowSkeleton key={i} />
+              ))
             ) : orders.length === 0 ? (
               <tr>
                 <td colSpan={6} className="py-32 text-center">
