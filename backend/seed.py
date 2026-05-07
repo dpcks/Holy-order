@@ -22,6 +22,7 @@ def create_admin_if_not_exists(db):
             is_active=True
         )
         db.add(new_admin)
+        db.commit()  # 변경사항 저장 추가
         print("✅ 초기 관리자 계정(master/ptcc0691!)이 생성되었습니다.")
     else:
         print("ℹ️ 초기 관리자 계정이 이미 존재합니다.")
@@ -37,6 +38,7 @@ def create_settings_if_not_exists(db):
             account_holder="평택중앙교회"
         )
         db.add(setting)
+        db.commit()  # 변경사항 저장 추가
         print("✅ 기본 시스템 설정이 생성되었습니다.")
 
 def seed_test_data(db):
