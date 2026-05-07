@@ -11,18 +11,18 @@ import models
 import auth
 
 def create_admin_if_not_exists(db):
-    """기본 관리자 계정(admin/1234) 생성"""
-    admin = db.query(models.Admin).filter(models.Admin.login_id == "admin").first()
+    """기본 관리자 계정(master/ptcc0691!) 생성"""
+    admin = db.query(models.Admin).filter(models.Admin.login_id == "master").first()
     if not admin:
         new_admin = models.Admin(
-            login_id="admin",
-            password_hash=auth.hash_password("1234"),
-            name="최고관리자",
+            login_id="master",
+            password_hash=auth.hash_password("ptcc0691!"),
+            name="이쁜현아",
             role="MASTER",
             is_active=True
         )
         db.add(new_admin)
-        print("✅ 초기 관리자 계정(admin/1234)이 생성되었습니다.")
+        print("✅ 초기 관리자 계정(master/ptcc0691!)이 생성되었습니다.")
     else:
         print("ℹ️ 초기 관리자 계정이 이미 존재합니다.")
 
