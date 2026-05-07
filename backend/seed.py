@@ -92,7 +92,7 @@ def seed_test_data(db):
     print("✅ 메뉴 및 주문 테스트 데이터 세팅 완료!")
 
 def clear_test_data(db):
-    """관리자 계정과 설정을 제외한 모든 데이터 삭제"""
+    """관리자 계정, 설정, 봉사자 정보를 제외한 운영 데이터 삭제"""
     print("⏳ 테스트 데이터를 싹 지웁니다...")
     try:
         # 외래키 무결성을 위해 순서대로 삭제
@@ -102,10 +102,8 @@ def clear_test_data(db):
         db.query(models.MenuOption).delete()
         db.query(models.Menu).delete()
         db.query(models.Category).delete()
-        db.query(models.VolunteerSchedule).delete()
-        db.query(models.Volunteer).delete()
         db.commit()
-        print("✅ 테스트 데이터가 깔끔하게 삭제되었습니다. (관리자 계정은 유지됨)")
+        print("✅ 운영 데이터가 깔끔하게 삭제되었습니다. (관리자 및 봉사자 데이터는 유지됨)")
     except Exception as e:
         db.rollback()
         print(f"❌ 데이터 삭제 중 오류 발생: {e}")
