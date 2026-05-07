@@ -22,6 +22,7 @@ def create_admin_if_not_exists(db):
             is_active=True
         )
         db.add(new_admin)
+        db.commit()  # 변경사항 저장 추가
         print("✅ 초기 관리자 계정(master/ptcc0691!)이 생성되었습니다.")
     else:
         print("ℹ️ 초기 관리자 계정이 이미 존재합니다.")
@@ -37,6 +38,7 @@ def create_settings_if_not_exists(db):
             account_holder="평택중앙교회"
         )
         db.add(setting)
+        db.commit()  # 변경사항 저장 추가
         print("✅ 기본 시스템 설정이 생성되었습니다.")
 
 def seed_test_data(db):
@@ -92,7 +94,7 @@ def seed_test_data(db):
     print("✅ 메뉴 및 주문 테스트 데이터 세팅 완료!")
 
 def clear_test_data(db):
-    """관리자 계정, 설정, 봉사자 정보를 제외한 운영 데이터 삭제"""
+    """설정, 봉사자 정보를 제외한 모든 데이터(관리자 포함) 삭제"""
     print("⏳ 테스트 데이터를 싹 지웁니다...")
     try:
         # 외래키 무결성을 위해 순서대로 삭제
@@ -102,8 +104,9 @@ def clear_test_data(db):
         db.query(models.MenuOption).delete()
         db.query(models.Menu).delete()
         db.query(models.Category).delete()
+        db.query(models.Admin).delete()  # 기존 관리자 계정 삭제 추가
         db.commit()
-        print("✅ 운영 데이터가 깔끔하게 삭제되었습니다. (관리자 및 봉사자 데이터는 유지됨)")
+        print("✅ 운영 데이터 및 관리자 계정이 삭제되었습니다. (봉사자 데이터는 유지됨)")
     except Exception as e:
         db.rollback()
         print(f"❌ 데이터 삭제 중 오류 발생: {e}")
