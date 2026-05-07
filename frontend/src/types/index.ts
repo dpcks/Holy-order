@@ -60,6 +60,7 @@ export interface Category {
 export interface OrderItem {
   id: number;
   menu_name_snapshot: string;
+  menu_image_url_snapshot?: string;
   quantity: number;
   options_text: string | null;
   sub_total: number;
