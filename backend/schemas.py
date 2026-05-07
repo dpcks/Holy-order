@@ -132,6 +132,7 @@ class PaymentLogListResponse(BaseModel):
 class OrderItemResponse(BaseModel):
     id: int
     menu_name_snapshot: str
+    menu_image_url_snapshot: Optional[str] = None
     quantity: int
     options_text: Optional[str]
     sub_total: int

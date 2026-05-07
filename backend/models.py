@@ -110,6 +110,7 @@ class OrderItem(Base):
     menu_id = Column(Integer, ForeignKey("menus.id"))
     menu_name_snapshot = Column(String) # 이름 변경 대비
     menu_price_snapshot = Column(Integer) # 단가 변경 대비
+    menu_image_url_snapshot = Column(String, nullable=True) # 이미지 변경 대비 추가
     quantity = Column(Integer, default=1)
     options_text = Column(String, nullable=True) # 예: "ICE, 샷 추가 1"
     sub_total = Column(Integer)

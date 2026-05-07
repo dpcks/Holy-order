@@ -63,6 +63,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
             "menu_id": item.menu_id,
             "menu_name_snapshot": menu.name,
             "menu_price_snapshot": menu.price,
+            "menu_image_url_snapshot": menu.image_url,
             "quantity": item.quantity,
             "options_text": item.options_text,
             "sub_total": item_total  # 이벤트 모드라도 프론트에서 넘어온 원래 금액을 저장

@@ -555,7 +555,19 @@ export const OrderStatus = () => {
           </h4>
           {order?.items?.map((item, idx) => (
             <div key={idx} className="flex gap-4 items-center mb-4 last:mb-0">
-              <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100"><img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=100&q=80" alt="coffee" className="w-full h-full object-cover" /></div>
+              <div className="w-14 h-14 rounded-2xl overflow-hidden bg-gray-50 shrink-0 border border-gray-100">
+                {item.menu_image_url_snapshot ? (
+                  <img 
+                    src={item.menu_image_url_snapshot} 
+                    alt={item.menu_name_snapshot} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-50 text-gray-300">
+                    <Coffee size={24} />
+                  </div>
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <h5 className="font-black text-[#1A0A0A] text-[15px] truncate mb-0.5">{item.menu_name_snapshot}</h5>
                 <p className="text-gray-400 text-[12px] font-bold">수량 {item.quantity}개 {item.options_text ? `· ${item.options_text}` : ''}</p>
