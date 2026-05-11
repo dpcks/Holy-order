@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
+import toast from 'react-hot-toast';
 import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
 
 export const OrderStatus = () => {
@@ -70,9 +71,13 @@ export const OrderStatus = () => {
 
   const loading = loadingOrder;
 
-  // 주문 상태 완료(COMPLETED) 시 자동 관리 로직
+  // 주문 상태 완료(COMPLETED) 또는 취소(CANCELLED) 시 자동 관리 로직
   useEffect(() => {
-    if (order?.status === 'COMPLETED' && id) {
+    if ((order?.status === 'COMPLETED' || order?.status === 'CANCELLED') && id) {
+      if (order.status === 'CANCELLED') {
+        toast.error('관리자에 의해 주문이 취소되었습니다.');
+      }
+      
       const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
       const filteredOrders = orders.filter((o: ActiveOrder) => String(o.id) !== String(id));
       localStorage.setItem('activeOrders', JSON.stringify(filteredOrders));
@@ -80,7 +85,7 @@ export const OrderStatus = () => {
       setActiveOrders(filteredOrders);
 
       if (filteredOrders.length > 0) {
-        console.log('🔄 [Auto-Nav] 주문 완료. 다음 활성 주문으로 이동합니다.');
+        console.log(`🔄 [Auto-Nav] 주문 ${order.status}. 다음 활성 주문으로 이동합니다.`);
         navigate(`/order/status/${filteredOrders[0].id}`, { replace: true });
       } else {
         navigate('/', { replace: true });

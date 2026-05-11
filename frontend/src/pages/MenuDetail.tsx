@@ -42,9 +42,15 @@ export const MenuDetail = () => {
     o => !TEMP_OPTION_NAMES.includes(o.name) && !CUP_OPTION_NAMES.includes(o.name)
   );
 
-  // 선택된 옵션 상태 (단일 선택)
+  const sortedTempOptions = [...tempOptions].sort((a, b) => {
+    if (a.name === 'ICE') return -1;
+    if (b.name === 'ICE') return 1;
+    return 0;
+  });
+
+  // 선택된 옵션 상태 (단일 선택) - ICE가 있으면 기본값으로 설정
   const [selectedTemp, setSelectedTemp] = useState<MenuOption | null>(
-    tempOptions.length > 0 ? tempOptions[0] : null
+    tempOptions.find(o => o.name === 'ICE') || (tempOptions.length > 0 ? tempOptions[0] : null)
   );
   const [selectedCup, setSelectedCup] = useState<MenuOption | null>(
     cupOptions.find(o => o.name === '일회용컵') || (cupOptions.length > 0 ? cupOptions[0] : null)
@@ -136,7 +142,16 @@ export const MenuDetail = () => {
         <div className="px-4 py-4">
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-[#0F0A0A]">
             {menu.image_url ? (
-              <img src={menu.image_url} alt={menu.name} className="w-full h-full object-cover" />
+              <img 
+                src={menu.image_url} 
+                alt={menu.name} 
+                className="w-full h-full object-cover" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80";
+                  e.currentTarget.classList.add('opacity-70');
+                }}
+              />
             ) : (
               <img
                 src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80"
@@ -165,17 +180,19 @@ export const MenuDetail = () => {
           {tempOptions.length > 0 && (
             <div className="flex flex-col gap-3">
               <h3 className="font-bold text-gray-900 text-[15px]">ICE&HOT</h3>
-              <div className="flex bg-[#F3F4F6] rounded-full p-1">
-                {tempOptions.map((opt) => {
+              <div className="flex bg-[#F3F4F6] rounded-full p-1 border border-gray-100 shadow-inner">
+                {sortedTempOptions.map((opt) => {
                   const isSelected = selectedTemp?.id === opt.id;
                   const isIce = opt.name === 'ICE';
                   return (
                     <button
                       key={opt.id}
                       onClick={() => setSelectedTemp(opt)}
-                      className={`flex-1 py-3 text-sm font-bold rounded-full transition-all ${isSelected
-                        ? `bg-white shadow-sm ${isIce ? 'text-blue-500' : 'text-orange-500'}`
-                        : 'text-gray-400 hover:text-gray-600'
+                      className={`flex-1 py-3 text-[15px] font-black rounded-full transition-all duration-300 tracking-wider ${isSelected
+                        ? isIce
+                          ? 'bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] scale-[1.02]'
+                          : 'bg-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)] scale-[1.02]'
+                        : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200/50'
                         }`}
                     >
                       {opt.name}

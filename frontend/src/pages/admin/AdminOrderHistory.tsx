@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare, Trash2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, type OrderHistoryFilters } from '../../api/queryKeys';
+import toast from 'react-hot-toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
@@ -67,11 +68,13 @@ const TableRowSkeleton = () => (
     <td className="py-5 hidden md:table-cell"><Skeleton className="h-5 w-12" /></td>
     <td className="py-5"><Skeleton className="h-6 w-16" /></td>
     <td className="py-5 pr-4 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+    <td className="py-5 pr-4"><Skeleton className="h-6 w-8" /></td>
   </tr>
 );
 export const AdminOrderHistory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialOrderId = searchParams.get('order_id');
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -134,12 +137,12 @@ export const AdminOrderHistory = () => {
     queryKey: QK.orders.history(page, filterParams),
     queryFn: async ({ queryKey }) => {
       // QK.orders.history 구조: ['orders', 'history', page, filters]
-      const [,, currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
-      
+      const [, , currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
+
       let url = `/admin/orders/history?page=${currentPage}&limit=${limit}`;
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
-      
+
       // 검색어 처리: focusedOrderId가 있으면 그것만, 없으면 일반 검색어
       if (filters.search) {
         url += `&search=${encodeURIComponent(filters.search)}`;
@@ -152,7 +155,7 @@ export const AdminOrderHistory = () => {
       return (res.success && res.data) ? res.data : null;
     },
     staleTime: 1000 * 60, // 1분 캐시
-    placeholderData: (prev) => prev, 
+    placeholderData: (prev) => prev,
   });
 
   const orders = historyData?.items ?? [];
@@ -194,6 +197,52 @@ export const AdminOrderHistory = () => {
   const handleCloseDetail = () => {
     setIsDetailModalOpen(false);
     setSelectedOrder(null);
+  };
+
+  const handleDeleteOrder = (e: React.MouseEvent, orderId: number) => {
+    e.stopPropagation(); // 모달 열림 방지
+
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[240px]">
+        <p className="text-[13px] font-bold text-gray-900 leading-snug">
+          주문 내역을 삭제하시겠습니까?<br />
+          <span className="text-[11px] text-gray-500 font-normal">관련 결제 내역 및 통계에서 제외됩니다.</span>
+        </p>
+        <div className="flex gap-2 justify-end mt-1">
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-[12px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            취소
+          </button>
+          <button
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                const res = await apiClient.delete<void, StandardResponse<null>>(`/admin/orders/${orderId}`);
+                if (res.success) {
+                  toast.success('주문 내역이 삭제되었습니다.');
+                  queryClient.invalidateQueries({ queryKey: ['orders'] });
+                  queryClient.invalidateQueries({ queryKey: ['stats'] });
+                } else {
+                  toast.error(res.message || '삭제에 실패했습니다.');
+                }
+              } catch (error) {
+                toast.error('삭제 중 오류가 발생했습니다.');
+                console.error(error);
+              }
+            }}
+            className="px-3 py-1.5 text-[12px] font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+          >
+            삭제 확인
+          </button>
+        </div>
+      </div>
+    ), {
+      duration: 5000,
+      position: 'top-center',
+      style: { padding: '16px', borderRadius: '16px' }
+    });
   };
 
   return (
@@ -362,6 +411,7 @@ export const AdminOrderHistory = () => {
               <th className="pb-4 hidden md:table-cell">결제수단</th>
               <th className="pb-4">상태</th>
               <th className="pb-4 pr-4 hidden lg:table-cell">시간</th>
+              <th className="pb-4 pr-4">삭제</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -371,7 +421,7 @@ export const AdminOrderHistory = () => {
               ))
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-32 text-center">
+                <td colSpan={8} className="py-32 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-300">
                     <Search size={48} strokeWidth={1} />
                     <p className="text-[15px] font-semibold mt-2">검색 결과가 없습니다.</p>
@@ -427,6 +477,15 @@ export const AdminOrderHistory = () => {
                         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
+                  </td>
+                  <td className="py-4 pr-4">
+                    <button
+                      onClick={(e) => handleDeleteOrder(e, order.id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="주문 내역 삭제"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))

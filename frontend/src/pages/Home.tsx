@@ -406,6 +406,11 @@ const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: M
             src={menu.image_url}
             alt={menu.name}
             className={`w-full h-full object-cover transition-transform duration-300 ${menu.is_available ? 'group-hover:scale-105' : 'grayscale'}`}
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80";
+              e.currentTarget.classList.add('opacity-80');
+            }}
           />
         ) : (
           <div className="w-full h-full bg-[#1A1818] flex items-center justify-center">
