@@ -85,3 +85,19 @@ def clear_database():
         return {"success": False, "message": f"오류 발생: {str(e)}"}
     finally:
         db.close()
+
+from sqlalchemy import text
+
+@app.get("/api/v1/dev/migrate")
+def migrate_database():
+    db = SessionLocal()
+    try:
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;"))
+        db.commit()
+        return {"success": True, "message": "데이터베이스 마이그레이션이 성공적으로 완료되었습니다."}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "message": f"오류 발생: {str(e)}"}
+    finally:
+        db.close()
