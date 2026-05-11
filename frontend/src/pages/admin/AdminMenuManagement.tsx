@@ -336,6 +336,26 @@ export const AdminMenuManagement = () => {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const optionsContainerRef = useRef<HTMLDivElement>(null);
+
+  const focusLastOption = () => {
+    setTimeout(() => {
+      if (optionsContainerRef.current) {
+        // 하단으로 스크롤
+        optionsContainerRef.current.scrollTo({
+          top: optionsContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+
+        // 마지막 옵션의 입력창 찾아서 포커스
+        const inputs = optionsContainerRef.current.querySelectorAll('input');
+        const lastInput = inputs[inputs.length - 2]; // 마지막에서 두번째 (하나는 이름, 하나는 가격이므로 이름 입력창 선택)
+        if (lastInput) {
+          (lastInput as HTMLInputElement).focus();
+        }
+      }
+    }, 100);
+  };
   const retryCountRef = useRef(0);
   const isUnmountingRef = useRef(false);
 
@@ -507,21 +527,13 @@ export const AdminMenuManagement = () => {
     setIsMenuModalOpen(true);
   };
 
+  // 옵션 추가/제거
   const handleAddOption = () => {
-    setEditForm(prev => {
-      const newIndex = prev.options.length;
-      setTimeout(() => {
-        const input = document.getElementById(`option-input-${newIndex}`);
-        if (input) {
-          input.focus();
-          input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, 50);
-      return {
-        ...prev,
-        options: [...prev.options, { name: '', extra_price: 0 }]
-      };
-    });
+    setEditForm(prev => ({
+      ...prev,
+      options: [...prev.options, { name: '', extra_price: 0 }]
+    }));
+    focusLastOption();
   };
 
   const handleRemoveOption = (index: number) => {
@@ -824,20 +836,11 @@ export const AdminMenuManagement = () => {
                       key={preset.name}
                       onClick={() => {
                         if (editForm.options.some(o => o.name === preset.name)) return;
-                        setEditForm(f => {
-                          const newIndex = f.options.length;
-                          setTimeout(() => {
-                            const input = document.getElementById(`option-input-${newIndex}`);
-                            if (input) {
-                              input.focus();
-                              input.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                            }
-                          }, 50);
-                          return {
-                            ...f,
-                            options: [...f.options, { name: preset.name, extra_price: preset.price }]
-                          };
-                        });
+                        setEditForm(f => ({
+                          ...f,
+                          options: [...f.options, { name: preset.name, extra_price: preset.price }]
+                        }));
+                        focusLastOption();
                       }}
                       className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[11px] font-bold text-gray-600 hover:border-primary hover:text-primary transition-all shadow-sm active:scale-95"
                     >
@@ -846,11 +849,13 @@ export const AdminMenuManagement = () => {
                   ))}
                 </div>
 
-                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
+                <div 
+                  ref={optionsContainerRef}
+                  className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar"
+                >
                   {editForm.options.map((opt, idx) => (
                     <div key={idx} className="flex gap-2 items-center bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm group animate-in zoom-in-95 duration-200">
                       <input
-                        id={`option-input-${idx}`}
                         placeholder="옵션명"
                         value={opt.name}
                         onChange={e => handleUpdateOption(idx, 'name', e.target.value)}
