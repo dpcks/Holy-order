@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Search, ChevronLeft, ChevronRight, Calendar, Filter, X, Building2, Wallet, MessageSquare, Trash2 } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, type OrderHistoryFilters } from '../../api/queryKeys';
+import toast from 'react-hot-toast';
 import { Skeleton } from '../../components/ui/Skeleton';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
@@ -67,11 +68,13 @@ const TableRowSkeleton = () => (
     <td className="py-5 hidden md:table-cell"><Skeleton className="h-5 w-12" /></td>
     <td className="py-5"><Skeleton className="h-6 w-16" /></td>
     <td className="py-5 pr-4 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
+    <td className="py-5 pr-4"><Skeleton className="h-6 w-8" /></td>
   </tr>
 );
 export const AdminOrderHistory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialOrderId = searchParams.get('order_id');
+  const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(20);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
@@ -194,6 +197,25 @@ export const AdminOrderHistory = () => {
   const handleCloseDetail = () => {
     setIsDetailModalOpen(false);
     setSelectedOrder(null);
+  };
+
+  const handleDeleteOrder = async (e: React.MouseEvent, orderId: number) => {
+    e.stopPropagation(); // 모달 열림 방지
+    if (!window.confirm('정말 이 주문 내역을 완전히 삭제하시겠습니까? (관련 결제 내역 및 통계에서도 제외됩니다)')) return;
+
+    try {
+      const res = await apiClient.delete(`/admin/orders/${orderId}`);
+      if (res.success) {
+        toast.success('주문 내역이 삭제되었습니다.');
+        queryClient.invalidateQueries({ queryKey: ['orders'] });
+        queryClient.invalidateQueries({ queryKey: ['stats'] });
+      } else {
+        toast.error(res.message || '삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      toast.error('삭제 중 오류가 발생했습니다.');
+      console.error(error);
+    }
   };
 
   return (
@@ -362,6 +384,7 @@ export const AdminOrderHistory = () => {
               <th className="pb-4 hidden md:table-cell">결제수단</th>
               <th className="pb-4">상태</th>
               <th className="pb-4 pr-4 hidden lg:table-cell">시간</th>
+              <th className="pb-4 pr-4">삭제</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
@@ -371,7 +394,7 @@ export const AdminOrderHistory = () => {
               ))
             ) : orders.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-32 text-center">
+                <td colSpan={8} className="py-32 text-center">
                   <div className="flex flex-col items-center gap-2 text-gray-300">
                     <Search size={48} strokeWidth={1} />
                     <p className="text-[15px] font-semibold mt-2">검색 결과가 없습니다.</p>
@@ -427,6 +450,15 @@ export const AdminOrderHistory = () => {
                         month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
                       })}
                     </span>
+                  </td>
+                  <td className="py-4 pr-4">
+                    <button
+                      onClick={(e) => handleDeleteOrder(e, order.id)}
+                      className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="주문 내역 삭제"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))

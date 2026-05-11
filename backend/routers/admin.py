@@ -168,6 +168,33 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     return {"success": True, "data": {"status": order.status}, "message": "상태가 변경되었습니다."}
 
 
+@router.delete("/orders/{order_id}")
+async def delete_order(order_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
+    """주문 내역 완전 삭제 (하위 항목 및 결제 로그 포함)"""
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+    
+    # 1. 관련된 결제 로그(PaymentLog) 삭제
+    db.query(models.PaymentLog).filter(models.PaymentLog.order_id == order_id).delete()
+    
+    # 2. 관련된 주문 상세(OrderItem) 삭제
+    db.query(models.OrderItem).filter(models.OrderItem.order_id == order_id).delete()
+    
+    # 3. 주문 원본 삭제
+    db.delete(order)
+    db.commit()
+    
+    # 변경 사항 브로드캐스트 (클라이언트 새로고침 유도용)
+    await manager.broadcast({
+        "type": "ORDER_DELETED",
+        "order_id": order_id,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    return {"success": True, "data": None, "message": "주문 내역이 완전히 삭제되었습니다."}
+
+
 # ────────────────────────────────────────
 # 메뉴 관리 (Menu Management)
 # ────────────────────────────────────────
