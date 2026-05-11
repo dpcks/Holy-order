@@ -221,7 +221,8 @@ export const AdminOrderHistory = () => {
               try {
                 const res = await apiClient.delete<void, StandardResponse<null>>(`/admin/orders/${orderId}`);
                 if (res.success) {
-                  toast.success('주문 내역이 삭제되었습니다.');
+                  const successToastId = toast.success('주문 내역이 삭제되었습니다.', { duration: 2000 });
+                  setTimeout(() => toast.dismiss(successToastId), 2500);
                   queryClient.invalidateQueries({ queryKey: ['orders'] });
                   queryClient.invalidateQueries({ queryKey: ['stats'] });
                 } else {

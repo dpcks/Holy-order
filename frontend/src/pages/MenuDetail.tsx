@@ -48,6 +48,12 @@ export const MenuDetail = () => {
     return 0;
   });
 
+  const sortedCupOptions = [...cupOptions].sort((a, b) => {
+    if (a.name === '일회용컵') return -1;
+    if (b.name === '일회용컵') return 1;
+    return 0;
+  });
+
   // 선택된 옵션 상태 (단일 선택) - ICE가 있으면 기본값으로 설정
   const [selectedTemp, setSelectedTemp] = useState<MenuOption | null>(
     tempOptions.find(o => o.name === 'ICE') || (tempOptions.length > 0 ? tempOptions[0] : null)
@@ -208,7 +214,7 @@ export const MenuDetail = () => {
             <div className="flex flex-col gap-3">
               <h3 className="font-bold text-gray-900 text-[15px]">컵 선택</h3>
               <div className="flex bg-[#F3F4F6] rounded-xl p-1 gap-1">
-                {cupOptions.map((opt) => {
+                {sortedCupOptions.map((opt) => {
                   const isSelected = selectedCup?.id === opt.id;
                   return (
                     <button
