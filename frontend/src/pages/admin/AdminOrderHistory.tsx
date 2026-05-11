@@ -137,12 +137,12 @@ export const AdminOrderHistory = () => {
     queryKey: QK.orders.history(page, filterParams),
     queryFn: async ({ queryKey }) => {
       // QK.orders.history 구조: ['orders', 'history', page, filters]
-      const [,, currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
-      
+      const [, , currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
+
       let url = `/admin/orders/history?page=${currentPage}&limit=${limit}`;
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
-      
+
       // 검색어 처리: focusedOrderId가 있으면 그것만, 없으면 일반 검색어
       if (filters.search) {
         url += `&search=${encodeURIComponent(filters.search)}`;
@@ -155,7 +155,7 @@ export const AdminOrderHistory = () => {
       return (res.success && res.data) ? res.data : null;
     },
     staleTime: 1000 * 60, // 1분 캐시
-    placeholderData: (prev) => prev, 
+    placeholderData: (prev) => prev,
   });
 
   const orders = historyData?.items ?? [];
@@ -201,25 +201,25 @@ export const AdminOrderHistory = () => {
 
   const handleDeleteOrder = (e: React.MouseEvent, orderId: number) => {
     e.stopPropagation(); // 모달 열림 방지
-    
+
     toast((t) => (
       <div className="flex flex-col gap-3 min-w-[240px]">
         <p className="text-[13px] font-bold text-gray-900 leading-snug">
-          주문 내역을 삭제하시겠습니까?<br/>
+          주문 내역을 삭제하시겠습니까?<br />
           <span className="text-[11px] text-gray-500 font-normal">관련 결제 내역 및 통계에서 제외됩니다.</span>
         </p>
         <div className="flex gap-2 justify-end mt-1">
-          <button 
+          <button
             onClick={() => toast.dismiss(t.id)}
             className="px-3 py-1.5 text-[12px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
           >
             취소
           </button>
-          <button 
+          <button
             onClick={async () => {
               toast.dismiss(t.id);
               try {
-                const res = await apiClient.delete(`/admin/orders/${orderId}`);
+                const res = await apiClient.delete<void, StandardResponse<null>>(`/admin/orders/${orderId}`);
                 if (res.success) {
                   toast.success('주문 내역이 삭제되었습니다.');
                   queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -238,8 +238,8 @@ export const AdminOrderHistory = () => {
           </button>
         </div>
       </div>
-    ), { 
-      duration: 5000, 
+    ), {
+      duration: 5000,
       position: 'top-center',
       style: { padding: '16px', borderRadius: '16px' }
     });
