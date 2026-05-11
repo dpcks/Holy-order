@@ -199,23 +199,50 @@ export const AdminOrderHistory = () => {
     setSelectedOrder(null);
   };
 
-  const handleDeleteOrder = async (e: React.MouseEvent, orderId: number) => {
+  const handleDeleteOrder = (e: React.MouseEvent, orderId: number) => {
     e.stopPropagation(); // 모달 열림 방지
-    if (!window.confirm('주문 내역을 삭제하시겠습니까? (관련 결제 내역 및 통계에서 제외됩니다)')) return;
-
-    try {
-      const res = await apiClient.delete(`/admin/orders/${orderId}`);
-      if (res.success) {
-        toast.success('주문 내역이 삭제되었습니다.');
-        queryClient.invalidateQueries({ queryKey: ['orders'] });
-        queryClient.invalidateQueries({ queryKey: ['stats'] });
-      } else {
-        toast.error(res.message || '삭제에 실패했습니다.');
-      }
-    } catch (error) {
-      toast.error('삭제 중 오류가 발생했습니다.');
-      console.error(error);
-    }
+    
+    toast((t) => (
+      <div className="flex flex-col gap-3 min-w-[240px]">
+        <p className="text-[13px] font-bold text-gray-900 leading-snug">
+          주문 내역을 삭제하시겠습니까?<br/>
+          <span className="text-[11px] text-gray-500 font-normal">관련 결제 내역 및 통계에서 제외됩니다.</span>
+        </p>
+        <div className="flex gap-2 justify-end mt-1">
+          <button 
+            onClick={() => toast.dismiss(t.id)}
+            className="px-3 py-1.5 text-[12px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+          >
+            취소
+          </button>
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              try {
+                const res = await apiClient.delete(`/admin/orders/${orderId}`);
+                if (res.success) {
+                  toast.success('주문 내역이 삭제되었습니다.');
+                  queryClient.invalidateQueries({ queryKey: ['orders'] });
+                  queryClient.invalidateQueries({ queryKey: ['stats'] });
+                } else {
+                  toast.error(res.message || '삭제에 실패했습니다.');
+                }
+              } catch (error) {
+                toast.error('삭제 중 오류가 발생했습니다.');
+                console.error(error);
+              }
+            }}
+            className="px-3 py-1.5 text-[12px] font-bold text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors shadow-sm"
+          >
+            삭제 확인
+          </button>
+        </div>
+      </div>
+    ), { 
+      duration: 5000, 
+      position: 'top-center',
+      style: { padding: '16px', borderRadius: '16px' }
+    });
   };
 
   return (
