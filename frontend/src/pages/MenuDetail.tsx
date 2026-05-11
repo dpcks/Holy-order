@@ -142,7 +142,16 @@ export const MenuDetail = () => {
         <div className="px-4 py-4">
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-[#0F0A0A]">
             {menu.image_url ? (
-              <img src={menu.image_url} alt={menu.name} className="w-full h-full object-cover" />
+              <img 
+                src={menu.image_url} 
+                alt={menu.name} 
+                className="w-full h-full object-cover" 
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80";
+                  e.currentTarget.classList.add('opacity-70');
+                }}
+              />
             ) : (
               <img
                 src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80"
@@ -180,8 +189,8 @@ export const MenuDetail = () => {
                       key={opt.id}
                       onClick={() => setSelectedTemp(opt)}
                       className={`flex-1 py-3 text-[15px] font-black rounded-full transition-all duration-300 tracking-wider ${isSelected
-                        ? isIce 
-                          ? 'bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] scale-[1.02]' 
+                        ? isIce
+                          ? 'bg-blue-500 text-white shadow-[0_4px_12px_rgba(59,130,246,0.3)] scale-[1.02]'
                           : 'bg-red-500 text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)] scale-[1.02]'
                         : 'text-gray-400 hover:text-gray-600 hover:bg-gray-200/50'
                         }`}
