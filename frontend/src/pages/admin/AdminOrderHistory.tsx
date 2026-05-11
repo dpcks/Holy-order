@@ -201,7 +201,7 @@ export const AdminOrderHistory = () => {
 
   const handleDeleteOrder = async (e: React.MouseEvent, orderId: number) => {
     e.stopPropagation(); // 모달 열림 방지
-    if (!window.confirm('정말 이 주문 내역을 완전히 삭제하시겠습니까? (관련 결제 내역 및 통계에서도 제외됩니다)')) return;
+    if (!window.confirm('주문 내역을 삭제하시겠습니까? (관련 결제 내역 및 통계에서 제외됩니다)')) return;
 
     try {
       const res = await apiClient.delete(`/admin/orders/${orderId}`);

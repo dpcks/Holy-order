@@ -50,7 +50,8 @@ def get_orders_board(db: Session = Depends(get_db), admin: models.Admin = Depend
     today = models.get_seoul_time().date()
     orders = db.query(models.Order).filter(
         models.Order.order_date == today,
-        models.Order.status.in_(["PENDING", "PREPARING", "READY"])
+        models.Order.status.in_(["PENDING", "PREPARING", "READY"]),
+        models.Order.is_active == True
     ).order_by(models.Order.id.asc()).all()
     return schemas.StandardResponse(success=True, data=orders, message="주문 현황을 조회했습니다.")
 
@@ -69,7 +70,7 @@ def get_orders_history(
     db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """주문 내역 히스토리: 필터링 및 페이징 지원"""
-    query = db.query(models.Order)
+    query = db.query(models.Order).filter(models.Order.is_active == True)
     
     # 검색어가 있는 경우 처리
     if search:
@@ -170,19 +171,18 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
 
 @router.delete("/orders/{order_id}")
 async def delete_order(order_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
-    """주문 내역 완전 삭제 (하위 항목 및 결제 로그 포함)"""
+    """주문 내역 완전 삭제 (하위 항목 및 결제 로그 포함) -> 소프트 삭제로 변경"""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
         raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
     
-    # 1. 관련된 결제 로그(PaymentLog) 삭제
-    db.query(models.PaymentLog).filter(models.PaymentLog.order_id == order_id).delete()
+    # 1. 소프트 삭제 처리 (원본 및 연관 데이터는 보존하되 통계/조회에서 제외)
+    order.is_active = False
+    order.deleted_at = models.get_seoul_time()
     
-    # 2. 관련된 주문 상세(OrderItem) 삭제
-    db.query(models.OrderItem).filter(models.OrderItem.order_id == order_id).delete()
+    # 2. 관련 결제 로그와 주문 상세는 삭제하지 않고 남겨둡니다. 
+    # (추후 복구나 정확한 히스토리 조회를 위함)
     
-    # 3. 주문 원본 삭제
-    db.delete(order)
     db.commit()
     
     # 변경 사항 브로드캐스트 (클라이언트 새로고침 유도용)
@@ -393,18 +393,20 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         start_date = target_date
         end_date = target_date
 
-    # 대상 기간 전체 주문 (취소 제외)
+    # 대상 기간 전체 주문 (취소 및 소프트삭제 제외)
     revenue_orders = db.query(models.Order).filter(
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
-        models.Order.status.notin_(["PENDING", "CANCELLED"])
+        models.Order.status.notin_(["PENDING", "CANCELLED"]),
+        models.Order.is_active == True
     ).all()
     
-    # 대상 기간 전체 주문 (PENDING 포함, CANCELLED 제외) - 카운트용
+    # 대상 기간 전체 주문 (PENDING 포함, CANCELLED 및 소프트삭제 제외) - 카운트용
     all_orders = db.query(models.Order).filter(
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
-        models.Order.status.notin_(["CANCELLED"])
+        models.Order.status.notin_(["CANCELLED"]),
+        models.Order.is_active == True
     ).all()
 
     total_orders = len(all_orders)
@@ -432,7 +434,8 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         .filter(
             models.Order.order_date >= start_date,
             models.Order.order_date <= end_date,
-            models.Order.status.notin_(["CANCELLED"])
+            models.Order.status.notin_(["CANCELLED"]),
+            models.Order.is_active == True
         )
         .group_by(models.OrderItem.menu_name_snapshot)
         .order_by(func.sum(models.OrderItem.quantity).desc())
@@ -450,7 +453,8 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         .filter(
             models.Order.order_date >= start_date,
             models.Order.order_date <= end_date,
-            models.Order.status.notin_(["CANCELLED"])
+            models.Order.status.notin_(["CANCELLED"]),
+            models.Order.is_active == True
         )
         .group_by(models.Order.user_duty_snapshot)
         .all()
@@ -488,7 +492,11 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             
         hourly_raw = (
             db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id).label("cnt"), func.sum(func.coalesce(models.Order.original_price, models.Order.total_price)).label("rev"))
-            .filter(models.Order.order_date == target_date, models.Order.status.notin_(["CANCELLED"]))
+            .filter(
+                models.Order.order_date == target_date, 
+                models.Order.status.notin_(["CANCELLED"]),
+                models.Order.is_active == True
+            )
             .group_by(func.extract("hour", models.Order.created_at))
             .all()
         )
@@ -514,7 +522,8 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         .filter(
             models.Order.order_date >= start_date,
             models.Order.order_date <= end_date,
-            models.Order.status.notin_(["PENDING", "CANCELLED"])
+            models.Order.status.notin_(["PENDING", "CANCELLED"]),
+            models.Order.is_active == True
         )
         .group_by(models.Order.payment_method)
         .all()
@@ -553,7 +562,7 @@ def get_payment_logs(
     db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """입금 승인 로그 조회: 필터링 및 페이징 지원"""
-    query = db.query(models.PaymentLog).join(models.Order, models.Order.id == models.PaymentLog.order_id)
+    query = db.query(models.PaymentLog).join(models.Order, models.Order.id == models.PaymentLog.order_id).filter(models.Order.is_active == True)
     
     if start_date:
         query = query.filter(func.date(models.PaymentLog.created_at) >= start_date)
