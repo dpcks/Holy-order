@@ -153,7 +153,7 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
 
 export const Cart = () => {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity, totalPrice, clearCart } = useCart();
+  const { items, removeItem, updateQuantity, totalPrice, totalTumblerDiscount, clearCart } = useCart();
 
   const [requests, setRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
@@ -168,7 +168,8 @@ export const Cart = () => {
     setToast({ message, type });
   };
 
-  const discount = 0;
+  // 텀블러 할인 포함 전체 할인
+  const discount = totalTumblerDiscount;
   const finalPrice = totalPrice - discount;
 
   // 이벤트 모드 상태 조회
@@ -205,6 +206,10 @@ export const Cart = () => {
     setShowUserModal(false);
     setIsSubmitting(true);
     try {
+      // [중요] API 전송 시 sub_total은 반드시 할인 후 실제 결제 금액이어야 함.
+      // 백엔드에서 sum(sub_total) == total_price 일치 여부를 검증하기 때문.
+      // CartItem.sub_total은 원가(UI 표시용)이므로 여기서 텀블러 할인을 차감해 전송.
+      // tumbler_discount는 백엔드 허용 최소 금액 계산을 위해 함께 전송.
       const orderData = {
         user_id: userId,
         payment_method: paymentMethod,
@@ -214,7 +219,8 @@ export const Cart = () => {
           menu_id: item.menu_id,
           quantity: item.quantity,
           options_text: item.options_text,
-          sub_total: item.sub_total,
+          sub_total: item.sub_total - item.tumbler_discount * item.quantity,
+          tumbler_discount: item.tumbler_discount,
         })),
       };
 
@@ -357,7 +363,7 @@ export const Cart = () => {
                         >+</button>
                       </div>
                       <span className="font-bold text-gray-900 text-[15px]">
-                        {item.sub_total.toLocaleString()}원
+                        {(item.sub_total - item.tumbler_discount * item.quantity).toLocaleString()}원
                       </span>
                     </div>
                   </div>
@@ -448,11 +454,16 @@ export const Cart = () => {
                 </span>
                 <span className="text-[14px] font-black text-amber-600">-{totalPrice.toLocaleString()}원</span>
               </div>
-            ) : (
-              <div className="flex justify-between items-center mb-5 pb-5 border-b border-gray-100">
-                <span className="text-[14px] text-gray-500 font-medium">할인금액</span>
-                <span className="text-[14px] font-semibold text-gray-800">-0원</span>
+            ) : discount > 0 ? (
+              // 텀블러 할인이 있을 때만 할인금액 행 표시
+              <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-100">
+                <span className="text-[14px] text-emerald-600 font-extrabold flex items-center gap-1.5">
+                  <span className="text-base">♻️</span> 텀블러 할인
+                </span>
+                <span className="text-[14px] font-black text-emerald-600">-{discount.toLocaleString()}원</span>
               </div>
+            ) : (
+              <div className="mb-5 pb-5 border-b border-gray-100" />
             )}
 
             <div className="flex justify-between items-end">

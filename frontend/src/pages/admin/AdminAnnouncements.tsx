@@ -559,17 +559,38 @@ export const AdminAnnouncements = () => {
                 </div>
               </div>
 
+              {/* 텀블러 할인 요약 카드 - 할인이 있을 때만 표시 */}
+              {(reportData.total_tumbler_discount ?? 0) > 0 && (
+                <div className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">♻️</span>
+                    <span className="text-[13px] font-black text-emerald-700">텀블러 할인 합계</span>
+                  </div>
+                  <span className="text-[14px] font-black text-emerald-600">
+                    -{reportData.total_tumbler_discount.toLocaleString()}원
+                  </span>
+                </div>
+              )}
+
               {/* 메뉴별 현황 */}
               {reportData.menu_breakdown.length > 0 && (
                 <div>
                   <h4 className="text-[13px] font-black text-gray-700 mb-2">메뉴별 판매 현황</h4>
                   <div className="space-y-2">
                     {reportData.menu_breakdown.map((m, i) => (
-                      <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                      <div key={i} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2.5">
                         <span className="text-[12px] font-bold text-gray-800">{m.name}</span>
-                        <div className="text-right">
-                          <span className="text-[12px] font-bold text-gray-600">{m.count}개</span>
-                          <span className="text-[11px] text-gray-900 font-bold ml-2">₩{m.revenue.toLocaleString()}</span>
+                        <div className="flex items-center gap-2">
+                          {/* 텀블러 할인이 있는 아이템만 배지 표시 */}
+                          {(m.tumbler_discount_total ?? 0) > 0 && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[10px] font-black">
+                              ♻️ -{m.tumbler_discount_total.toLocaleString()}원
+                            </span>
+                          )}
+                          <div className="text-right">
+                            <span className="text-[12px] font-bold text-gray-600">{m.count}개</span>
+                            <span className="text-[11px] text-gray-900 font-bold ml-2">₩{m.revenue.toLocaleString()}</span>
+                          </div>
                         </div>
                       </div>
                     ))}

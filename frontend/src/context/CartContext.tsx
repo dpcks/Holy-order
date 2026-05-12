@@ -9,7 +9,8 @@ interface CartContextType {
   removeItem: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, quantity: number) => void;
   clearCart: () => void;
-  totalPrice: number;
+  totalPrice: number;          // 수량 반영한 원가 합계 (할인 미반영)
+  totalTumblerDiscount: number; // 장바구니 전체의 텀블러 할인 총액
   totalCount: number;
 }
 
@@ -40,6 +41,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
           ...existing,
           quantity: newQuantity,
           sub_total: existing.price * newQuantity,
+          // tumbler_discount는 단가 기준이므로 quantity만 변경
         };
         return updatedItems;
       }
@@ -70,11 +72,16 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const totalPrice = items.reduce((sum, item) => sum + item.sub_total, 0);
+  // 각 아이템의 tumbler_discount(단가 할인) * quantity = 해당 아이템 터블러 할인 전체
+  const totalTumblerDiscount = items.reduce(
+    (sum, item) => sum + item.tumbler_discount * item.quantity,
+    0
+  );
   const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalPrice, totalCount }}
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalPrice, totalTumblerDiscount, totalCount }}
     >
       {children}
     </CartContext.Provider>

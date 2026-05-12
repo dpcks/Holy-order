@@ -1014,21 +1014,35 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db),
     order_ids = [o.id for o in orders]
     total_items = db.query(func.sum(models.OrderItem.quantity)).filter(models.OrderItem.order_id.in_(order_ids)).scalar() or 0
 
-    # 메뉴별 판매 현황 집계
+    # 메뉴별 판매 현황 집계 (기본가 기준 revenue + 텀블러 할인 집계)
     menu_breakdown_raw = (
         db.query(
             models.OrderItem.menu_name_snapshot,
             func.sum(models.OrderItem.quantity).label("count"),
-            func.sum(models.OrderItem.menu_price_snapshot * models.OrderItem.quantity).label("revenue")
+            # revenue는 메뉴 기본가 기준 (옵션 제외) - 정산 참고용
+            func.sum(models.OrderItem.menu_price_snapshot * models.OrderItem.quantity).label("revenue"),
+            # 실제 결제된 sub_total 합계 (텀블러 할인 반영)
+            func.sum(models.OrderItem.sub_total).label("sub_total_sum")
         )
         .filter(models.OrderItem.order_id.in_(order_ids))
         .group_by(models.OrderItem.menu_name_snapshot)
         .all()
     )
-    menu_breakdown = [
-        {"name": r.menu_name_snapshot, "count": int(r.count), "revenue": int(r.revenue)}
-        for r in menu_breakdown_raw
-    ]
+    menu_breakdown = []
+    for r in menu_breakdown_raw:
+        base_revenue = int(r.revenue)
+        actual_revenue = int(r.sub_total_sum) if r.sub_total_sum else base_revenue
+        # 텀블러 할인액 = 기본가 합계 - 실제 결제 합계
+        # (sub_total이 0이면 이벤트 무료 제공이므로 할인 계산 제외)
+        tumbler_disc = max(0, base_revenue - actual_revenue) if actual_revenue > 0 else 0
+        menu_breakdown.append({
+            "name": r.menu_name_snapshot,
+            "count": int(r.count),
+            "revenue": base_revenue,
+            "tumbler_discount_total": tumbler_disc,
+        })
+
+    total_tumbler_discount = sum(m["tumbler_discount_total"] for m in menu_breakdown)
 
     # 직분별 이용 현황 집계
     duty_counts = {}
@@ -1040,6 +1054,7 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db),
         "total_orders": total_orders,
         "total_items": int(total_items),
         "original_price_sum": original_price_sum,
+        "total_tumbler_discount": total_tumbler_discount,
         "menu_breakdown": menu_breakdown,
         "duty_breakdown": duty_counts
     }

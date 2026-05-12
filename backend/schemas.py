@@ -93,6 +93,8 @@ class OrderItemCreate(BaseModel):
     quantity: int = Field(gt=0, description="1 이상이어야 합니다")
     options_text: Optional[str] = None
     sub_total: int = Field(ge=0, description="0 이상이어야 합니다")
+    # 텀블러 선택 시 적용되는 아이템당 할인 단가 (1개 기준, 기본 0)
+    tumbler_discount: int = Field(default=0, ge=0, description="텀블러 할인 단가 (기본 0)")
 
 class PaymentMethodEnum(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"
@@ -376,11 +378,13 @@ class MenuBreakdown(BaseModel):
     name: str
     count: int
     revenue: int
+    tumbler_discount_total: int = 0  # 메뉴별 텀블러 할인 합계
 
 class AnnouncementReportResponse(BaseModel):
     total_orders: int
     total_items: int
     original_price_sum: int
+    total_tumbler_discount: int = 0  # 전체 텀블러 할인 합계
     menu_breakdown: List[MenuBreakdown]
     duty_breakdown: dict # {duty: count}
 

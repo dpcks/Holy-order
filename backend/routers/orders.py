@@ -50,11 +50,16 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         base_total = menu.price * item.quantity
         item_total = item.sub_total
         
-        # [중요] 이벤트 모드(DB 확인 또는 요청 기반)가 아닐 때만 금액 미달 검증 수행
-        if not is_event_mode and item_total < base_total:
+        # 텀블러 할인이 적용된 경우 허용 최소 금액 = 기본가 - (tumbler_discount × 수량)
+        # max(0, ...)로 음수 방지
+        allowed_discount = item.tumbler_discount * item.quantity
+        min_allowed_total = max(0, base_total - allowed_discount)
+        
+        # [중요] 이벤트 모드가 아닐 때만 금액 미달 검증 수행
+        if not is_event_mode and item_total < min_allowed_total:
             raise HTTPException(
                 status_code=400, 
-                detail=f"'{menu.name}' 메뉴의 금액이 기본가({base_total}원)보다 낮게 요청되었습니다."
+                detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
             )
             
         # [중요] 이벤트 모드라도 통계(TOP 5)를 위해 개별 아이템의 원래 가치는 보존
