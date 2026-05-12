@@ -153,8 +153,9 @@ export interface CartItem {
   image_url?: string;
   quantity: number;
   options_text: string | null;
-  price: number; // 메뉴 기본가 + 옵션 추가금액 합계 (단가)
-  sub_total: number; // 단가 * 수량
+  price: number;           // 메뉴 기본가 + 옵션 추가금액 합계 (단가, 텀블러 할인 미반영)
+  sub_total: number;       // price * quantity (텀블러 할인 미반영 금액)
+  tumbler_discount: number; // 텀블러 선택 시 1개당 할인금액 (미선택이면 0)
 }
 
 export interface StandardResponse<T> {
@@ -251,12 +252,14 @@ export interface MenuBreakdown {
   name: string;
   count: number;
   revenue: number;
+  tumbler_discount_total: number; // 메뉴별 텀블러 할인 합계
 }
 
 export interface AnnouncementReportResponse {
   total_orders: number;
   total_items: number;
   original_price_sum: number;
+  total_tumbler_discount: number; // 전체 텀블러 할인 합계
   menu_breakdown: MenuBreakdown[];
   duty_breakdown: Record<string, number>;
 }

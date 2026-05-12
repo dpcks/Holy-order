@@ -13,6 +13,8 @@ import type { Menu, MenuOption } from '../types';
 const TEMP_OPTION_NAMES = ['ICE', 'HOT'];
 // 컵 종류 옵션인지 판별하는 상수 - 백엔드 name 값 기준
 const CUP_OPTION_NAMES = ['텀블러', '일회용컵'];
+// 텀블러 선택 시 적용되는 고정 할인 금액 (원)
+const TUMBLER_DISCOUNT = 500;
 
 export const MenuDetail = () => {
   const location = useLocation();
@@ -75,12 +77,22 @@ export const MenuDetail = () => {
 
   // ────────────────────────────────────────────────────────────────
   // 총액 계산 - 선택된 모든 옵션의 extra_price를 합산
+  // 텀블러 선택 시 TUMBLER_DISCOUNT(500원)를 추가로 차감한다.
+  // extra_price와 별도로 관리하여 백엔드 데이터와 독립적으로 유지
   // ────────────────────────────────────────────────────────────────
+  const isTumblerSelected = selectedCup?.name === '텀블러';
+  const tumblerDiscount = isTumblerSelected ? TUMBLER_DISCOUNT : 0;
+
   const extraPriceSum =
     (selectedTemp?.extra_price ?? 0) +
     (selectedCup?.extra_price ?? 0) +
     selectedExtras.reduce((sum, opt) => sum + opt.extra_price, 0);
-  const unitPrice = menu.price + extraPriceSum;
+
+  // 원가(할인 전) 단가: 장바구니에 저장될 기준 단가
+  const originalUnitPrice = menu.price + extraPriceSum;
+  // 실제 결제 단가: 텀블러 할인 적용
+  const unitPrice = Math.max(0, originalUnitPrice - tumblerDiscount);
+  // 실제 결제 총액 (할인 후)
   const totalPrice = unitPrice * quantity;
 
   const handleAddToCart = (shouldNavigate = true) => {
@@ -103,8 +115,11 @@ export const MenuDetail = () => {
       name: menu.name,
       image_url: menu.image_url || undefined,
       quantity,
-      price: unitPrice,
-      sub_total: totalPrice,
+      // price/sub_total은 원가(할인 전) 기준 저장 → Cart에서 할인을 분리 표시하기 위함
+      price: originalUnitPrice,
+      sub_total: originalUnitPrice * quantity,
+      // 텀블러 할인은 단가 기준으로 저장 (quantity는 CartContext에서 걱은)
+      tumbler_discount: tumblerDiscount,
       options_text: optionsTextParts.join(' / ') || null,
     });
 
@@ -216,16 +231,30 @@ export const MenuDetail = () => {
               <div className="flex bg-[#F3F4F6] rounded-xl p-1 gap-1">
                 {sortedCupOptions.map((opt) => {
                   const isSelected = selectedCup?.id === opt.id;
+                  const isTumbler = opt.name === '텀블러';
                   return (
                     <button
                       key={opt.id}
                       onClick={() => setSelectedCup(opt)}
-                      className={`flex-1 py-3.5 text-[13px] font-bold rounded-lg transition-all ${isSelected
-                        ? 'bg-[#2D1616] text-white shadow-md'
-                        : 'text-gray-600 hover:bg-gray-200'
-                        }`}
+                      className={`relative flex-1 flex flex-col items-center justify-center py-3 rounded-lg transition-all ${
+                        isSelected
+                          ? 'bg-[#2D1616] text-white shadow-md'
+                          : 'text-gray-600 hover:bg-gray-200'
+                      }`}
                     >
-                      {opt.name}
+                      <span className="text-[13px] font-bold leading-tight">{opt.name}</span>
+                      {/* 텀블러 전용 할인 배지 - 버튼 우상단 절대 위치 */}
+                      {isTumbler && (
+                        <span
+                          className={`absolute -top-2 -right-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-black tracking-tight shadow-sm transition-all ${
+                            isSelected
+                              ? 'bg-emerald-400 text-[#0d3321]'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}
+                        >
+                          -{TUMBLER_DISCOUNT.toLocaleString()}원
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -291,6 +320,21 @@ export const MenuDetail = () => {
                   <div className="flex items-center gap-1.5 justify-end">
                     <span className="text-[14px] text-gray-400 line-through font-medium">{totalPrice.toLocaleString()}원</span>
                     <span className="text-xl font-black text-amber-600">0원</span>
+                  </div>
+                ) : isTumblerSelected ? (
+                  // 텀블러 할인 적용 시: 원가에 취소선 + 할인가 강조 표시
+                  <div className="flex flex-col items-end gap-0.5">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] bg-emerald-100 text-emerald-700 font-black px-1.5 py-0.5 rounded-full">
+                        텀블러 -{(tumblerDiscount * quantity).toLocaleString()}원
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[13px] text-gray-400 line-through font-medium">
+                        {((unitPrice + tumblerDiscount) * quantity).toLocaleString()}원
+                      </span>
+                      <span className="text-xl font-black text-emerald-600">{totalPrice.toLocaleString()}원</span>
+                    </div>
                   </div>
                 ) : (
                   <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>

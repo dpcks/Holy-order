@@ -94,6 +94,8 @@ def migrate_database():
     try:
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;"))
+        # 주문 내역 이미지 스냅샷 컬럼 추가
+        db.execute(text("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_image_url_snapshot VARCHAR;"))
         db.commit()
         return {"success": True, "message": "데이터베이스 마이그레이션이 성공적으로 완료되었습니다."}
     except Exception as e:
