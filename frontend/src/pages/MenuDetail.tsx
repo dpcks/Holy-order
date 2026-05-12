@@ -163,10 +163,10 @@ export const MenuDetail = () => {
         <div className="px-4 py-4">
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-[#0F0A0A]">
             {menu.image_url ? (
-              <img 
-                src={menu.image_url} 
-                alt={menu.name} 
-                className="w-full h-full object-cover" 
+              <img
+                src={menu.image_url}
+                alt={menu.name}
+                className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80";
@@ -194,8 +194,8 @@ export const MenuDetail = () => {
           </div>
         </div>
 
-        {/* 옵션 선택 섹션 */}
-        <div className="px-4 py-4 flex flex-col gap-8">
+        {/* 옵션 선택 섹션  pb-40 */}
+        <div className="px-4 py-4 pb-20 flex flex-col gap-8">
 
           {/* ICE & HOT - 백엔드에서 해당 옵션이 있을 때만 렌더링 */}
           {tempOptions.length > 0 && (
@@ -236,21 +236,19 @@ export const MenuDetail = () => {
                     <button
                       key={opt.id}
                       onClick={() => setSelectedCup(opt)}
-                      className={`relative flex-1 flex flex-col items-center justify-center py-3 rounded-lg transition-all ${
-                        isSelected
-                          ? 'bg-[#2D1616] text-white shadow-md'
-                          : 'text-gray-600 hover:bg-gray-200'
-                      }`}
+                      className={`relative flex-1 flex flex-col items-center justify-center py-3 rounded-lg transition-all ${isSelected
+                        ? 'bg-[#2D1616] text-white shadow-md'
+                        : 'text-gray-600 hover:bg-gray-200'
+                        }`}
                     >
                       <span className="text-[13px] font-bold leading-tight">{opt.name}</span>
                       {/* 텀블러 전용 할인 배지 - 버튼 우상단 절대 위치 */}
                       {isTumbler && (
                         <span
-                          className={`absolute -top-2 -right-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-black tracking-tight shadow-sm transition-all ${
-                            isSelected
-                              ? 'bg-emerald-400 text-[#0d3321]'
-                              : 'bg-emerald-100 text-emerald-700'
-                          }`}
+                          className={`absolute -top-2 -right-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-black tracking-tight shadow-sm transition-all ${isSelected
+                            ? 'bg-emerald-400 text-[#0d3321]'
+                            : 'bg-emerald-100 text-emerald-700'
+                            }`}
                         >
                           -{TUMBLER_DISCOUNT.toLocaleString()}원
                         </span>
