@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Building2, MessageSquare, ChevronDown, Wallet } from 'lucide-react';
+import { X, Building2, MessageSquare, ChevronDown, Wallet, Copy, Check } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
@@ -37,8 +37,8 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
     setError('');
     try {
       // 필수 설정이 꺼져 있으면 전화번호를 보내지 않음
-      const phoneToSubmit = requirePhone && phone.trim() 
-        ? phone.trim().replace(/-/g, '') 
+      const phoneToSubmit = requirePhone && phone.trim()
+        ? phone.trim().replace(/-/g, '')
         : null;
 
       // 전화번호로 기존 유저 조회 또는 새 유저 생성
@@ -157,6 +157,7 @@ export const Cart = () => {
 
   const [requests, setRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
+  const [copied, setCopied] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
 
@@ -185,7 +186,7 @@ export const Cart = () => {
           apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active'),
           apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings')
         ]);
-        
+
         if (eventRes.success && eventRes.data) setActiveEvent(eventRes.data);
         if (settingsRes.success && settingsRes.data) setSettings(settingsRes.data);
       } catch (err) {
@@ -405,38 +406,91 @@ export const Cart = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                  className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
-                    ? 'bg-[#2D1616] text-white border-transparent shadow-md'
-                    : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                    }`}
-                >
-                  <Building2 size={20} />
-                  <span className="text-[12px] font-bold">계좌이체</span>
-                </button>
-                <button
-                  onClick={() => setPaymentMethod('CASH')}
-                  className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'CASH'
-                    ? 'bg-[#2D1616] text-white border-transparent shadow-md'
-                    : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
-                    }`}
-                >
-                  <Wallet size={20} />
-                  <span className="text-[12px] font-bold">현금 결제</span>
-                </button>
-                {/* 
-                <button
-                  disabled
-                  className="py-4 flex flex-col items-center justify-center gap-2 rounded-xl bg-gray-50 text-gray-300 border border-gray-100 relative opacity-60 cursor-not-allowed"
-                >
-                  <div className="absolute top-1 right-1 bg-gray-200 text-gray-500 text-[8px] px-1 py-0.5 rounded font-bold scale-90">준비중</div>
-                  <MessageSquare size={20} />
-                  <span className="text-[12px] font-bold text-gray-300">카카오페이</span>
-                </button>
-                */}
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setPaymentMethod('BANK_TRANSFER')}
+                    className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
+                      ? 'bg-[#2D1616] text-white border-transparent shadow-md'
+                      : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Building2 size={20} />
+                    <span className="text-[12px] font-bold">계좌이체</span>
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('CASH')}
+                    className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'CASH'
+                      ? 'bg-[#2D1616] text-white border-transparent shadow-md'
+                      : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Wallet size={20} />
+                    <span className="text-[12px] font-bold">현금 결제</span>
+                  </button>
+                </div>
+
+                {/* 결제수단별 안내 영역 */}
+                {paymentMethod === 'BANK_TRANSFER' && settings && (
+                  <div className="mt-3 bg-indigo-50 rounded-xl p-4 border border-indigo-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex justify-between items-center text-[13px]">
+                        <span className="text-indigo-400 font-bold uppercase tracking-wider text-[10px]">Bank</span>
+                        <span className="font-black text-indigo-900">{settings.bank_name}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[13px]">
+                        <span className="text-indigo-400 font-bold uppercase tracking-wider text-[10px]">Holder</span>
+                        <span className="font-black text-indigo-900">{settings.account_holder}</span>
+                      </div>
+                      <div className="flex items-center justify-between bg-white rounded-xl px-4 py-3 mt-1 border border-indigo-200 shadow-sm">
+                        <span className="text-[15px] font-black text-indigo-950 tracking-wide">{settings.account_number}</span>
+                        <button
+                          onClick={async () => {
+                            if (!settings?.account_number) return;
+                            try {
+                              if (navigator.clipboard && window.isSecureContext) {
+                                await navigator.clipboard.writeText(settings.account_number);
+                              } else {
+                                const textArea = document.createElement('textarea');
+                                textArea.value = settings.account_number;
+                                textArea.style.position = 'fixed';
+                                textArea.style.left = '-9999px';
+                                document.body.appendChild(textArea);
+                                textArea.focus();
+                                textArea.select();
+                                document.execCommand('copy');
+                                document.body.removeChild(textArea);
+                              }
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            } catch {
+                              alert('자동 복사에 실패했습니다. 직접 입력해 주세요: ' + settings.account_number);
+                            }
+                          }}
+                          className={`flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all ${copied ? 'bg-green-500 text-white' : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                            }`}
+                          aria-label="계좌번호 복사"
+                          tabIndex={0}
+                        >
+                          {copied ? <Check size={12} /> : <Copy size={12} />}
+                          {copied ? '복사됨!' : '복사'}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-[12px] text-indigo-600 font-bold mt-3 text-center">
+                      주문하기 버튼 클릭 후 위 계좌로 입금해주세요 ~ 😊
+                    </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'CASH' && (
+                  <div className="mt-3 bg-orange-50 rounded-xl p-4 border border-orange-100 text-center animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="text-[14px] font-bold text-gray-800">
+                      카운터에서 결제해주시면 됩니다. 😊
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
