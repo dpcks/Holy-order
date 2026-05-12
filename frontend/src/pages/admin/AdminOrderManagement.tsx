@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX } from 'lucide-react';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX, Plus } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { AdminDirectOrderModal } from './AdminDirectOrderModal';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
 
@@ -109,6 +110,7 @@ export const AdminOrderManagement = () => {
   const { isSoundEnabled, toggleSound, audioRef } = useOutletContext<AdminOutletContext>();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [now, setNow] = useState<number>(Date.now());
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // [React Query] 주문 보드 데이터 조회
   const { data: orders = [], isLoading: loadingOrders } = useQuery({
@@ -309,7 +311,7 @@ export const AdminOrderManagement = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#F9FAFB] overflow-hidden">
+    <div className="relative flex flex-col h-full bg-[#F9FAFB] overflow-hidden">
       <header className="bg-white border-b border-gray-200 px-6 xl:px-8 py-3 xl:py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-6">
           <div>
@@ -538,6 +540,20 @@ export const AdminOrderManagement = () => {
           </span>
         </div>
       </footer>
+
+      {/* Floating Action Button */}
+      <button
+        onClick={() => setIsAddModalOpen(true)}
+        className="absolute bottom-24 right-8 xl:right-12 w-16 h-16 bg-[#1A0A0A] hover:bg-black text-white rounded-full flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all active:scale-90 z-40 group"
+        aria-label="주문 추가"
+      >
+        <Plus size={32} className="group-hover:rotate-90 transition-transform duration-300" />
+      </button>
+
+      <AdminDirectOrderModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </div>
   );
 };

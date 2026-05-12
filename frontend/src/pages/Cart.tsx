@@ -382,7 +382,7 @@ export const Cart = () => {
             <textarea
               value={requests}
               onChange={(e) => setRequests(e.target.value)}
-              placeholder="매장에 전달할 메시지를 입력해 주세요."
+              placeholder="카페에 전달할 메시지를 입력해 주세요."
               className="w-full bg-[#F3F4F6] rounded-xl p-3 text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-none h-20"
             />
           </section>

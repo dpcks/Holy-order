@@ -108,6 +108,15 @@ class OrderCreate(BaseModel):
     request: Optional[str] = None
     items: List[OrderItemCreate]
 
+class AdminOrderCreate(BaseModel):
+    user_name_snapshot: Optional[str] = "현장 주문"
+    user_duty_snapshot: str = "성도"
+    total_price: int
+    payment_method: PaymentMethodEnum
+    request: Optional[str] = None
+    items: List[OrderItemCreate]
+    status: str = "PREPARING"
+
 class PaymentLogCreate(BaseModel):
     order_id: int
     amount: int
