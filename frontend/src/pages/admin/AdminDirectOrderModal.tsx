@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK } from '../../api/queryKeys';
 import type { StandardResponse } from '../../api/client';
-import type { Menu, Category } from '../../types';
+import type { Category } from '../../types';
 
 interface AdminDirectOrderModalProps {
   isOpen: boolean;
@@ -309,7 +309,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {selectedItems.map((item, idx) => {
+                    {selectedItems.map((item) => {
                       let uiExtraPrice = 0;
                       if (item.selectedIceHot) uiExtraPrice += item.availableOptions.find(o => o.name === item.selectedIceHot)?.extra_price || 0;
                       if (item.selectedCup) uiExtraPrice += item.availableOptions.find(o => o.name === item.selectedCup)?.extra_price || 0;
