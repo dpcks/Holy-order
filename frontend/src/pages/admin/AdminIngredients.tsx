@@ -39,7 +39,9 @@ export const AdminIngredients = () => {
 
   // 모달 상태
   const [showModal, setShowModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [editingItem, setEditingItem] = useState<Ingredient | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Ingredient | null>(null);
 
   // 폼 상태
   const [formData, setFormData] = useState<IngredientCreate>({
@@ -149,10 +151,29 @@ export const AdminIngredients = () => {
     setShowModal(true);
   };
 
+  // 상세 모달 열기
+  const handleOpenDetail = (item: Ingredient) => {
+    setSelectedItem(item);
+    setShowDetailModal(true);
+  };
+
   // 모달 닫기
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingItem(null);
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setSelectedItem(null);
+  };
+
+  // 상세 모달에서 수정 모드로 전환
+  const handleEditFromDetail = () => {
+    if (!selectedItem) return;
+    const itemToEdit = selectedItem;
+    handleCloseDetailModal();
+    handleOpenModal(itemToEdit);
   };
 
   // 저장 (ONSUCCESS는 useMutation 내부에서 코르한 이유로
@@ -231,11 +252,11 @@ export const AdminIngredients = () => {
                   <div
                     key={item.id}
                     className="bg-white rounded-2xl p-4 border border-red-200/50 flex items-center justify-between group hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => handleOpenModal(item)}
+                    onClick={() => handleOpenDetail(item)}
                     role="button"
                     tabIndex={0}
-                    aria-label={`${item.name} 수정하기`}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleOpenModal(item); }}
+                    aria-label={`${item.name} 상세보기`}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleOpenDetail(item); }}
                   >
                     <div className="min-w-0">
                       <p className="font-bold text-gray-900 text-sm truncate">{item.name}</p>
@@ -244,8 +265,8 @@ export const AdminIngredients = () => {
                         현재 {item.current_stock}{item.unit || '개'} (주문필요)
                       </p>
                     </div>
-                    <div className="w-8 h-8 bg-red-100 text-red-600 rounded-lg flex items-center justify-center shrink-0 ml-3 group-hover:bg-red-200 transition-colors">
-                      <Pencil size={14} />
+                    <div className="w-8 h-8 bg-red-50 text-red-400 rounded-lg flex items-center justify-center shrink-0 ml-3 group-hover:bg-red-100 transition-colors">
+                      <ChevronDown size={14} className="-rotate-90" />
                     </div>
                   </div>
                 ))}
@@ -320,9 +341,10 @@ export const AdminIngredients = () => {
                     return (
                       <tr
                         key={item.id}
-                        className={`border-b border-gray-50 transition-colors hover:bg-gray-50/50 ${
+                        className={`border-b border-gray-50 transition-colors hover:bg-gray-100/50 cursor-pointer ${
                           status === 'CRITICAL' ? 'bg-red-50/40' : status === 'WARNING' ? 'bg-amber-50/40' : ''
                         }`}
+                        onClick={() => handleOpenDetail(item)}
                       >
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
@@ -383,16 +405,11 @@ export const AdminIngredients = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={() => handleOpenModal(item)}
-                              className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center hover:bg-gray-200 hover:text-gray-700 transition-all"
-                              aria-label={`${item.name} 수정`}
-                              title="수정"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item)}
-                              className="w-8 h-8 bg-gray-100 text-gray-500 rounded-lg flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item);
+                              }}
+                              className="w-8 h-8 bg-gray-100 text-gray-400 rounded-lg flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"
                               aria-label={`${item.name} 삭제`}
                               title="삭제"
                             >
@@ -420,6 +437,111 @@ export const AdminIngredients = () => {
           )}
         </div>
       </main>
+
+      {/* 상세 정보 모달 */}
+      {showDetailModal && selectedItem && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          onClick={handleCloseDetailModal}
+        >
+          <div
+            className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 모달 헤더 */}
+            <div className="px-8 py-7 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-md">
+                  <Package className="text-white" size={20} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 leading-tight">상세 정보</h2>
+                  <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Item Details</p>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseDetailModal}
+                className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-600 shadow-sm transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* 모달 본문 */}
+            <div className="px-8 py-8 space-y-8">
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className={`text-[11px] font-black px-2.5 py-1 rounded-full mb-2 inline-block ${
+                    selectedItem.category === '재료' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                  }`}>
+                    {selectedItem.category}
+                  </span>
+                  <h3 className="text-2xl font-black text-gray-900 tracking-tight">{selectedItem.name}</h3>
+                </div>
+                {getStockStatus(selectedItem) === 'CRITICAL' && (
+                  <div className="bg-red-100 text-red-600 px-3 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
+                    <AlertTriangle size={16} />
+                    <span className="text-[12px] font-black">주문필요</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">현재 재고</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-3xl font-black ${
+                      getStockStatus(selectedItem) === 'CRITICAL' ? 'text-red-600' : 'text-gray-900'
+                    }`}>
+                      {selectedItem.current_stock}
+                    </span>
+                    <span className="text-gray-400 font-bold text-sm">{selectedItem.unit || '개'}</span>
+                  </div>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100">
+                  <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">기준 수량</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-black text-gray-900">{selectedItem.alert_threshold}</span>
+                    <span className="text-gray-400 font-bold text-sm">{selectedItem.unit || '개'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {selectedItem.memo && (
+                <div className="bg-amber-50/50 rounded-2xl p-5 border border-amber-100">
+                  <p className="text-[11px] font-black text-amber-600 uppercase tracking-widest mb-2">메모</p>
+                  <p className="text-[14px] text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">
+                    {selectedItem.memo}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 모달 하단 */}
+            <div className="px-8 py-6 bg-gray-50/50 border-t border-gray-100 flex items-center gap-3">
+              <button
+                onClick={() => {
+                  if (confirm(`'${selectedItem.name}' 항목을 삭제하시겠습니까?`)) {
+                    deleteMutation.mutate(selectedItem);
+                    handleCloseDetailModal();
+                  }
+                }}
+                className="w-14 h-14 bg-white border border-gray-200 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all shadow-sm"
+                title="삭제"
+              >
+                <Trash2 size={22} />
+              </button>
+              <button
+                onClick={handleEditFromDetail}
+                className="flex-1 bg-black text-white h-14 rounded-2xl font-black text-base flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-black/10"
+              >
+                <Pencil size={18} />
+                정보 수정하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 추가/수정 모달 */}
       {showModal && (
