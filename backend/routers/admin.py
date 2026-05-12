@@ -1001,10 +1001,11 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db),
     if not announcement:
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
 
-    # 해당 이벤트에 연결된 주문 조회 (취소 제외)
+    # 해당 이벤트에 연결된 주문 조회 (취소 및 소프트삭제 제외)
     orders = db.query(models.Order).filter(
         models.Order.announcement_id == announcement_id,
-        models.Order.status != "CANCELLED"
+        models.Order.status != "CANCELLED",
+        models.Order.is_active == True
     ).all()
 
     total_orders = len(orders)

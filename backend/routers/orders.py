@@ -152,6 +152,120 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     
     return schemas.StandardResponse(success=True, data=new_order, message="주문이 성공적으로 생성되었습니다.")
 
+@router.post("/orders/admin", response_model=schemas.StandardResponse[schemas.OrderResponse])
+async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depends(get_db)):
+    menu_ids = [item.menu_id for item in order.items]
+    menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
+    menu_dict = {m.id: m for m in menus}
+    
+    calculated_total = 0
+    order_items_prepared = []
+    
+    for item in order.items:
+        menu = menu_dict.get(item.menu_id)
+        if not menu:
+            raise HTTPException(status_code=400, detail=f"존재하지 않는 메뉴(ID: {item.menu_id})가 포함되어 있습니다.")
+            
+        base_total = menu.price * item.quantity
+        item_total = item.sub_total
+        allowed_discount = item.tumbler_discount * item.quantity
+        min_allowed_total = max(0, base_total - allowed_discount)
+        
+        if item_total < min_allowed_total:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
+            )
+            
+        calculated_total += item_total
+        order_items_prepared.append({
+            "menu_id": item.menu_id,
+            "menu_name_snapshot": menu.name,
+            "menu_price_snapshot": menu.price,
+            "menu_image_url_snapshot": menu.image_url,
+            "quantity": item.quantity,
+            "options_text": item.options_text,
+            "sub_total": item_total
+        })
+
+    active_event = db.query(models.Announcement)\
+        .filter(models.Announcement.is_active == True, models.Announcement.is_event_mode == True)\
+        .first()
+    is_event_mode = active_event is not None
+
+    is_event_order = False
+    if is_event_mode:
+        is_event_order = True
+        final_price = 0
+        original_price = calculated_total
+        announcement_id = active_event.id
+        payment_method = "FREE"
+    else:
+        if calculated_total != order.total_price:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"결제 금액이 올바르지 않습니다. (요청: {order.total_price}, 실제: {calculated_total})"
+            )
+        final_price = calculated_total
+        original_price = None
+        announcement_id = None
+        payment_method = order.payment_method.value
+
+    today = models.get_seoul_time().date()
+    last_order = db.query(models.Order)\
+        .filter(models.Order.order_date == today)\
+        .order_by(models.Order.order_number.desc())\
+        .first()
+    next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
+
+    new_order = models.Order(
+        user_id=None,
+        user_duty_snapshot=order.user_duty_snapshot,
+        user_name_snapshot=order.user_name_snapshot,
+        request=order.request,
+        total_price=final_price,
+        original_price=original_price,
+        announcement_id=announcement_id,
+        payment_method=payment_method,
+        status=order.status,
+        order_number=next_order_number,
+        order_date=today
+    )
+    
+    try:
+        db.add(new_order)
+        db.flush()
+        
+        for item_data in order_items_prepared:
+            order_item = models.OrderItem(order_id=new_order.id, **item_data)
+            db.add(order_item)
+            
+        if not is_event_mode and order.status in ["PREPARING", "COMPLETED"] and order.payment_method in [schemas.PaymentMethodEnum.CASH, schemas.PaymentMethodEnum.BANK_TRANSFER]:
+            payment_log = models.PaymentLog(
+                order_id=new_order.id,
+                log_type="CALLBACK",
+                amount=calculated_total,
+                sender_name=order.user_name_snapshot or "현장 결제",
+                raw_data={"method": order.payment_method.value, "type": "admin_direct"}
+            )
+            db.add(payment_log)
+            
+        db.commit()
+        db.refresh(new_order)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="주문 번호 생성에 실패했습니다. 다시 시도해주세요.")
+
+    await manager.broadcast({
+        "type": "NEW_ORDER",
+        "order_id": new_order.id,
+        "is_event_order": is_event_order,
+        "status": new_order.status,
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    return schemas.StandardResponse(success=True, data=new_order, message="관리자 수동 주문이 성공적으로 생성되었습니다.")
+
 @router.get("/orders/status/{order_id}", response_model=schemas.StandardResponse[schemas.OrderResponse])
 def get_order_status(order_id: int, db: Session = Depends(get_db)):
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
