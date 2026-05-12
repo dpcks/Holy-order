@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Plus, Minus, Coffee, Wallet, Building2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
@@ -29,6 +29,16 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
   const [customerName, setCustomerName] = useState('');
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER'>('BANK_TRANSFER');
+  const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCustomerName('');
+      setSelectedItems([]);
+      setPaymentMethod('BANK_TRANSFER');
+      setActiveCategoryId(null);
+    }
+  }, [isOpen]);
 
   // Fetch Menus
   const { data: categories = [] } = useQuery({
@@ -39,6 +49,12 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
     },
     enabled: isOpen,
   });
+
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategoryId) {
+      setActiveCategoryId(categories[0].id);
+    }
+  }, [categories, activeCategoryId]);
 
   // Fetch active event
   const { data: activeEvent } = useQuery({
@@ -210,7 +226,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
               <Plus size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-gray-900 tracking-tight">수동 주문 추가</h2>
+              <h2 className="text-xl font-black text-gray-900 tracking-tight">주문 추가</h2>
               <p className="text-[12px] font-bold text-gray-500 tracking-tight">관리자 직접 입력 및 결제 처리</p>
             </div>
           </div>
@@ -221,12 +237,29 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
 
         <div className="flex-1 flex overflow-hidden">
           {/* Left: Menu Selection */}
-          <div className="flex-1 overflow-y-auto p-6 border-r border-gray-100 bg-white">
-            <h3 className="text-[14px] font-black text-gray-800 mb-4 tracking-tight">메뉴 선택</h3>
-            <div className="space-y-6">
-              {categories.map(category => (
+          <div className="flex-1 overflow-y-auto p-6 border-r border-gray-100 bg-white flex flex-col">
+            <h3 className="text-[14px] font-black text-gray-800 mb-4 tracking-tight shrink-0">메뉴 선택</h3>
+            
+            {/* Category Tabs */}
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 scrollbar-hide">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`px-4 py-2 rounded-xl whitespace-nowrap text-[13px] font-bold transition-all ${
+                    activeCategoryId === cat.id
+                      ? 'bg-gray-900 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-6 flex-1 overflow-y-auto pr-2">
+              {categories.filter(c => c.id === activeCategoryId).map(category => (
                 <div key={category.id}>
-                  <h4 className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-3">{category.name}</h4>
                   <div className="grid grid-cols-2 gap-3">
                     {category.menus.filter(m => m.is_available).map(menu => {
                       const isDessert = category.name.includes('디저트') || category.name.includes('빵') || category.name.includes('쿠키');
@@ -257,7 +290,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
                   type="text"
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
-                  placeholder="예: 홍길동 (미입력시 '현장 주문')"
+                  placeholder="미입력시 '현장 주문'으로 저장"
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all font-bold text-[15px]"
                 />
               </div>
