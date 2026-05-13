@@ -158,6 +158,12 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
     menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
     menu_dict = {m.id: m for m in menus}
     
+    active_event = db.query(models.Announcement)\
+        .filter(models.Announcement.is_active == True, models.Announcement.is_event_mode == True)\
+        .first()
+    is_event_mode = active_event is not None
+    is_free_order = (order.payment_method in [schemas.PaymentMethodEnum.FREE, schemas.PaymentMethodEnum.VOLUNTEER])
+
     calculated_total = 0
     order_items_prepared = []
     
@@ -171,11 +177,13 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
         allowed_discount = item.tumbler_discount * item.quantity
         min_allowed_total = max(0, base_total - allowed_discount)
         
-        if item_total < min_allowed_total:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
-            )
+        # 이벤트 모드나 관리자 수동 무료 주문이 아닌 경우에만 금액 검증 수행
+        if not is_event_mode and not is_free_order:
+            if item_total < min_allowed_total:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
+                )
             
         calculated_total += item_total
         order_items_prepared.append({
@@ -188,18 +196,19 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
             "sub_total": item_total
         })
 
-    active_event = db.query(models.Announcement)\
-        .filter(models.Announcement.is_active == True, models.Announcement.is_event_mode == True)\
-        .first()
-    is_event_mode = active_event is not None
-
     is_event_order = False
     if is_event_mode:
         is_event_order = True
         final_price = 0
-        original_price = calculated_total
+        original_price = order.total_price # 이벤트 모드일 때는 요청받은 원래 합계를 보존
         announcement_id = active_event.id
         payment_method = "FREE"
+    elif is_free_order:
+        # 관리자가 수동으로 무료(사역자 등) 처리한 경우
+        final_price = 0
+        original_price = order.total_price # 프론트에서 보낸 원래의 합계 금액
+        announcement_id = None
+        payment_method = order.payment_method.value
     else:
         if calculated_total != order.total_price:
             raise HTTPException(

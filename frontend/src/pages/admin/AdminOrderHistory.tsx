@@ -472,9 +472,13 @@ export const AdminOrderHistory = () => {
                   <td className="py-4 hidden md:table-cell">
                     <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${order.payment_method === 'CASH'
                         ? 'bg-orange-50 text-orange-600 border-orange-100'
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
+                        : order.payment_method === 'FREE'
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          : order.payment_method === 'VOLUNTEER'
+                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                            : 'bg-blue-50 text-blue-600 border-blue-100'
                       }`}>
-                      {order.payment_method === 'CASH' ? '현금' : '계좌'}
+                      {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? '사역자' : order.payment_method === 'VOLUNTEER' ? '식당봉사' : '계좌'}
                     </div>
                   </td>
                   <td className="py-4">

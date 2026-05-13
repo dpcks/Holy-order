@@ -398,6 +398,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
         models.Order.status.notin_(["PENDING", "CANCELLED"]),
+        models.Order.payment_method != "FREE", # 무료 주문(사역자/이벤트)은 실제 매출액 계산에서 제외
         models.Order.is_active == True
     ).all()
     
@@ -410,7 +411,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     ).all()
 
     total_orders = len(all_orders)
-    total_sales = sum((o.original_price if o.original_price is not None else o.total_price) for o in revenue_orders)
+    total_sales = sum(o.total_price for o in revenue_orders)
     avg_order_value = round(total_sales / len(revenue_orders)) if revenue_orders else 0
 
     # 상태별 카운트
@@ -423,12 +424,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         db.query(
             models.OrderItem.menu_name_snapshot,
             func.sum(models.OrderItem.quantity).label("total_qty"),
-            func.sum(
-                case(
-                    (models.OrderItem.sub_total == 0, models.OrderItem.menu_price_snapshot * models.OrderItem.quantity),
-                    else_=models.OrderItem.sub_total
-                )
-            ).label("total_revenue"),
+            func.sum(models.OrderItem.sub_total).label("total_revenue"),
         )
         .join(models.Order, models.Order.id == models.OrderItem.order_id)
         .filter(
@@ -471,7 +467,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             month_key = f"{o.order_date.month}월"
             trend_data[month_key]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[month_key]["revenue"] += (o.original_price if o.original_price is not None else o.total_price)
+                trend_data[month_key]["revenue"] += o.total_price
             
     elif type == "weekly":
         # 주차별 통계 (1주차, 2주차...)
@@ -483,7 +479,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             week_key = f"{week_num}주차"
             trend_data[week_key]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[week_key]["revenue"] += (o.original_price if o.original_price is not None else o.total_price)
+                trend_data[week_key]["revenue"] += o.total_price
             
     else: # daily
         # 시간대별 통계 (09, 10...)
@@ -514,11 +510,10 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
                 trend_data[hour_str] = {"count": 0, "revenue": 0}
             trend_data[hour_str]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[hour_str]["revenue"] += (o.original_price if o.original_price is not None else o.total_price)
+                trend_data[hour_str]["revenue"] += o.total_price
 
-    # 결제 수단별 매출 현황
     payment_raw = (
-        db.query(models.Order.payment_method, func.sum(func.coalesce(models.Order.original_price, models.Order.total_price)))
+        db.query(models.Order.payment_method, func.sum(models.Order.total_price))
         .filter(
             models.Order.order_date >= start_date,
             models.Order.order_date <= end_date,
