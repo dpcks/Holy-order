@@ -1,3 +1,8 @@
+/**
+ * [File Role]
+ * 역할: 관리자용 매출 통계 및 정산 리포트 페이지 (차트, 인기 메뉴, 마감 리포트 생성 기능 포함)
+ * 위치: frontend/src/pages/admin/AdminSalesReports.tsx
+ */
 import { useState, useEffect, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { TrendingUp, ShoppingBag, Star, BarChart2, Download, X, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
@@ -477,7 +482,7 @@ export const AdminSalesReports = () => {
                   <div className="flex-1 overflow-y-auto custom-scrollbar bg-gray-100 p-5">
                     <div ref={reportRef} className="bg-white p-6 rounded-2xl shadow-sm">
                       <div className="text-center mb-6 pb-4 border-b-2 border-dashed border-gray-200">
-                        <h2 className="text-lg font-black text-gray-900 mb-1">Holy-Order 마감 보고서</h2>
+                        <h2 className="text-lg font-black text-gray-900 mb-1">Mission-Cafe 마감 보고서</h2>
                         <p className="text-xs font-bold text-gray-500">마감 기준: {selectedDate} ({period})</p>
                       </div>
 

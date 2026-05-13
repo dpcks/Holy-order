@@ -1,3 +1,8 @@
+/**
+ * [File Role]
+ * 역할: 관리자 페이지의 전체 레이아웃 (사이드바 네비게이션, 소켓 연결, 로그인 상태 확인 등 포함)
+ * 위치: frontend/src/pages/admin/AdminLayout.tsx
+ */
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
@@ -277,7 +282,7 @@ export const AdminLayout = () => {
                 </div>
               ) : (
                 <h1 className="text-2xl font-black text-white tracking-tighter italic animate-in fade-in duration-500">
-                  Holy-Order
+                  Mission-Cafe
                 </h1>
               )}
             </div>
@@ -355,7 +360,7 @@ export const AdminLayout = () => {
                   {adminInfo ? adminInfo.name : '관리자'}
                 </p>
                 <p className="text-white/40 text-[10px]">
-                  {adminInfo ? `@${adminInfo.login_id}` : 'Holy-Order Admin'}
+                  {adminInfo ? `@${adminInfo.login_id}` : 'Mission-Cafe Admin'}
                 </p>
               </div>
             )}
