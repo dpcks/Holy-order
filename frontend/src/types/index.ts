@@ -68,6 +68,7 @@ export interface OrderItem {
 
 export interface Order {
   id: number;
+  user_id: number | null;
   order_number: number;
   status: OrderStatus;
   user_name_snapshot: string | null;

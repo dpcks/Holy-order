@@ -29,6 +29,11 @@ const TableRowSkeleton = () => (
   </tr>
 );
 
+const LOG_TYPE_LABELS: Record<string, { label: string; className: string }> = {
+  'APPROVED': { label: 'QR주문', className: 'bg-green-50 text-green-600 border border-green-100' },
+  'CALLBACK': { label: '현장주문', className: 'bg-[#FEE500]/20 text-[#3C1E1E] border border-[#FEE500]/30' },
+};
+
 export const AdminPaymentLogs = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
@@ -319,23 +324,27 @@ export const AdminPaymentLogs = () => {
                     </Link>
                   </td>
                   <td className="py-5">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight ${log.log_type === 'APPROVED' ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight ${LOG_TYPE_LABELS[log.log_type]?.className || 'bg-gray-100 text-gray-400'
                       }`}>
-                      {log.log_type}
+                      {LOG_TYPE_LABELS[log.log_type]?.label || log.log_type}
                     </span>
                   </td>
                   <td className="py-5">
-                    {log.raw_data?.payment_method ? (
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${log.raw_data.payment_method === 'CASH'
-                        ? 'bg-orange-50 text-orange-600 border-orange-100'
-                        : 'bg-blue-50 text-blue-600 border-blue-100'
-                        }`}>
-                        {log.raw_data.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
-                        {log.raw_data.payment_method === 'CASH' ? '현금' : '계좌'}
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-gray-300 font-bold">-</span>
-                    )}
+                    {(() => {
+                      const method = log.raw_data?.payment_method || log.raw_data?.method;
+                      if (!method) return <span className="text-[10px] text-gray-300 font-bold">-</span>;
+
+                      const isCash = method === 'CASH';
+                      return (
+                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${isCash
+                          ? 'bg-orange-50 text-orange-600 border-orange-100'
+                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                          }`}>
+                          {isCash ? <Wallet size={12} /> : <Building2 size={12} />}
+                          {isCash ? '현금' : '계좌'}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="py-5">
                     <div className="flex items-center gap-2">

@@ -1,3 +1,8 @@
+/**
+ * [File Role]
+ * 역할: 사용자용 모바일 웹의 상단 헤더 컴포넌트 (로고, 뒤로가기, 타이틀, 장바구니 등 포함)
+ * 위치: frontend/src/components/layout/Header.tsx
+ */
 import { useState, type ReactNode } from 'react';
 import { ChevronLeft, ShoppingCart, Search, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +18,7 @@ interface HeaderProps {
 }
 
 export const Header = ({
-  title = 'Holy-Order',
+  title = 'Mission-Cafe',
   showBack = false,
   showCart = true,
   showSearch = false,
@@ -58,7 +63,7 @@ export const Header = ({
           </div>
 
           <div className="flex-1 flex justify-center">
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight whitespace-nowrap">{title}</h1>
+            <h1 className="text-2xl font-black italic text-black tracking-tighter whitespace-nowrap">{title}</h1>
           </div>
 
           <div className="flex-1 flex items-center justify-end gap-1">

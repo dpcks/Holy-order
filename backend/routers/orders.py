@@ -246,7 +246,7 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
                 log_type="CALLBACK",
                 amount=calculated_total,
                 sender_name=order.user_name_snapshot or "현장 결제",
-                raw_data={"method": order.payment_method.value, "type": "admin_direct"}
+                raw_data={"payment_method": order.payment_method.value, "type": "admin_direct"}
             )
             db.add(payment_log)
             
