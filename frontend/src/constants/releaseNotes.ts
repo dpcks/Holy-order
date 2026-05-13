@@ -21,9 +21,11 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: '2026-05-13',
     title: '주문 내역 및 입금 확인 고도화',
     updates: [
+      { text: '현장 주문 시 동일 메뉴 및 옵션 항목 자동 병합 기능 구현 (중복 표시 버그 수정)', isNew: true },
+      { text: '시스템 설정 내 "업데이트 소식(릴리즈 노트)" 확인 기능 추가', isNew: true },
       { text: '주문 내역 히스토리에 주문 유형(QR주문/현장주문) 컬럼 추가', isNew: true },
       { text: '입금 승인 내역의 유형별 뱃지 색상 동기화 (QR: 초록, 현장: 카카오색)', isNew: true },
-      { text: '주문 상세 모달에서 주문 유형 정보를 명확하게 표시', isNew: true },
+      { text: '주문 상세 모달에서 주문 유형 정보를 명확하게 표시' },
       { text: '관리자 페이지 전반적인 디자인 폴리싱 및 접근성 개선' }
     ]
   },
