@@ -87,43 +87,58 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
+      // 메뉴 ID와 옵션 텍스트가 동일한 항목들을 그룹화하여 병합
+      const groupedItemsMap = new Map<string, any>();
+
+      selectedItems.forEach(item => {
+        let extraPrice = 0;
+        const opts = [];
+        if (item.selectedIceHot) {
+          extraPrice += item.availableOptions.find(o => o.name === item.selectedIceHot)?.extra_price || 0;
+          opts.push(item.selectedIceHot);
+        }
+        if (item.selectedCup) {
+          extraPrice += item.availableOptions.find(o => o.name === item.selectedCup)?.extra_price || 0;
+          opts.push(item.selectedCup);
+        }
+        item.selectedAddons.forEach(addon => {
+          extraPrice += item.availableOptions.find(o => o.name === addon)?.extra_price || 0;
+          opts.push(addon);
+        });
+
+        const optionsText = opts.join(', ') || null;
+        const isTumbler = item.selectedCup?.includes('텀블러');
+        const key = `${item.menuId}-${optionsText}`;
+        
+        const basePriceWithExtra = item.price + extraPrice;
+        const itemDiscount = isTumbler ? 500 : 0;
+        const subTotal = (basePriceWithExtra - itemDiscount) * item.quantity;
+
+        if (groupedItemsMap.has(key)) {
+          const existing = groupedItemsMap.get(key);
+          existing.quantity += item.quantity;
+          existing.sub_total += subTotal;
+        } else {
+          groupedItemsMap.set(key, {
+            menu_id: item.menuId,
+            quantity: item.quantity,
+            tumbler_discount: itemDiscount,
+            options_text: optionsText,
+            sub_total: subTotal
+          });
+        }
+      });
+
       const payload = {
         user_name_snapshot: customerName.trim() || '현장 주문',
-        user_duty_snapshot: '성도', // default
+        user_duty_snapshot: '성도',
         total_price: totalAmount,
         payment_method: paymentMethod,
         status: 'PREPARING',
-        items: selectedItems.map(item => {
-          let extraPrice = 0;
-          const opts = [];
-          if (item.selectedIceHot) {
-            extraPrice += item.availableOptions.find(o => o.name === item.selectedIceHot)?.extra_price || 0;
-            opts.push(item.selectedIceHot);
-          }
-          if (item.selectedCup) {
-            extraPrice += item.availableOptions.find(o => o.name === item.selectedCup)?.extra_price || 0;
-            opts.push(item.selectedCup);
-          }
-          item.selectedAddons.forEach(addon => {
-            extraPrice += item.availableOptions.find(o => o.name === addon)?.extra_price || 0;
-            opts.push(addon);
-          });
-
-          const isTumbler = item.selectedCup?.includes('텀블러');
-          const baseTotal = (item.price + extraPrice) * item.quantity;
-          const discount = isTumbler ? 500 * item.quantity : 0;
-
-          return {
-            menu_id: item.menuId,
-            quantity: item.quantity,
-            tumbler_discount: isTumbler ? 500 : 0,
-            options_text: opts.join(', ') || null,
-            sub_total: baseTotal - discount
-          };
-        })
+        items: Array.from(groupedItemsMap.values())
       };
+      
       const res = await apiClient.post<any, StandardResponse<any>>('/orders/admin', payload);
-      // fallback to /admin if not works
       return res;
     },
     onSuccess: () => {
