@@ -9,6 +9,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { AdminDirectOrderModal } from './AdminDirectOrderModal';
 import type { StandardResponse } from '../../api/client';
 import type { Order, DashboardStats } from '../../types';
+import { TossLogo } from '../../components/ui/TossLogo';
 
 // 상태 전이 정의
 const STATUS_TRANSITIONS: Record<string, { label: string; next: string; color: string } | null> = {
@@ -411,12 +412,24 @@ export const AdminOrderManagement = () => {
                               <span className="text-2xl xl:text-3xl font-black text-[#1A0A0A] tracking-tighter">
                                 #{order.order_number}
                               </span>
-                              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black border ${order.payment_method === 'CASH'
-                                  ? 'bg-orange-50 text-orange-600 border-orange-100'
-                                  : 'bg-blue-50 text-blue-600 border-blue-100'
+                              <div className={`flex items-center rounded-lg text-[10px] font-black border ${order.payment_method === 'CASH'
+                                  ? 'bg-orange-50 text-orange-600 border-orange-100 px-2.5 py-1 gap-1.5'
+                                  : order.payment_method === 'TOSS'
+                                    ? 'bg-[#0064FF]/10 border-[#0064FF]/20 p-0 overflow-hidden'
+                                    : order.payment_method === 'FREE'
+                                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100 px-2.5 py-1 gap-1.5'
+                                      : order.payment_method === 'VOLUNTEER'
+                                        ? 'bg-amber-50 text-amber-600 border-amber-100 px-2.5 py-1 gap-1.5'
+                                        : 'bg-blue-50 text-blue-600 border-blue-100 px-2.5 py-1 gap-1.5'
                                 }`}>
-                                {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
-                                {order.payment_method === 'CASH' ? '현금' : '계좌'}
+                                {order.payment_method === 'TOSS' ? (
+                                  <TossLogo size={24} className="px-1" />
+                                ) : (
+                                  <>
+                                    {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
+                                    {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? '사역자' : order.payment_method === 'VOLUNTEER' ? '식당봉사' : '계좌'}
+                                  </>
+                                )}
                               </div>
                             </div>
                             <span className={`text-[11px] font-black px-3 py-1 rounded-full uppercase tracking-widest ${order.status === 'PREPARING' ? 'bg-red-50 text-primary animate-pulse' : 'bg-gray-100 text-gray-500'
@@ -487,14 +500,21 @@ export const AdminOrderManagement = () => {
                               </button>
                             )}
                             {transition && (
-                              <button
-                                onClick={() => handleStatusChange(order.id, transition.next)}
-                                disabled={isUpdating}
-                                className={`flex-1 py-4 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
-                              >
-                                {isUpdating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={18} />}
-                                {transition.label}
-                              </button>
+                              order.status === 'PENDING' && order.payment_method === 'TOSS' ? (
+                                <div className="flex-1 py-4 text-[13px] font-black rounded-2xl bg-[#0064FF]/10 text-[#0064FF] flex items-center justify-center gap-2 border border-[#0064FF]/20">
+                                  <TossLogo size={16} />
+                                  토스 송금 자동 확인 대기
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleStatusChange(order.id, transition.next)}
+                                  disabled={isUpdating}
+                                  className={`flex-1 py-4 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
+                                >
+                                  {isUpdating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={18} />}
+                                  {transition.label}
+                                </button>
+                              )
                             )}
                           </div>
                         </div>

@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN, type PaymentLogFilters } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { TossLogo } from '../../components/ui/TossLogo';
 import type { StandardResponse, PaymentLogListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
@@ -32,6 +33,7 @@ const TableRowSkeleton = () => (
 const LOG_TYPE_LABELS: Record<string, { label: string; className: string }> = {
   'APPROVED': { label: 'QR주문', className: 'bg-green-50 text-green-600 border border-green-100' },
   'CALLBACK': { label: '현장주문', className: 'bg-[#FEE500]/20 text-[#3C1E1E] border border-[#FEE500]/30' },
+  'TOSS_AUTO': { label: 'QR주문', className: 'bg-green-50 text-green-600 border border-green-100' },
 };
 
 export const AdminPaymentLogs = () => {
@@ -98,6 +100,7 @@ export const AdminPaymentLogs = () => {
     start_date: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : undefined,
     end_date: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : undefined,
     payment_method: (paymentMethodFilter as any) || undefined,
+    log_type: undefined,
     sender_name: searchQuery || undefined,
   };
 
@@ -110,6 +113,7 @@ export const AdminPaymentLogs = () => {
       if (filters.start_date) url += `&start_date=${filters.start_date}`;
       if (filters.end_date) url += `&end_date=${filters.end_date}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
+      if (filters.log_type) url += `&log_type=${filters.log_type}`;
       
       if (filters.sender_name) {
         // 검색어가 숫자인 경우 order_id로, 아니면 sender_name으로 처리
@@ -282,6 +286,12 @@ export const AdminPaymentLogs = () => {
             >
               <Wallet size={13} /> 현금
             </button>
+            <button
+              onClick={() => { setPaymentMethodFilter('TOSS'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'TOSS' ? 'bg-[#0064FF] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <TossLogo size={13} invert={paymentMethodFilter === 'TOSS'} /> 토스
+            </button>
           </div>
         </div>
       </header>
@@ -332,16 +342,20 @@ export const AdminPaymentLogs = () => {
                   <td className="py-5">
                     {(() => {
                       const method = log.raw_data?.payment_method || log.raw_data?.method;
-                      if (!method) return <span className="text-[10px] text-gray-300 font-bold">-</span>;
-
+                      const isToss = log.log_type === 'TOSS_AUTO' || method === 'TOSS';
                       const isCash = method === 'CASH';
+
+                      if (!method && !log.log_type) return <span className="text-[10px] text-gray-300 font-bold">-</span>;
+
                       return (
                         <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-black border ${isCash
                           ? 'bg-orange-50 text-orange-600 border-orange-100'
-                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                          : isToss
+                            ? 'bg-[#0064FF]/10 text-[#0064FF] border-[#0064FF]/20'
+                            : 'bg-blue-50 text-blue-600 border-blue-100'
                           }`}>
-                          {isCash ? <Wallet size={12} /> : <Building2 size={12} />}
-                          {isCash ? '현금' : '계좌'}
+                          {isCash ? <Wallet size={12} /> : isToss ? <TossLogo size={12} /> : <Building2 size={12} />}
+                          {isCash ? '현금' : isToss ? '토스' : '계좌'}
                         </div>
                       );
                     })()}

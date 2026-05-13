@@ -101,6 +101,7 @@ class PaymentMethodEnum(str, Enum):
     CASH = "CASH"
     FREE = "FREE"
     VOLUNTEER = "VOLUNTEER"
+    TOSS = "TOSS"
 
 class OrderCreate(BaseModel):
     user_id: int
@@ -196,6 +197,7 @@ class SettingResponse(BaseModel):
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
     require_phone: bool = True
+    toss_enabled: bool = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -208,6 +210,7 @@ class SettingUpdate(BaseModel):
     account_number: Optional[str] = None
     account_holder: Optional[str] = None
     require_phone: Optional[bool] = None
+    toss_enabled: Optional[bool] = None
 
 class MenuOptionCreate(BaseModel):
     name: str

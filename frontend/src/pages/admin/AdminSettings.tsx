@@ -23,7 +23,8 @@ import {
   Users,
   Clock,
   Info,
-  Sparkles
+  Sparkles,
+  Send
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -295,6 +296,53 @@ export const AdminSettings = () => {
                   <span className="text-[13px] font-black">
                     {localSettings.require_phone ? '필수 입력' : '입력 생략'}
                   </span>
+                </div>
+              </section>
+
+              {/* 3-2. 토스 송금 설정 */}
+              <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-[#0064FF]/5 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-[#0064FF]/10 transition-colors" />
+
+                <div className="relative flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${localSettings.toss_enabled ? 'bg-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 text-gray-400'}`}>
+                      <Send size={18} />
+                    </div>
+                    <div>
+                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">토스 송금</h2>
+                      <p className="text-[11px] font-bold text-gray-400">위 계좌 정보로 토스 앱 송금 연결</p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!localSettings.toss_enabled && (!localSettings.bank_name || !localSettings.account_number)) {
+                        toast.error('계좌 정보를 먼저 입력해 주세요.');
+                        return;
+                      }
+                      handleUpdate({ toss_enabled: !localSettings.toss_enabled });
+                    }}
+                    disabled={saving}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${localSettings.toss_enabled ? 'bg-[#0064FF] shadow-lg shadow-[#0064FF]/30' : 'bg-gray-200 shadow-inner'}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.toss_enabled ? 'translate-x-8' : 'translate-x-0'}`}>
+                      <Send size={12} className={localSettings.toss_enabled ? 'text-[#0064FF]' : 'text-gray-300'} />
+                    </div>
+                  </button>
+                </div>
+
+                <div className={`relative w-full p-4 rounded-2xl flex flex-col gap-1.5 border transition-all duration-500 ${localSettings.toss_enabled ? 'bg-[#0064FF]/5 border-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 상태</span>
+                    <span className="text-[12px] font-black">
+                      {localSettings.toss_enabled ? '활성화' : '비활성화'}
+                    </span>
+                  </div>
+                  {localSettings.toss_enabled && (
+                    <p className="text-[10px] font-bold opacity-60 mt-1">
+                      사용자 주문 시 토스 앱 송금 버튼이 표시됩니다
+                    </p>
+                  )}
                 </div>
               </section>
 

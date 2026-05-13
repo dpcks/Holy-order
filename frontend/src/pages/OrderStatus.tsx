@@ -6,6 +6,7 @@ import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
 import toast from 'react-hot-toast';
+import { TossLogo } from '../components/ui/TossLogo';
 import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
 
 export const OrderStatus = () => {
@@ -15,6 +16,7 @@ export const OrderStatus = () => {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+  const [isConfirmingToss, setIsConfirmingToss] = useState(false);
 
   // iOS 알림 관련 상태
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
@@ -458,7 +460,7 @@ export const OrderStatus = () => {
             <div className={`px-6 py-3.5 flex items-center gap-2.5 ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'bg-amber-100' : 'bg-primary/10'}`}>
               <div className={`w-2 h-2 rounded-full animate-pulse ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'bg-amber-600' : 'bg-primary'}`} />
               <span className={`font-black text-[13px] tracking-wide uppercase ${(order?.payment_method === 'FREE' || totalAmount === 0) ? 'text-amber-700' : 'text-primary'}`}>
-                {(order?.payment_method === 'FREE' || totalAmount === 0) ? '섬김의 시간 안내' : order?.payment_method === 'CASH' ? '현금 결제 대기' : '입금 확인 대기'}
+                {(order?.payment_method === 'FREE' || totalAmount === 0) ? '섬김의 시간 안내' : order?.payment_method === 'CASH' ? '현금 결제 대기' : order?.payment_method === 'TOSS' ? '토스 송금 확인 대기' : '입금 확인 대기'}
               </span>
             </div>
             <div className="px-6 py-6 flex flex-col gap-5">
@@ -495,6 +497,39 @@ export const OrderStatus = () => {
                     <p className="text-[13px] text-gray-500 font-medium mt-1">현금을 준비해 주시면 빠른 접수가 가능합니다.</p>
                   </div>
                 </div>
+              ) : order?.payment_method === 'TOSS' ? (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="w-24 h-24 bg-[#0064FF] rounded-full flex items-center justify-center shadow-lg shadow-[#0064FF]/20">
+                    <TossLogo size={50} invert={true} />
+                  </div>
+                  <div className="text-center">
+                    <p className="font-black text-gray-900 text-[17px]">토스에서 송금을 완료해 주세요</p>
+                    <p className="text-[13px] text-gray-500 font-medium mt-1">송금 후 아래 버튼을 누르면 자동으로 제조가 시작됩니다.</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setIsConfirmingToss(true);
+                      try {
+                        const res = await apiClient.post<any, StandardResponse<any>>(`/orders/${id}/confirm-toss`);
+                        if (res.success) {
+                          toast.success('송금이 확인되었습니다! 제조를 시작합니다 ☕');
+                          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
+                        }
+                      } catch (err: any) {
+                        const msg = err?.response?.data?.detail || '확인 중 오류가 발생했습니다.';
+                        toast.error(msg);
+                      } finally {
+                        setIsConfirmingToss(false);
+                      }
+                    }}
+                    disabled={isConfirmingToss}
+                    className="flex items-center gap-2 bg-[#0064FF] text-white font-black text-[14px] px-8 py-3.5 rounded-2xl shadow-lg shadow-[#0064FF]/30 hover:bg-[#0052D4] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <CheckCircle2 size={18} />
+                    {isConfirmingToss ? '확인 중...' : '송금을 완료했습니다'}
+                  </button>
+                  <p className="text-[11px] text-gray-400 font-bold">⚠️ 송금 전이라면 먼저 토스 앱에서 송금해 주세요</p>
+                </div>
               ) : (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex justify-between items-center text-[14px]">
@@ -523,7 +558,7 @@ export const OrderStatus = () => {
             {isCompleted ? '수령이 완료되었습니다! ☺️' : 
              isReady ? '메뉴가 준비되었습니다! 🎉' : 
              isPreparing ? '맛있게 만들고 있어요! ☕️' : 
-             ((order?.payment_method === 'FREE' || totalAmount === 0) ? '주문이 정상 접수되었습니다 ❤️' : order?.payment_method === 'CASH' ? '카운터에서 결제해 주세요 💵' : '입금을 기다리고 있어요 💳')}
+             ((order?.payment_method === 'FREE' || totalAmount === 0) ? '주문이 정상 접수되었습니다 ❤️' : order?.payment_method === 'CASH' ? '카운터에서 결제해 주세요 💵' : order?.payment_method === 'TOSS' ? '토스 송금을 기다리고 있어요 💱' : '입금을 기다리고 있어요 💳')}
           </h3>
           <div className="inline-flex items-center gap-2.5 bg-white border border-gray-100 shadow-md px-6 py-3 rounded-full">
             <div className={`w-3 h-3 rounded-full animate-pulse ${isReady || isCompleted ? 'bg-green-500' : isPreparing ? 'bg-primary' : 'bg-orange-400'}`} />
@@ -531,7 +566,7 @@ export const OrderStatus = () => {
               {isCompleted ? '이용해 주셔서 감사합니다' : 
                isReady ? '픽업대에서 가져가세요' : 
                isPreparing ? '잠시만 기다려 주세요' : 
-               ((order?.payment_method === 'FREE' || totalAmount === 0) ? '곧 맛있게 만들어 드릴게요' : order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : '입금 확인 시 제조 시작')}
+               ((order?.payment_method === 'FREE' || totalAmount === 0) ? '곧 맛있게 만들어 드릴게요' : order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : order?.payment_method === 'TOSS' ? '송금 확인 후 제조 시작' : '입금 확인 시 제조 시작')}
             </span>
           </div>
         </div>

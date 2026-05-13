@@ -24,7 +24,7 @@ export type OrderHistoryFilters = {
   | 'READY'
   | 'COMPLETED'
   | 'CANCELLED';
-  payment_method?: 'CASH' | 'BANK_TRANSFER' | 'FREE';
+  payment_method?: 'CASH' | 'BANK_TRANSFER' | 'FREE' | 'TOSS' | 'VOLUNTEER';
   search?: string;
 };
 
@@ -32,7 +32,8 @@ export type PaymentLogFilters = {
   start_date?: string;
   end_date?: string;
   sender_name?: string;
-  payment_method?: 'CASH' | 'BANK_TRANSFER' | 'FREE';
+  payment_method?: 'CASH' | 'BANK_TRANSFER' | 'FREE' | 'TOSS' | 'VOLUNTEER';
+  log_type?: string;
 };
 
 export type ScheduleRange = {

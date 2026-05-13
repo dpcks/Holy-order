@@ -6,6 +6,7 @@ import { apiClient } from '../../api/client';
 import { QK, type OrderHistoryFilters } from '../../api/queryKeys';
 import toast from 'react-hot-toast';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { TossLogo } from '../../components/ui/TossLogo';
 import type { Order, StandardResponse, OrderListResponse } from '../../types';
 
 // react-date-range 라이브러리 및 스타일
@@ -397,6 +398,12 @@ export const AdminOrderHistory = () => {
             >
               <Wallet size={13} /> 현금
             </button>
+            <button
+              onClick={() => { setPaymentMethodFilter('TOSS'); setPage(1); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'TOSS' ? 'bg-[#0064FF] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              <TossLogo size={13} invert={paymentMethodFilter === 'TOSS'} /> 토스
+            </button>
           </div>
         </div>
       </header>
@@ -476,9 +483,11 @@ export const AdminOrderHistory = () => {
                           ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
                           : order.payment_method === 'VOLUNTEER'
                             ? 'bg-amber-50 text-amber-600 border-amber-100'
-                            : 'bg-blue-50 text-blue-600 border-blue-100'
+                            : order.payment_method === 'TOSS'
+                              ? 'bg-[#0064FF]/10 text-[#0064FF] border-[#0064FF]/20'
+                              : 'bg-blue-50 text-blue-600 border-blue-100'
                       }`}>
-                      {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? '사역자' : order.payment_method === 'VOLUNTEER' ? '식당봉사' : '계좌'}
+                      {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? '사역자' : order.payment_method === 'VOLUNTEER' ? '식당봉사' : order.payment_method === 'TOSS' ? '토스' : '계좌'}
                     </div>
                   </td>
                   <td className="py-4">

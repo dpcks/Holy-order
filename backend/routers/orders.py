@@ -281,3 +281,52 @@ def get_order_status(order_id: int, db: Session = Depends(get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return schemas.StandardResponse(success=True, data=order, message="주문 상세 정보를 조회했습니다.")
+
+@router.post("/orders/{order_id}/confirm-toss", response_model=schemas.StandardResponse)
+async def confirm_toss_payment(order_id: int, db: Session = Depends(get_db)):
+    """
+    [토스 송금 완료 확인 API]
+    사용자가 토스 앱에서 송금을 완료한 뒤 '송금 완료' 버튼을 클릭하면 호출됩니다.
+    TOSS 결제 건에 한해 PENDING → PREPARING 으로 자동 전환하여
+    관리자 수동 입금 승인 절차를 생략합니다.
+    
+    왜 자동 전환인가?
+    - 교회 공동체 특성상 허위 송금 완료 가능성이 극히 낮음
+    - 관리자가 필요시 주문을 취소할 수 있으므로 리스크 관리가 가능
+    - 토스 결제 건마다 관리자가 수동 확인하는 것은 비효율적
+    """
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+    
+    # 토스 결제 건만 자동 확인 허용
+    if order.payment_method != schemas.PaymentMethodEnum.TOSS.value:
+        raise HTTPException(status_code=400, detail="토스 송금 주문만 자동 확인이 가능합니다.")
+    
+    # 이미 진행된 주문은 중복 처리 방지
+    if order.status != "PENDING":
+        raise HTTPException(status_code=400, detail="이미 처리된 주문입니다.")
+    
+    order.status = "PREPARING"
+    
+    # 입금 확인 로그 자동 생성 (raw_data에 자동 확인 정보 기록)
+    payment_log = models.PaymentLog(
+        order_id=order.id,
+        amount=order.total_price,
+        log_type="TOSS_AUTO",
+        sender_name="토스 자동확인",
+        raw_data={"method": "TOSS", "auto_confirmed": True, "note": "사용자가 송금 완료 버튼을 클릭하여 자동 확인 처리됨"}
+    )
+    db.add(payment_log)
+    db.commit()
+    db.refresh(order)
+    
+    # WebSocket으로 관리자에게 실시간 알림
+    await manager.broadcast({
+        "type": "ORDER_UPDATED",
+        "order_id": order.id,
+        "status": "PREPARING",
+        "timestamp": datetime.now().isoformat()
+    })
+    
+    return schemas.StandardResponse(success=True, data={"id": order.id, "status": order.status}, message="토스 송금이 확인되었습니다. 제조를 시작합니다.")

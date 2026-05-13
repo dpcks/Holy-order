@@ -92,14 +92,26 @@ from sqlalchemy import text
 def migrate_database():
     db = SessionLocal()
     try:
+        # 1. 주문 관련 스키마 (Order)
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE;"))
-        # 주문 내역 이미지 스냅샷 컬럼 추가
         db.execute(text("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS menu_image_url_snapshot VARCHAR;"))
+        
+        # 2. 마스터 데이터 소프트 삭제용 (User, Category, Menu, etc)
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        db.execute(text("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;"))
+        db.execute(text("ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        db.execute(text("ALTER TABLE menus ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        db.execute(text("ALTER TABLE menu_options ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        db.execute(text("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+        
+        # 3. 토스 송금 설정 컬럼
+        db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS toss_enabled BOOLEAN DEFAULT FALSE;"))
+        
         db.commit()
-        return {"success": True, "message": "데이터베이스 마이그레이션이 성공적으로 완료되었습니다."}
+        return {"success": True, "message": "데이터베이스 마이그레이션이 모든 테이블에 대해 성공적으로 완료되었습니다."}
     except Exception as e:
         db.rollback()
-        return {"success": False, "message": f"오류 발생: {str(e)}"}
+        return {"success": False, "message": f"마이그레이션 중 오류 발생: {str(e)}"}
     finally:
         db.close()
