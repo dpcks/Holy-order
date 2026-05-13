@@ -65,6 +65,7 @@ const TableRowSkeleton = () => (
     <td className="py-5"><div className="space-y-1"><Skeleton className="h-4 w-16" /><Skeleton className="h-3 w-10" /></div></td>
     <td className="py-5"><div className="space-y-1"><Skeleton className="h-4 w-40" /><Skeleton className="h-3 w-32" /></div></td>
     <td className="py-5"><Skeleton className="h-5 w-20" /></td>
+    <td className="py-5 hidden sm:table-cell"><Skeleton className="h-5 w-12" /></td>
     <td className="py-5 hidden md:table-cell"><Skeleton className="h-5 w-12" /></td>
     <td className="py-5"><Skeleton className="h-6 w-16" /></td>
     <td className="py-5 pr-4 hidden lg:table-cell"><Skeleton className="h-4 w-24" /></td>
@@ -409,6 +410,7 @@ export const AdminOrderHistory = () => {
               <th className="pb-4">고객 정보</th>
               <th className="pb-4">주문 내역</th>
               <th className="pb-4">금액</th>
+              <th className="pb-4 hidden sm:table-cell">유형</th>
               <th className="pb-4 hidden md:table-cell">결제수단</th>
               <th className="pb-4">상태</th>
               <th className="pb-4 pr-4 hidden lg:table-cell">시간</th>
@@ -459,10 +461,18 @@ export const AdminOrderHistory = () => {
                   <td className="py-4">
                     <span className="text-[14px] xl:text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
                   </td>
+                  <td className="py-4 hidden sm:table-cell">
+                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${order.user_id
+                        ? 'bg-green-50 text-green-600 border-green-100'
+                        : 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                      }`}>
+                      {order.user_id ? 'QR주문' : '현장주문'}
+                    </div>
+                  </td>
                   <td className="py-4 hidden md:table-cell">
                     <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${order.payment_method === 'CASH'
-                      ? 'bg-orange-50 text-orange-600 border-orange-100'
-                      : 'bg-blue-50 text-blue-600 border-blue-100'
+                        ? 'bg-orange-50 text-orange-600 border-orange-100'
+                        : 'bg-blue-50 text-blue-600 border-blue-100'
                       }`}>
                       {order.payment_method === 'CASH' ? '현금' : '계좌'}
                     </div>
@@ -583,6 +593,15 @@ export const AdminOrderHistory = () => {
                 <div className="space-y-4">
                   <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Order Summary</h4>
                   <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-bold text-gray-900">주문 유형:</span>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-black border ${selectedOrder.user_id
+                        ? 'bg-green-50 text-green-600 border-green-100'
+                        : 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                        }`}>
+                        {selectedOrder.user_id ? 'QR 주문' : '현장 주문'}
+                      </span>
+                    </div>
                     <p className="text-[15px] font-bold text-gray-900">결제수단: {selectedOrder.payment_method === 'CASH' ? '현금 결제' : '계좌 이체'}</p>
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-bold text-gray-500">주문 상태:</span>

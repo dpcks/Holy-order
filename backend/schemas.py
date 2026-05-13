@@ -152,6 +152,7 @@ class OrderItemResponse(BaseModel):
 
 class OrderResponse(BaseModel):
     id: int
+    user_id: Optional[int] = None
     order_number: int
     user_duty_snapshot: str
     user_name_snapshot: Optional[str] = None
