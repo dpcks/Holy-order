@@ -22,19 +22,22 @@ import {
   ChevronRight,
   Users,
   Clock,
-  Info
+  Info,
+  Sparkles
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { apiClient } from '../../api/client';
 import type { SettingResponse, StandardResponse, AdminInfo, AdminUser } from '../../types';
+import { RELEASE_NOTES } from '../../constants/releaseNotes';
 
 export const AdminSettings = () => {
   const queryClient = useQueryClient();
   const [localSettings, setLocalSettings] = useState<SettingResponse | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
 
   // 비밀번호 실시간 검증을 위한 상태
   const [newPassword, setNewPassword] = useState('');
@@ -129,6 +132,16 @@ export const AdminSettings = () => {
             <h1 className="text-2xl font-black text-gray-900 tracking-tight">시스템 설정</h1>
             <p className="text-[13px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Global System Settings</p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsReleaseNotesOpen(true)}
+            className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-primary/10 to-primary/5 hover:from-primary/20 hover:to-primary/10 text-primary rounded-2xl transition-all border border-primary/10 group shadow-sm active:scale-95"
+          >
+            <Sparkles size={18} className="group-hover:rotate-12 transition-transform duration-300" />
+            <span className="text-[14px] font-black tracking-tight">업데이트 소식</span>
+          </button>
         </div>
       </header>
 
@@ -730,6 +743,87 @@ export const AdminSettings = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 릴리즈 노트 모달 */}
+      {isReleaseNotesOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsReleaseNotesOpen(false)}
+          />
+          <div className="relative w-full max-w-2xl bg-white rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
+            {/* 모달 헤더 */}
+            <div className="p-8 bg-[#1A0A0A] text-white flex justify-between items-start shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                  <Sparkles size={28} className="text-yellow-400" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight">업데이트 소식</h2>
+                  <p className="text-white/40 text-[12px] font-bold uppercase tracking-widest mt-0.5">Release Notes & Updates</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsReleaseNotesOpen(false)}
+                className="p-2 hover:bg-white/10 rounded-full transition-all"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* 모달 콘텐츠 */}
+            <div className="flex-1 overflow-y-auto p-10 custom-scrollbar space-y-12">
+              {RELEASE_NOTES.map((note, index) => (
+                <div key={index} className="relative pl-10 border-l-2 border-gray-100 group">
+                  {/* 타임라인 마커 */}
+                  <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full border-4 border-white shadow-md transition-colors duration-300 ${index === 0 ? 'bg-primary' : 'bg-gray-200'}`} />
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${index === 0 ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>
+                        {note.version}
+                      </span>
+                      <span className="text-sm font-bold text-gray-400">{note.date}</span>
+                    </div>
+                    
+                    <h3 className="text-xl font-black text-gray-900 leading-tight">
+                      {note.title}
+                    </h3>
+                    
+                    <ul className="space-y-4">
+                      {note.updates.map((update, i) => (
+                        <li key={i} className="flex items-start gap-3 group/item">
+                          <div className={`mt-2 w-1.5 h-1.5 rounded-full shrink-0 transition-all duration-300 ${update.isNew ? 'bg-primary scale-125 shadow-sm shadow-primary/50' : 'bg-gray-300 group-hover/item:bg-primary'}`} />
+                          <div className="flex flex-wrap items-center gap-2 min-w-0">
+                            <p className={`text-[15px] font-bold leading-relaxed transition-colors ${update.isNew ? 'text-gray-900' : 'text-gray-600 group-hover/item:text-gray-900'}`}>
+                              {update.text}
+                            </p>
+                            {update.isNew && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary text-white text-[9px] font-black tracking-widest shadow-sm animate-in zoom-in-50 duration-500">
+                                <span className="w-1 h-1 bg-white rounded-full animate-ping" />
+                                NEW
+                              </span>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 모달 하단 액션 */}
+            <div className="p-8 bg-gray-50 border-t border-gray-100">
+              <button
+                onClick={() => setIsReleaseNotesOpen(false)}
+                className="w-full py-4 text-[15px] font-black text-gray-500 bg-white border border-gray-200 hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
+              >
+                확인했습니다
+              </button>
             </div>
           </div>
         </div>
