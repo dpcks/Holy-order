@@ -398,7 +398,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
         models.Order.status.notin_(["PENDING", "CANCELLED"]),
-        models.Order.payment_method != "FREE", # 무료 주문(사역자/이벤트)은 실제 매출액 계산에서 제외
+        models.Order.payment_method.notin_(["FREE", "VOLUNTEER"]), # 무료 주문(사역자/식당봉사/이벤트)은 실제 매출액 계산에서 제외
         models.Order.is_active == True
     ).all()
     
@@ -554,6 +554,7 @@ def get_payment_logs(
     sender_name: Optional[str] = None,
     order_id: Optional[int] = None,
     payment_method: Optional[str] = None,
+    log_type: Optional[str] = None,
     db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
     """입금 승인 로그 조회: 필터링 및 페이징 지원"""
@@ -569,6 +570,8 @@ def get_payment_logs(
         query = query.filter(models.PaymentLog.order_id == order_id)
     if payment_method:
         query = query.filter(models.Order.payment_method == payment_method)
+    if log_type:
+        query = query.filter(models.PaymentLog.log_type == log_type)
         
     total_count = query.count()
     offset = (page - 1) * limit

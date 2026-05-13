@@ -173,6 +173,8 @@ class Setting(Base):
     account_number = Column(String, nullable=True) # 계좌번호
     account_holder = Column(String, nullable=True) # 예금주
     require_phone = Column(Boolean, default=True) # 전화번호 필수 입력 여부
+    # 토스 송금 설정 - supertoss:// 딥링크를 활용한 간편 송금
+    toss_enabled = Column(Boolean, default=False) # 토스 송금 활성화 여부 (기존 계좌 정보 활용)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

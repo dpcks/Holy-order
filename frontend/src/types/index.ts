@@ -19,7 +19,7 @@ export type Duty =
   | '부목사' | '목사';
 
 /** 결제 수단 */
-export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'FREE' | 'VOLUNTEER';
+export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'FREE' | 'VOLUNTEER' | 'TOSS';
 
 // ==========================================
 // 메뉴 관련 (Menus)
@@ -112,6 +112,7 @@ export interface SettingResponse {
   open_time: string | null;
   close_time: string | null;
   require_phone: boolean;
+  toss_enabled: boolean;
 }
 
 export type SettingUpdate = Partial<SettingResponse>;

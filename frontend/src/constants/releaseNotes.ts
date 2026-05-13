@@ -21,6 +21,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: '2026-05-13',
     title: '주문 내역 및 입금 확인 고도화',
     updates: [
+      { text: '토스(Toss) 송금 결제 수단 도입 - 토스송금 클릭시 토스앱이 바로 실행되어 간편 송금 가능', isNew: true },
       { text: '사역자 및 식당 봉사자 전용 무료 주문 기능 도입 (관리자 현장 주문 결제 수단 추가)', isNew: true },
       { text: '현장 주문 시 동일 메뉴 및 옵션 항목 자동 병합 기능 구현 (중복 표시 버그 수정)', isNew: true },
       { text: '시스템 설정 내 "업데이트 소식(릴리즈 노트)" 확인 기능 추가', isNew: true },

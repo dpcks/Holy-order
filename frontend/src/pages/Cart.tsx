@@ -4,6 +4,7 @@ import { X, Building2, MessageSquare, ChevronDown, Wallet, Copy, Check } from 'l
 import { Header } from '../components/layout/Header';
 import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
+import { TossLogo } from '../components/ui/TossLogo';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
@@ -245,6 +246,13 @@ export const Cart = () => {
         const updatedOrders = [...existingOrders.filter((o: any) => String(o.id) !== String(newOrder.id)), newOrder];
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
 
+        // 토스 송금 선택 시 주문 생성 후 supertoss:// 딥링크 실행
+        if (paymentMethod === 'TOSS' && settings?.bank_name && settings?.account_number) {
+          const accountNo = settings.account_number.replace(/-/g, '');
+          const tossUrl = `supertoss://send?bank=${encodeURIComponent(settings.bank_name)}&accountNo=${accountNo}&amount=${eventFinalPrice}`;
+          window.location.href = tossUrl;
+        }
+
         navigate(`/order/status/${response.data.id}`, {
           state: { orderNumber: response.data.order_number, total: eventFinalPrice }
         });
@@ -407,27 +415,45 @@ export const Cart = () => {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-2">
+                <div className={`grid ${settings?.toss_enabled ? 'grid-cols-3' : 'grid-cols-2'} gap-2`}>
                   <button
                     onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                    className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
+                    className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
                       ? 'bg-[#2D1616] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
-                    <Building2 size={20} />
-                    <span className="text-[12px] font-bold">계좌이체</span>
+                    <div className="h-[40px] flex items-center justify-center">
+                      <Building2 size={22} />
+                    </div>
+                    <span className="text-[11px] font-bold">계좌이체</span>
                   </button>
                   <button
                     onClick={() => setPaymentMethod('CASH')}
-                    className={`py-4 flex flex-col items-center justify-center gap-2 rounded-xl transition-all border ${paymentMethod === 'CASH'
+                    className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'CASH'
                       ? 'bg-[#2D1616] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
-                    <Wallet size={20} />
-                    <span className="text-[12px] font-bold">현금 결제</span>
+                    <div className="h-[40px] flex items-center justify-center">
+                      <Wallet size={22} />
+                    </div>
+                    <span className="text-[11px] font-bold">현금 결제</span>
                   </button>
+                  {settings?.toss_enabled && (
+                    <button
+                      onClick={() => setPaymentMethod('TOSS')}
+                      className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'TOSS'
+                        ? 'bg-[#0064FF] text-white border-transparent shadow-md'
+                        : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
+                        }`}
+                    >
+                      <div className="h-[40px] flex items-center justify-center">
+                        <TossLogo size={40} invert={paymentMethod === 'TOSS'} />
+                      </div>
+                      <span className="text-[11px] font-bold">토스 송금</span>
+                    </button>
+                  )}
                 </div>
 
                 {/* 결제수단별 안내 영역 */}
@@ -488,6 +514,23 @@ export const Cart = () => {
                     <p className="text-[14px] font-bold text-gray-800">
                       카운터에서 결제해주시면 됩니다. 😊
                     </p>
+                  </div>
+                )}
+
+                {paymentMethod === 'TOSS' && settings?.toss_enabled && (
+                  <div className="mt-3 bg-[#0064FF]/5 rounded-xl p-4 border border-[#0064FF]/10 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-24 h-24 bg-[#0064FF] rounded-full flex items-center justify-center shadow-lg shadow-[#0064FF]/20">
+                        <TossLogo size={50} invert={true} />
+                      </div>
+                      <p className="text-[13px] font-bold text-gray-700 text-center leading-relaxed">
+                        주문하기 버튼을 누르면<br />
+                        <span className="text-[#0064FF] font-black">토스 앱</span>이 실행되어 송금화면으로 이동합니다.
+                      </p>
+                      <p className="text-[11px] text-gray-400 font-bold">
+                        ⚠️ 토스 앱이 설치되어 있어야 합니다
+                      </p>
+                    </div>
                   </div>
                 )}
               </>
