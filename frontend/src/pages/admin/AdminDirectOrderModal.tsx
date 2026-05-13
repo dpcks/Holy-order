@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Minus, Coffee, Wallet, Building2 } from 'lucide-react';
+import { X, Plus, Minus, Coffee, Wallet, Building2, Gift, Utensils } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK } from '../../api/queryKeys';
@@ -28,7 +28,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
   const queryClient = useQueryClient();
   const [customerName, setCustomerName] = useState('');
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER'>('BANK_TRANSFER');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'BANK_TRANSFER' | 'FREE' | 'VOLUNTEER'>('BANK_TRANSFER');
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -83,7 +83,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
     return sum + itemTotal - discount;
   }, 0);
 
-  const eventFinalPrice = isEventMode ? 0 : totalAmount;
+  const eventFinalPrice = (isEventMode || paymentMethod === 'FREE' || paymentMethod === 'VOLUNTEER') ? 0 : totalAmount;
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
@@ -129,13 +129,18 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
         }
       });
 
+      const isFreeOrder = paymentMethod === 'FREE' || paymentMethod === 'VOLUNTEER';
+
       const payload = {
-        user_name_snapshot: customerName.trim() || '현장 주문',
-        user_duty_snapshot: '성도',
-        total_price: totalAmount,
+        user_name_snapshot: customerName.trim() || (paymentMethod === 'FREE' ? '사역자' : paymentMethod === 'VOLUNTEER' ? '식당 봉사' : '현장 주문'),
+        user_duty_snapshot: paymentMethod === 'FREE' ? '사역자' : paymentMethod === 'VOLUNTEER' ? '식당 봉사' : '성도',
+        total_price: totalAmount, // 무료 주문이라도 원본 금액을 보내 백엔드에서 original_price로 기록하게 함
         payment_method: paymentMethod,
         status: 'PREPARING',
-        items: Array.from(groupedItemsMap.values())
+        items: Array.from(groupedItemsMap.values()).map(item => ({
+          ...item,
+          sub_total: isFreeOrder ? 0 : item.sub_total
+        }))
       };
       
       const res = await apiClient.post<any, StandardResponse<any>>('/orders/admin', payload);
@@ -422,24 +427,42 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
               {/* Payment Method */}
               <div>
                 <label className="block text-[12px] font-black text-gray-600 uppercase tracking-widest mb-2">결제 수단</label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => setPaymentMethod('BANK_TRANSFER')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[14px] ${paymentMethod === 'BANK_TRANSFER'
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[13px] ${paymentMethod === 'BANK_TRANSFER'
                       ? 'border-blue-500 bg-blue-50 text-blue-600'
                       : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >
-                    <Building2 size={18} /> 계좌이체
+                    <Building2 size={16} /> 계좌
                   </button>
                   <button
                     onClick={() => setPaymentMethod('CASH')}
-                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[14px] ${paymentMethod === 'CASH'
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[13px] ${paymentMethod === 'CASH'
                       ? 'border-orange-500 bg-orange-50 text-orange-600'
                       : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                   >
-                    <Wallet size={18} /> 현금
+                    <Wallet size={16} /> 현금
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('FREE')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[12px] ${paymentMethod === 'FREE'
+                      ? 'border-emerald-500 bg-emerald-50 text-emerald-600'
+                      : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Gift size={15} /> 사역자
+                  </button>
+                  <button
+                    onClick={() => setPaymentMethod('VOLUNTEER')}
+                    className={`flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all font-black text-[12px] ${paymentMethod === 'VOLUNTEER'
+                      ? 'border-amber-500 bg-amber-50 text-amber-600'
+                      : 'border-gray-100 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                  >
+                    <Utensils size={15} /> 식당봉사
                   </button>
                 </div>
               </div>
@@ -456,7 +479,9 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
                     </span>
                   )}
                 </span>
-                <span className="text-2xl font-black text-gray-900 tracking-tight">₩{eventFinalPrice.toLocaleString()}</span>
+                <span className="text-2xl font-black text-gray-900 tracking-tight">
+                  ₩{eventFinalPrice.toLocaleString()}
+                </span>
               </div>
               <button
                 onClick={() => createOrderMutation.mutate()}
