@@ -38,6 +38,7 @@ export const AdminSettings = () => {
   const [localSettings, setLocalSettings] = useState<SettingResponse | null>(null);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isOrderSettingsModalOpen, setIsOrderSettingsModalOpen] = useState(false);
   const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
 
   // 비밀번호 실시간 검증을 위한 상태
@@ -191,46 +192,46 @@ export const AdminSettings = () => {
           </section>
 
           <div className="grid grid-cols-2 gap-6 items-start">
-            {/* 2. 결제 계좌 정보 (왼쪽 배치) */}
-            <section className="bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 flex flex-col h-full">
-              <div className="flex items-center gap-3 mb-8">
+            {/* 왼쪽 컬럼: 결제 계좌 정보 */}
+            <section className="bg-white rounded-[32px] p-7 shadow-sm border border-gray-100 flex flex-col h-full">
+              <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
                   <CreditCard size={20} />
                 </div>
-                <h2 className="text-lg font-black text-gray-900">결제 계좌 관리</h2>
+                <h2 className="text-lg font-black text-gray-900 tracking-tight">결제 계좌 관리</h2>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-4">
                 <div>
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">은행명</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 px-1">은행명</label>
                   <input
                     type="text"
                     value={localSettings.bank_name || ''}
                     onChange={(e) => setLocalSettings({ ...localSettings, bank_name: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예: 카카오뱅크"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">계좌번호</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 px-1">계좌번호</label>
                   <input
                     type="text"
                     value={localSettings.account_number || ''}
                     onChange={(e) => setLocalSettings({ ...localSettings, account_number: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="하이픈(-) 포함 입력"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block mb-2 px-1">예금주</label>
+                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1.5 px-1">예금주</label>
                   <input
                     type="text"
                     value={localSettings.account_holder || ''}
                     onChange={(e) => setLocalSettings({ ...localSettings, account_holder: e.target.value })}
                     disabled={currentAdmin?.role !== 'MASTER'}
-                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-4 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="w-full bg-gray-50 border-none rounded-2xl px-5 py-3.5 text-sm font-bold focus:bg-white focus:ring-4 focus:ring-black/5 transition-all outline-none disabled:opacity-60 disabled:cursor-not-allowed"
                     placeholder="예금주 명칭"
                   />
                 </div>
@@ -257,157 +258,74 @@ export const AdminSettings = () => {
               </div>
             </section>
 
-            {/* 오른쪽 컬럼: 전화번호 설정 + 보안 설정 스택 */}
-            <div className="flex flex-col gap-6 h-full">
-              {/* 3. 전화번호 필수 입력 여부 제어 */}
-              <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0">
+            {/* 오른쪽 컬럼: 주문설정, 보안, 관리자 스택 */}
+            <div className="flex flex-col gap-5">
+              {/* 3. 주문 설정 진입 카드 */}
+              <section
+                onClick={() => setIsOrderSettingsModalOpen(true)}
+                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
+              >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-blue-100/50 transition-colors" />
-
-                <div className="relative flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${localSettings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'
-                      }`}>
-                      <Smartphone size={18} />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shadow-inner">
+                      <Smartphone size={22} />
                     </div>
                     <div>
-                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">전화번호 설정</h2>
-                      <p className="text-[11px] font-bold text-gray-400">주문시 전화번호 필수입력 여부 조절</p>
+                      <h2 className="text-[17px] font-black text-gray-900 tracking-tight leading-tight">주문 설정</h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${localSettings.require_phone ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'}`}>
+                          전화번호:{localSettings.require_phone ? '필수' : '선택'}
+                        </span>
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${localSettings.toss_enabled ? 'bg-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-100 text-gray-500'}`}>
+                          토스:{localSettings.toss_enabled ? '활성' : '비활성'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-
-                  <button
-                    onClick={() => handleUpdate({ require_phone: !localSettings.require_phone })}
-                    disabled={saving}
-                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${localSettings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'
-                      }`}
-                  >
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.require_phone ? 'translate-x-8' : 'translate-x-0'
-                      }`}>
-                      <Smartphone size={12} className={localSettings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
-                    </div>
-                  </button>
-                </div>
-
-                <div className={`relative w-full p-4 rounded-2xl flex items-center justify-between border transition-all duration-500 ${localSettings.require_phone
-                  ? 'bg-blue-50 border-blue-100 text-blue-700'
-                  : 'bg-gray-50 border-gray-100 text-gray-500'
-                  }`}>
-                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 설정</span>
-                  <span className="text-[13px] font-black">
-                    {localSettings.require_phone ? '필수 입력' : '입력 생략'}
-                  </span>
-                </div>
-              </section>
-
-              {/* 3-2. 토스 송금 설정 */}
-              <section className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0">
-                <div className="absolute top-0 right-0 w-24 h-24 bg-[#0064FF]/5 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-[#0064FF]/10 transition-colors" />
-
-                <div className="relative flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-500 ${localSettings.toss_enabled ? 'bg-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 text-gray-400'}`}>
-                      <Send size={18} />
-                    </div>
-                    <div>
-                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">토스 송금</h2>
-                      <p className="text-[11px] font-bold text-gray-400">위 계좌 정보로 토스 앱 송금 연결</p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      if (!localSettings.toss_enabled && (!localSettings.bank_name || !localSettings.account_number)) {
-                        toast.error('계좌 정보를 먼저 입력해 주세요.');
-                        return;
-                      }
-                      handleUpdate({ toss_enabled: !localSettings.toss_enabled });
-                    }}
-                    disabled={saving}
-                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 focus:outline-none focus:ring-4 focus:ring-black/5 ${localSettings.toss_enabled ? 'bg-[#0064FF] shadow-lg shadow-[#0064FF]/30' : 'bg-gray-200 shadow-inner'}`}
-                  >
-                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.toss_enabled ? 'translate-x-8' : 'translate-x-0'}`}>
-                      <Send size={12} className={localSettings.toss_enabled ? 'text-[#0064FF]' : 'text-gray-300'} />
-                    </div>
-                  </button>
-                </div>
-
-                <div className={`relative w-full p-4 rounded-2xl flex flex-col gap-1.5 border transition-all duration-500 ${localSettings.toss_enabled ? 'bg-[#0064FF]/5 border-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase tracking-wider opacity-60">현재 상태</span>
-                    <span className="text-[12px] font-black">
-                      {localSettings.toss_enabled ? '활성화' : '비활성화'}
-                    </span>
-                  </div>
-                  {localSettings.toss_enabled && (
-                    <p className="text-[10px] font-bold opacity-60 mt-1">
-                      사용자 주문 시 토스 앱 송금 버튼이 표시됩니다
-                    </p>
-                  )}
+                  <ChevronRight size={20} className="text-gray-300 group-hover:text-blue-500 transition-colors" />
                 </div>
               </section>
 
               {/* 4. 보안 및 계정 관리 진입 카드 */}
               <section
                 onClick={() => setIsSecurityModalOpen(true)}
-                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
+                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-amber-100/50 transition-colors" />
-
-                <div className="relative flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
-                      <ShieldCheck size={18} />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner">
+                      <ShieldCheck size={22} />
                     </div>
                     <div>
-                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">보안 및 계정</h2>
-                      <p className="text-[11px] font-bold text-gray-400">비밀번호 및 계정</p>
+                      <h2 className="text-[17px] font-black text-gray-900 tracking-tight leading-tight">보안 및 계정</h2>
+                      <p className="text-[11px] font-bold text-gray-400 mt-0.5">비밀번호 및 권한 관리</p>
                     </div>
                   </div>
-                  <div className="w-10 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-amber-500 group-hover:bg-amber-50 transition-all">
-                    <ChevronRight size={16} />
-                  </div>
-                </div>
-
-                <div className="relative w-full p-4 rounded-2xl flex items-center justify-between border border-amber-100 bg-amber-50/50 text-amber-700 transition-all duration-500">
-                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">관리 상태</span>
-                  <span className="text-[13px] font-black flex items-center gap-1.5">
-                    <Lock size={12} />
-                    설정 관리하기
-                  </span>
+                  <ChevronRight size={20} className="text-gray-300 group-hover:text-amber-500 transition-colors" />
                 </div>
               </section>
 
               {/* 5. 관리자 목록 및 현황 진입 카드 */}
               <section
                 onClick={() => setIsAdminModalOpen(true)}
-                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden shrink-0 cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
+                className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100 relative group overflow-hidden cursor-pointer hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 active:scale-[0.98]"
               >
                 <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50/50 rounded-full blur-2xl -mr-12 -mt-12 group-hover:bg-purple-100/50 transition-colors" />
-
-                <div className="relative flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
-                      <Users size={18} />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center shadow-inner">
+                      <Users size={22} />
                     </div>
                     <div>
-                      <h2 className="text-[16px] font-black text-gray-900 leading-tight">관리자 목록</h2>
-                      <p className="text-[11px] font-bold text-gray-400">접속 현황 및 권한</p>
+                      <h2 className="text-[17px] font-black text-gray-900 tracking-tight leading-tight">관리자 목록</h2>
+                      <p className="text-[11px] font-bold text-gray-400 mt-0.5">현재 {admins.length}명의 관리자 등록됨</p>
                     </div>
                   </div>
-                  <div className="w-10 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-purple-500 group-hover:bg-purple-50 transition-all">
-                    <ChevronRight size={16} />
-                  </div>
-                </div>
-
-                <div className="relative w-full p-4 rounded-2xl flex items-center justify-between border border-purple-100 bg-purple-50/50 text-purple-700 transition-all duration-500">
-                  <span className="text-[11px] font-black uppercase tracking-wider opacity-60">등록된 관리자</span>
-                  <span className="text-[13px] font-black flex items-center gap-1.5">
-                    <Users size={12} />
-                    {admins.length}명 보기
-                  </span>
+                  <ChevronRight size={20} className="text-gray-300 group-hover:text-purple-500 transition-colors" />
                 </div>
               </section>
-
             </div>
           </div>
         </div>
@@ -791,6 +709,113 @@ export const AdminSettings = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 주문 설정 모달 */}
+      {isOrderSettingsModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setIsOrderSettingsModalOpen(false)}
+          />
+
+          <div className="relative w-full max-w-xl bg-gray-50 rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[90vh] flex flex-col">
+            <div className="p-8 bg-white border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Smartphone size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-gray-900 tracking-tight">주문 상세 설정</h2>
+                  <p className="text-[12px] text-gray-400 font-bold uppercase tracking-wider">Order Options Control</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsOrderSettingsModalOpen(false)}
+                className="w-10 h-10 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-gray-100 hover:text-gray-900 transition-all"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-6 overflow-y-auto custom-scrollbar">
+              {/* 전화번호 설정 */}
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${localSettings.require_phone ? 'bg-blue-50 text-blue-500' : 'bg-gray-50 text-gray-400'}`}>
+                      <Smartphone size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-gray-900">전화번호 입력 설정</h3>
+                      <p className="text-[11px] font-bold text-gray-400">주문 시 전화번호 필수 여부</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUpdate({ require_phone: !localSettings.require_phone })}
+                    disabled={saving}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 ${localSettings.require_phone ? 'bg-blue-500 shadow-lg shadow-blue-500/30' : 'bg-gray-200 shadow-inner'}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.require_phone ? 'translate-x-8' : 'translate-x-0'}`}>
+                      <Smartphone size={12} className={localSettings.require_phone ? 'text-blue-500' : 'text-gray-300'} />
+                    </div>
+                  </button>
+                </div>
+                <div className={`p-4 rounded-2xl border text-center ${localSettings.require_phone ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                   <span className="text-[13px] font-black uppercase tracking-wider">
+                     현재: {localSettings.require_phone ? '전화번호 필수 입력' : '전화번호 입력 생략 가능'}
+                   </span>
+                </div>
+              </div>
+
+              {/* 토스 송금 설정 */}
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${localSettings.toss_enabled ? 'bg-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 text-gray-400'}`}>
+                      <Send size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-gray-900">토스 송금 기능</h3>
+                      <p className="text-[11px] font-bold text-gray-400">토스 앱 간편 송금 활성화</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!localSettings.toss_enabled && (!localSettings.bank_name || !localSettings.account_number)) {
+                        toast.error('먼저 결제 계좌 정보를 설정해 주세요.');
+                        return;
+                      }
+                      handleUpdate({ toss_enabled: !localSettings.toss_enabled });
+                    }}
+                    disabled={saving}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 ${localSettings.toss_enabled ? 'bg-[#0064FF] shadow-lg shadow-[#0064FF]/30' : 'bg-gray-200 shadow-inner'}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.toss_enabled ? 'translate-x-8' : 'translate-x-0'}`}>
+                      <Send size={12} className={localSettings.toss_enabled ? 'text-[#0064FF]' : 'text-gray-300'} />
+                    </div>
+                  </button>
+                </div>
+                <div className={`p-4 rounded-2xl border flex flex-col gap-1 text-center ${localSettings.toss_enabled ? 'bg-[#0064FF]/5 border-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                   <span className="text-[13px] font-black uppercase tracking-wider">
+                     현재: {localSettings.toss_enabled ? '토스 송금 활성화됨' : '토스 송금 비활성'}
+                   </span>
+                   {localSettings.toss_enabled && (
+                     <p className="text-[11px] font-bold opacity-60">사용자 앱에서 '토스 송금' 버튼이 노출됩니다.</p>
+                   )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-50 border-t border-gray-100 shrink-0">
+               <button
+                 onClick={() => setIsOrderSettingsModalOpen(false)}
+                 className="w-full py-4 bg-black text-white rounded-2xl font-black text-sm hover:bg-gray-800 transition-all active:scale-[0.98]"
+               >
+                 닫기
+               </button>
             </div>
           </div>
         </div>
