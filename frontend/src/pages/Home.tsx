@@ -242,7 +242,7 @@ export const Home = () => {
         <>
 
           {/* Store Selector */}
-          <div className="px-4 py-4">
+          <div className="px-4 py-4 flex justify-end">
             <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg">
               <MapPin size={16} className="text-primary" />
               <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
