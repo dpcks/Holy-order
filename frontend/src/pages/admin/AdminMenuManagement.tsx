@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { Search, Plus, Pencil, X, Check, Trash2, Image as ImageIcon, GripVertical, EyeOff } from 'lucide-react';
@@ -38,10 +39,24 @@ interface EditForm {
   options: MenuOptionForm[];
 }
 
-/** 관리 도구에서 카테고리 정보가 포함된 메뉴 타입 */
 interface AdminMenu extends Menu {
   categoryId: number;
   categoryName: string;
+}
+
+/** 카테고리 편집을 위한 로컬 전용 타입 (ID가 임시 문자열일 수 있음) */
+interface LocalCategory extends Omit<Category, 'id'> {
+  id: number | string;
+}
+
+/** 메뉴 저장 시 사용하는 페이로드 타입 */
+interface MenuPayload {
+  name: string;
+  price: number;
+  description: string | null;
+  category_id: number;
+  image_url: string | null;
+  options: MenuOptionForm[];
 }
 
 // 드래그 가능한 카테고리 아이템 컴포넌트
@@ -52,11 +67,11 @@ const SortableCategoryItem = ({
   onDelete,
   onToggleActive
 }: {
-  cat: Category;
+  cat: LocalCategory;
   index: number;
-  onRename: (id: number, name: string) => void;
-  onDelete: (id: number) => void;
-  onToggleActive: (id: number, currentStatus: boolean) => void;
+  onRename: (id: number | string, name: string) => void;
+  onDelete: (id: number | string) => void;
+  onToggleActive: (id: number | string, currentStatus: boolean) => void;
 }) => {
   const {
     attributes,
@@ -264,19 +279,13 @@ export const AdminMenuManagement = () => {
     },
   });
 
-  // [React Query] Mutations
-  const categoryReorderMutation = useMutation({
-    mutationFn: (categoryIds: number[]) => apiClient.patch('/admin/categories/reorder', { category_ids: categoryIds }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
-  });
-
   const menuReorderMutation = useMutation({
     mutationFn: (menuIds: number[]) => apiClient.patch('/admin/menus/reorder', { menu_ids: menuIds }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
   });
 
   const saveMenuMutation = useMutation({
-    mutationFn: async ({ editingMenu, payload }: { editingMenu: AdminMenu | null; payload: any }) => {
+    mutationFn: async ({ editingMenu, payload }: { editingMenu: AdminMenu | null; payload: MenuPayload }) => {
       if (editingMenu) return apiClient.patch(`/admin/menus/${editingMenu.id}`, payload);
       return apiClient.post('/admin/menus', payload);
     },
@@ -301,24 +310,29 @@ export const AdminMenuManagement = () => {
     },
   });
 
-  const categoryMutation = useMutation({
-    mutationFn: async ({ id, payload, action }: { id?: number; payload?: any; action: 'patch' | 'post' | 'delete' }) => {
-      if (action === 'patch') return apiClient.patch(`/admin/categories/${id}`, payload);
-      if (action === 'delete') return apiClient.delete(`/admin/categories/${id}`);
-      return apiClient.post('/admin/categories', payload);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories }),
-  });
-
   // 모달 상태
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<AdminMenu | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-
-  // 폼 상태
   const [editForm, setEditForm] = useState<EditForm>({
     name: '', price: '', description: '', category_id: 0, image_url: '', options: []
   });
+  // 카테고리 로컬 편집 상태
+  const [localCategories, setLocalCategories] = useState<LocalCategory[]>([]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [deletedCategoryIds, setDeletedCategoryIds] = useState<number[]>([]);
+
+  // 모달 열릴 때 초기화
+  useEffect(() => {
+    if (isCategoryModalOpen) {
+      setLocalCategories(categories);
+      setDeletedCategoryIds([]);
+      setIsAddingCategory(false);
+      setNewCategoryName('');
+    }
+  }, [isCategoryModalOpen, categories]);
+
   const [savingId] = useState<number | 'new' | null>(null);
 
   // 토스트 알림 상태
@@ -376,15 +390,13 @@ export const AdminMenuManagement = () => {
     })
   );
 
-  // 드래그 종료 처리
-  const handleDragEnd = async (event: DragEndEvent) => {
+  // 카테고리 드래그 종료 (로컬 상태만 변경)
+  const handleCategoryDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (over && active.id !== over.id) {
-      const oldIndex = categories.findIndex((c) => c.id === active.id);
-      const newIndex = categories.findIndex((c) => c.id === over.id);
-      const newOrder = arrayMove(categories, oldIndex, newIndex);
-      categoryReorderMutation.mutate(newOrder.map(c => c.id));
+      const oldIndex = localCategories.findIndex((c) => c.id === active.id);
+      const newIndex = localCategories.findIndex((c) => c.id === over.id);
+      setLocalCategories(arrayMove(localCategories, oldIndex, newIndex));
     }
   };
 
@@ -588,20 +600,74 @@ export const AdminMenuManagement = () => {
     );
   };
 
-  // 노출 상태 토글
-  // const handleToggleActive = async (menu: AdminMenu) => {
-  //   setSavingId(menu.id);
-  //   const newStatus = !menu.is_active;
-  //   try {
-  //     await apiClient.patch(`/admin/menus/${menu.id}`, { is_active: newStatus });
-  //     await fetchMenus();
-  //     showToast(`'${menu.name}' 메뉴가 목록에서 ${newStatus ? '노출' : '숨김'} 처리되었습니다.`, 'success');
-  //   } catch {
-  //     alert('노출 상태 변경에 실패했습니다.');
-  //   } finally {
-  //     setSavingId(null);
-  //   }
-  // };
+  // 카테고리 로컬 추가 함수
+  const handleAddCategoryLocal = () => {
+    const trimmedName = newCategoryName.trim();
+    if (!trimmedName) {
+      setIsAddingCategory(false);
+      return;
+    }
+    const tempId = `new-${Date.now()}`;
+    const newCat: LocalCategory = {
+      id: tempId,
+      name: trimmedName,
+      is_active: true,
+      display_order: localCategories.length,
+      menus: []
+    };
+    setLocalCategories(prev => [...prev, newCat]);
+    setNewCategoryName('');
+    setIsAddingCategory(false);
+    showToast(`'${trimmedName}' 카테고리가 목록에 추가되었습니다. 하단의 저장 버튼을 눌러 확정해 주세요.`, 'info');
+  };
+
+  // 카테고리 설정 일괄 저장
+  const handleSaveAllCategories = async () => {
+    try {
+      // 1. 삭제된 카테고리 처리
+      for (const id of deletedCategoryIds) {
+        await apiClient.delete(`/admin/categories/${id}`);
+      }
+
+      // 2. 기존 카테고리 수정 및 순서 변경
+      const existingCats = localCategories.filter(c => typeof c.id === 'number');
+      
+      // 순서 변경 일괄 적용
+      await apiClient.patch('/admin/categories/reorder', {
+        category_ids: existingCats.map(c => c.id)
+      });
+
+      // 개별 정보(이름, 활성상태) 수정 확인 및 반영
+      for (const cat of existingCats) {
+        const original = categories.find(c => c.id === cat.id);
+        if (original && (original.name !== cat.name || original.is_active !== cat.is_active)) {
+          await apiClient.patch(`/admin/categories/${cat.id}`, {
+            name: cat.name,
+            is_active: cat.is_active
+          });
+        }
+      }
+
+      // 3. 신규 카테고리 추가
+      const newCats = localCategories.filter(c => typeof c.id === 'string'); // 임시 ID 사용 시
+      for (const ncat of newCats) {
+        await apiClient.post('/admin/categories', {
+          name: ncat.name,
+          display_order: localCategories.indexOf(ncat)
+        });
+      }
+
+      showToast('카테고리 설정이 성공적으로 저장되었습니다.', 'success');
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
+      setIsCategoryModalOpen(false);
+    } catch (err: unknown) {
+      let errorMsg = '저장 중 오류가 발생했습니다.';
+      if (axios.isAxiosError(err)) {
+        errorMsg = err.response?.data?.detail || err.message;
+      }
+      alert(errorMsg);
+    }
+  };
 
   // Cloudinary 이미지 실제 업로드
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -917,77 +983,98 @@ export const AdminMenuManagement = () => {
 
       {/* 카테고리 설정 모달 */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsCategoryModalOpen(false)}>
-          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsCategoryModalOpen(false)}>
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">카테고리 설정</h2>
-                <p className="text-[12px] text-gray-400 mt-0.5">드래그하여 순서를 변경할 수 있습니다.</p>
+                <p className="text-[12px] text-gray-400 mt-0.5">드래그하여 순서를 변경하거나 이름을 수정하세요.</p>
               </div>
               <button onClick={() => setIsCategoryModalOpen(false)} className="p-2 text-gray-400 hover:text-gray-600 transition-colors"><X size={20} /></button>
             </div>
 
-            <div className="mb-6 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar mb-6">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+                onDragEnd={handleCategoryDragEnd}
                 modifiers={[restrictToVerticalAxis, restrictToWindowEdges]}
               >
                 <SortableContext
-                  items={categories.map(c => c.id)}
+                  items={localCategories.map(c => c.id)}
                   strategy={verticalListSortingStrategy}
                 >
-                  <div className="space-y-3">
-                    {categories.map((cat, idx) => (
+                  <div className="space-y-2.5">
+                    {localCategories.map((cat, idx) => (
                       <SortableCategoryItem
                         key={cat.id}
                         cat={cat}
                         index={idx}
-                        onRename={async (id, name) => {
-                          if (name === cat.name) return;
-                          categoryMutation.mutate({ id, payload: { name }, action: 'patch' });
+                        onRename={(id, name) => {
+                          setLocalCategories(prev => prev.map(c => c.id === id ? { ...c, name } : c));
                         }}
-                        onDelete={async (id) => {
-                          if (!confirm('카테고리를 삭제하시겠습니까? (메뉴가 있으면 삭제 불가)')) return;
-                          categoryMutation.mutate({ id, action: 'delete' }, {
-                            onError: (err: any) => alert(err.response?.data?.detail || '삭제 실패')
-                          });
+                        onDelete={(id) => {
+                          if (typeof id === 'number') setDeletedCategoryIds(prev => [...prev, id]);
+                          setLocalCategories(prev => prev.filter(c => c.id !== id));
                         }}
-                        onToggleActive={async (id, currentStatus) => {
-                          const newStatus = !currentStatus;
-                          categoryMutation.mutate({ id, payload: { is_active: newStatus }, action: 'patch' }, {
-                            onSuccess: () => {
-                              showToast(`'${cat.name}' 카테고리가 ${newStatus ? '노출' : '숨김'} 상태로 변경되었습니다.`, 'success');
-                            }
-                          });
+                        onToggleActive={(id, currentStatus) => {
+                          setLocalCategories(prev => prev.map(c => c.id === id ? { ...c, is_active: !currentStatus } : c));
                         }}
                       />
                     ))}
                   </div>
                 </SortableContext>
               </DndContext>
+
+              {/* 추가하기 버튼 또는 폼 */}
+              <div className="mt-4">
+                {isAddingCategory ? (
+                  <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex gap-2 animate-in slide-in-from-top-2 duration-200">
+                    <input
+                      autoFocus
+                      placeholder="카테고리명 입력"
+                      value={newCategoryName}
+                      onChange={e => setNewCategoryName(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleAddCategoryLocal();
+                        if (e.key === 'Escape') setIsAddingCategory(false);
+                      }}
+                      className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategoryLocal}
+                      className="bg-primary text-white p-2.5 rounded-xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
+                    >
+                      <Check size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setIsAddingCategory(true)}
+                    className="w-full py-4 border-2 border-dashed border-gray-100 rounded-2xl flex items-center justify-center gap-2 text-gray-400 hover:text-primary hover:border-primary/20 hover:bg-primary/5 transition-all group"
+                  >
+                    <Plus size={18} className="group-hover:scale-110 transition-transform" />
+                    <span className="text-[13px] font-bold">카테고리 추가하기</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="bg-primary/5 p-5 rounded-2xl border border-primary/10">
-              <label className="text-[12px] font-bold text-primary mb-3 block uppercase tracking-wider">새 카테고리 추가</label>
-              <div className="flex gap-2">
-                <input
-                  id="new-category-input"
-                  placeholder="예: 시그니처"
-                  className="flex-1 bg-white border border-primary/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
-                />
-                <button
-                  onClick={async () => {
-                    const input = document.getElementById('new-category-input') as HTMLInputElement;
-                    if (!input.value) return;
-                    categoryMutation.mutate({ payload: { name: input.value, display_order: categories.length }, action: 'post' }, {
-                      onSuccess: () => { input.value = ''; }
-                    });
-                  }}
-                  className="bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95"
-                >추가</button>
-              </div>
+            {/* 하단 저장 버튼 */}
+            <div className="flex gap-3 pt-4 border-t border-gray-100">
+              <button
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="flex-1 py-3.5 text-[14px] font-bold text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveAllCategories}
+                className="flex-[2] py-3.5 text-[14px] font-bold text-white bg-primary hover:bg-primary/90 rounded-2xl transition-all shadow-lg shadow-primary/20"
+              >
+                설정 저장하기
+              </button>
             </div>
           </div>
         </div>
@@ -995,7 +1082,7 @@ export const AdminMenuManagement = () => {
 
       {/* 토스트 알림 UI */}
       {toast && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`px-6 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-md ${toast.type === 'success' ? 'bg-white/90 border-blue-100 text-blue-600' : 'bg-white/90 border-orange-100 text-orange-600'
             }`}>
             <div className={`w-2 h-2 rounded-full animate-pulse ${toast.type === 'success' ? 'bg-blue-500' : 'bg-orange-500'}`} />
