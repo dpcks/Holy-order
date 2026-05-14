@@ -214,6 +214,7 @@ export const AdminSalesReports = () => {
   });
 
   const bankTransferTotal = stats?.payment_method_sales?.BANK_TRANSFER || 0;
+  const tossTotal = stats?.payment_method_sales?.TOSS || 0;
   const cashTotal = stats?.payment_method_sales?.CASH || 0;
   const dutyData = stats ? groupDuty(stats.duty_breakdown) : [];
 
@@ -321,6 +322,7 @@ export const AdminSalesReports = () => {
               <div className="flex flex-col gap-4">
                 {[
                   { label: '계좌이체', amount: bankTransferTotal, total: stats.total_sales, color: 'bg-[#1A0A0A]' },
+                  { label: '토스송금', amount: tossTotal, total: stats.total_sales, color: 'bg-[#0064FF]' },
                   { label: '현금', amount: cashTotal, total: stats.total_sales, color: 'bg-orange-500' },
                 ].map((item, i) => {
                   const pct = stats.total_sales > 0 ? Math.round((item.amount / stats.total_sales) * 100) : 0;
@@ -504,6 +506,10 @@ export const AdminSalesReports = () => {
                           <div className="flex justify-between mb-1.5">
                             <span className="text-[13px] font-semibold text-gray-600">계좌이체</span>
                             <span className="text-[13px] font-bold text-gray-900">₩{bankTransferTotal.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between mb-1.5">
+                            <span className="text-[13px] font-semibold text-gray-600">토스송금</span>
+                            <span className="text-[13px] font-bold text-gray-900">₩{tossTotal.toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between mb-1.5">
                             <span className="text-[13px] font-semibold text-gray-600">현금 (시스템 상)</span>
