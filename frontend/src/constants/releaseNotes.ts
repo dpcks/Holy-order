@@ -17,12 +17,23 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.3.0',
+    date: '2026-05-14',
+    title: '정산 통계 강화 및 시스템 속도 최적화',
+    updates: [
+      { text: '정산 및 매출 통계에 "토스송금" 결제 수단 항목 추가 (계좌이체/토스/현금 개별 집계)', isNew: true },
+      { text: '마감 리포트 생성 시 토스송금 매출 합계 정보 포함', isNew: true },
+      { text: '관리자 페이지 전체적인 접속 및 화면 전환 속도 최적화', isNew: true },
+      { text: '통계 차트 및 데이터 로딩 시각적 피드백 개선' }
+    ]
+  },
+  {
     version: 'v1.2.5',
     date: '2026-05-13',
     title: '주문 내역 및 입금 확인 고도화',
     updates: [
       { text: '토스(Toss) 송금 결제 수단 도입 - 토스송금 클릭시 토스앱이 바로 실행되어 간편 송금 가능', isNew: true },
-      { text: '사역자 및 식당 봉사자 전용 무료 주문 기능 도입 (관리자 현장 주문 결제 수단 추가)', isNew: true },
+      { text: '사역자 및 식당 봉사자 전용 무료 주문 기능 도입 (QR주문은 불가, 관리자가 직접 추가 가능)', isNew: true },
       { text: '현장 주문 시 동일 메뉴 및 옵션 항목 자동 병합 기능 구현 (중복 표시 버그 수정)', isNew: true },
       { text: '시스템 설정 내 "업데이트 소식(릴리즈 노트)" 확인 기능 추가', isNew: true },
       { text: '주문 내역 히스토리에 주문 유형(QR주문/현장주문) 컬럼 추가', isNew: true },
