@@ -189,13 +189,18 @@ export const Cart = () => {
         ]);
 
         if (eventRes.success && eventRes.data) setActiveEvent(eventRes.data);
-        if (settingsRes.success && settingsRes.data) setSettings(settingsRes.data);
+        if (settingsRes.success && settingsRes.data) {
+          setSettings(settingsRes.data);
+          if (!settingsRes.data.is_open) {
+            navigate('/', { replace: true });
+          }
+        }
       } catch (err) {
         console.warn('정보를 불러오지 못했습니다.', err);
       }
     };
     fetchEvent();
-  }, []);
+  }, [navigate]);
 
   // 주문 버튼 클릭 → 사용자 정보 확인을 위해 항상 모달 오픈
   const handleOrderClick = () => {

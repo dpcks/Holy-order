@@ -7,7 +7,9 @@ import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { useCart } from '../context/CartContext';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
-import type { Menu, MenuOption } from '../types';
+import type { Menu, MenuOption, SettingResponse, StandardResponse } from '../types';
+import { apiClient } from '../api/client';
+import { useEffect } from 'react';
 
 // ICE/HOT 옵션인지 판별하는 상수 - 백엔드 name 값 기준
 const TEMP_OPTION_NAMES = ['ICE', 'HOT'];
@@ -31,6 +33,20 @@ export const MenuDetail = () => {
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
   };
+
+  useEffect(() => {
+    const checkStoreStatus = async () => {
+      try {
+        const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings');
+        if (res.success && res.data && !res.data.is_open) {
+          navigate('/', { replace: true });
+        }
+      } catch (err) {
+        console.warn('설정 정보를 불러오지 못했습니다.', err);
+      }
+    };
+    checkStoreStatus();
+  }, [navigate]);
 
   // ────────────────────────────────────────────────────────────────
   // [동적 매핑] 백엔드에서 받은 options 배열을 name 기준으로 그룹화
