@@ -16,6 +16,11 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없거나 활성화되지 않았습니다.")
         
+    # 0. 영업 상태 확인
+    setting = db.query(models.Setting).first()
+    if setting and not setting.is_open:
+        raise HTTPException(status_code=403, detail="현재 영업 시간이 아닙니다. 주문을 생성할 수 없습니다.")
+        
     # 1. 활성 이벤트(골든벨) 모드 확인 (시간 범위 포함)
     from sqlalchemy import or_
     now = models.get_seoul_time().replace(tzinfo=None)
