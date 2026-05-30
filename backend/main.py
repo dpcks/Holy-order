@@ -105,8 +105,9 @@ def migrate_database():
         db.execute(text("ALTER TABLE menu_options ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
         db.execute(text("ALTER TABLE ingredients ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
         
-        # 3. 토스 송금 설정 컬럼
+        # 3. 설정 테이블 컬럼
         db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS toss_enabled BOOLEAN DEFAULT FALSE;"))
+        db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS show_price BOOLEAN DEFAULT TRUE;"))
         
         db.commit()
         return {"success": True, "message": "데이터베이스 마이그레이션이 모든 테이블에 대해 성공적으로 완료되었습니다."}
