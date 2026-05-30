@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift } from 'lucide-react';
+import { MapPin, Coffee, PartyPopper, Gift, Megaphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
@@ -281,6 +281,7 @@ export const Home = () => {
                     key={menu.id}
                     menu={menu}
                     isEventMode={!!activeEvent?.is_event_mode}
+                    showPrice={shopSettings?.show_price ?? true}
                     onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                     onShowToast={showToast}
                   />
@@ -302,6 +303,7 @@ export const Home = () => {
                   key={menu.id}
                   menu={menu}
                   isEventMode={!!activeEvent?.is_event_mode}
+                  showPrice={shopSettings?.show_price ?? true}
                   onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                   onShowToast={showToast}
                 />
@@ -359,12 +361,16 @@ export const Home = () => {
               <img src={activeEvent.image_url} alt={activeEvent.title} className="w-full h-48 object-cover" />
             )}
             <div className="p-6 text-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <PartyPopper size={28} className="text-white" />
+              <div className={`w-14 h-14 ${activeEvent.is_event_mode ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gray-100'} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                {activeEvent.is_event_mode ? (
+                  <PartyPopper size={28} className="text-white" />
+                ) : (
+                  <Megaphone size={28} className="text-gray-600" />
+                )}
               </div>
               <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{activeEvent.title}</h2>
               {activeEvent.content && (
-                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep">{activeEvent.content}</p>
+                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep whitespace-pre-wrap">{activeEvent.content}</p>
               )}
               {activeEvent.sponsor_name && (
                 <p className="text-[13px] font-bold text-amber-600 mb-4">
@@ -386,7 +392,7 @@ export const Home = () => {
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
+const MenuCard = ({ menu, isEventMode = false, showPrice = true, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, showPrice?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
   const handleCardClick = () => {
     if (!menu.is_available) {
       onShowToast(`'${menu.name}' 메뉴는 현재 품절입니다.`, 'error');
@@ -454,12 +460,14 @@ const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: M
       )}
       {/* 이벤트 모드: 기존 가격 취소선 + 0원 표시 */}
       {isEventMode ? (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[13px] text-gray-400 line-through font-medium">{menu.price.toLocaleString()}원</span>
-          <span className="font-black text-amber-600 text-[15px]">0원</span>
-        </div>
+        showPrice && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-gray-400 line-through font-medium">{menu.price.toLocaleString()}원</span>
+            <span className="font-black text-amber-600 text-[15px]">0원</span>
+          </div>
+        )
       ) : (
-        <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
+        showPrice && <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
       )}
     </div>
   );

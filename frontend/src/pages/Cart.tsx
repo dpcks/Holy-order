@@ -165,6 +165,7 @@ export const Cart = () => {
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [settings, setSettings] = useState<SettingResponse | null>(null);
+  const showPrice = settings?.show_price ?? true;
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
@@ -376,9 +377,11 @@ export const Cart = () => {
                           className="w-7 h-7 flex items-center justify-center text-gray-600 active:bg-gray-200"
                         >+</button>
                       </div>
-                      <span className="font-bold text-gray-900 text-[15px]">
-                        {(item.sub_total - item.tumbler_discount * item.quantity).toLocaleString()}원
-                      </span>
+                      {showPrice && (
+                        <span className="font-bold text-gray-900 text-[15px]">
+                          {(item.sub_total - item.tumbler_discount * item.quantity).toLocaleString()}원
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -543,47 +546,57 @@ export const Cart = () => {
           </section>
 
           {/* 결제 요약 */}
-          <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[14px] text-gray-500 font-medium">상품금액</span>
-              <span className="text-[14px] font-bold text-gray-800">{totalPrice.toLocaleString()}원</span>
-            </div>
-
-            {isEventMode ? (
-              <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-200">
-                <span className="text-[14px] text-amber-600 font-extrabold flex items-center gap-1.5">
-                  <span className="text-base">🎉</span> 이벤트 할인
-                </span>
-                <span className="text-[14px] font-black text-amber-600">-{totalPrice.toLocaleString()}원</span>
+          {showPrice ? (
+            <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[14px] text-gray-500 font-medium">상품금액</span>
+                <span className="text-[14px] font-bold text-gray-800">{totalPrice.toLocaleString()}원</span>
               </div>
-            ) : discount > 0 ? (
-              // 텀블러 할인이 있을 때만 할인금액 행 표시
-              <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-100">
-                <span className="text-[14px] text-emerald-600 font-extrabold flex items-center gap-1.5">
-                  <span className="text-base">♻️</span> 텀블러 할인
-                </span>
-                <span className="text-[14px] font-black text-emerald-600">-{discount.toLocaleString()}원</span>
-              </div>
-            ) : (
-              <div className="mb-5 pb-5 border-b border-gray-100" />
-            )}
 
-            <div className="flex justify-between items-end">
-              <span className="text-[15px] font-black text-gray-900 mb-1">최종 결제 금액</span>
-              <div className="text-right">
-                {isEventMode && (
-                  <div className="text-[13px] text-gray-400 line-through font-bold mb-0.5">
-                    {totalPrice.toLocaleString()}원
-                  </div>
-                )}
-                <div className="flex items-center justify-end gap-2">
-                  <span className={`text-2xl font-black ${isEventMode ? 'text-amber-600' : 'text-primary'}`}>
-                    {eventFinalPrice.toLocaleString()}원
+              {isEventMode ? (
+                <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-200">
+                  <span className="text-[14px] text-amber-600 font-extrabold flex items-center gap-1.5">
+                    <span className="text-base">🎉</span> 이벤트 할인
                   </span>
+                  <span className="text-[14px] font-black text-amber-600">-{totalPrice.toLocaleString()}원</span>
+                </div>
+              ) : discount > 0 ? (
+                // 텀블러 할인이 있을 때만 할인금액 행 표시
+                <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-100">
+                  <span className="text-[14px] text-emerald-600 font-extrabold flex items-center gap-1.5">
+                    <span className="text-base">♻️</span> 텀블러 할인
+                  </span>
+                  <span className="text-[14px] font-black text-emerald-600">-{discount.toLocaleString()}원</span>
+                </div>
+              ) : (
+                <div className="mb-5 pb-5 border-b border-gray-100" />
+              )}
+
+              <div className="flex justify-between items-end">
+                <span className="text-[15px] font-black text-gray-900 mb-1">최종 결제 금액</span>
+                <div className="text-right">
+                  {isEventMode && (
+                    <div className="text-[13px] text-gray-400 line-through font-bold mb-0.5">
+                      {totalPrice.toLocaleString()}원
+                    </div>
+                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    <span className={`text-2xl font-black ${isEventMode ? 'text-amber-600' : 'text-primary'}`}>
+                      {eventFinalPrice.toLocaleString()}원
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+          ) : discount > 0 ? (
+            // 가격 표시 OFF 이지만 텀블러 할인이 적용된 경우 안내 배지 표시
+            <section className="mb-4">
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3">
+                <span className="text-base">♻️</span>
+                <p className="text-[13px] font-black text-emerald-700">텀블러 할인이 적용되었습니다</p>
+              </div>
+            </section>
+          ) : null}
 
         </main>
 
@@ -596,7 +609,7 @@ export const Cart = () => {
             disabled={isSubmitting}
             className="text-[16px] h-14"
           >
-            {isSubmitting ? '처리 중...' : isEventMode ? '무료 주문하기 🎉' : `${finalPrice.toLocaleString()}원 주문하기`}
+            {isSubmitting ? '처리 중...' : (!showPrice ? '주문하기' : isEventMode ? '무료 주문하기 🎉' : `${finalPrice.toLocaleString()}원 주문하기`)}
           </Button>
         </div>
 

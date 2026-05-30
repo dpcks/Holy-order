@@ -113,6 +113,7 @@ export interface SettingResponse {
   close_time: string | null;
   require_phone: boolean;
   toss_enabled: boolean;
+  show_price: boolean;
 }
 
 export type SettingUpdate = Partial<SettingResponse>;

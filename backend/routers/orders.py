@@ -320,7 +320,7 @@ async def confirm_toss_payment(order_id: int, db: Session = Depends(get_db)):
         amount=order.total_price,
         log_type="TOSS_AUTO",
         sender_name="토스 자동확인",
-        raw_data={"method": "TOSS", "auto_confirmed": True, "note": "사용자가 송금 완료 버튼을 클릭하여 자동 확인 처리됨"}
+        raw_data={"method": "TOSS", "auto_confirmed": True, "order_number": order.order_number, "payment_method": "TOSS", "note": "사용자가 송금 완료 버튼을 클릭하여 자동 확인 처리됨"}
     )
     db.add(payment_log)
     db.commit()
