@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
-  X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon, Eye, Gift
+  X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon, Eye
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
