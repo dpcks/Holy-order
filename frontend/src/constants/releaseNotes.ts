@@ -17,6 +17,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.3.5',
+    date: '2026-05-30',
+    title: '사용자 화면 개선 및 이벤트 관리 기능 강화',
+    updates: [
+      { text: '메뉴 가격 숨김 설정 기능 추가 (관리자 설정에서 토글로 켜고 끌 수 있습니다)', isNew: true },
+      { text: '이벤트 관리 메뉴에 "사용자 화면 미리보기(눈 아이콘)" 버튼 신규 추가', isNew: true },
+      { text: '일반 공지사항일 경우 이벤트 팝업에 "확성기" 아이콘이 표시되도록 개선', isNew: true },
+      { text: '이벤트 상세 내용 작성 시 줄바꿈과 띄어쓰기가 사용자 화면에도 그대로 예쁘게 유지되도록 개선' },
+      { text: '안정적인 서비스 운영을 위해 이벤트 배너 이미지 업로드 용량 10MB 제한 안내 추가' }
+    ]
+  },
+  {
     version: 'v1.3.0',
     date: '2026-05-14',
     title: '정산 통계 강화 및 시스템 속도 최적화',
