@@ -29,6 +29,10 @@ export const MenuDetail = () => {
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  
+  // 설정 상태
+  const [settings, setSettings] = useState<SettingResponse | null>(null);
+  const showPrice = settings?.show_price ?? true;
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
@@ -38,8 +42,11 @@ export const MenuDetail = () => {
     const checkStoreStatus = async () => {
       try {
         const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings');
-        if (res.success && res.data && !res.data.is_open) {
-          navigate('/', { replace: true });
+        if (res.success && res.data) {
+          setSettings(res.data);
+          if (!res.data.is_open) {
+            navigate('/', { replace: true });
+          }
         }
       } catch (err) {
         console.warn('설정 정보를 불러오지 못했습니다.', err);
@@ -259,7 +266,7 @@ export const MenuDetail = () => {
                     >
                       <span className="text-[13px] font-bold leading-tight">{opt.name}</span>
                       {/* 텀블러 전용 할인 배지 - 버튼 우상단 절대 위치 */}
-                      {isTumbler && (
+                      {isTumbler && showPrice && (
                         <span
                           className={`absolute -top-2 -right-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-black tracking-tight shadow-sm transition-all ${isSelected
                             ? 'bg-emerald-400 text-[#0d3321]'
@@ -295,7 +302,7 @@ export const MenuDetail = () => {
                       <span className={`font-semibold text-sm ${isSelected ? 'text-primary' : 'text-gray-800'}`}>
                         {opt.name}
                       </span>
-                      {opt.extra_price > 0 && !isEventMode && (
+                      {opt.extra_price > 0 && !isEventMode && showPrice && (
                         <span className="text-gray-500 text-sm font-medium">
                           +{opt.extra_price.toLocaleString()}원
                         </span>
@@ -329,29 +336,39 @@ export const MenuDetail = () => {
                 onDecrease={() => setQuantity(q => q - 1)}
               />
               <div className="text-right">
-                <p className="text-[11px] text-gray-500 font-medium mb-0.5">총 주문 금액</p>
-                {isEventMode ? (
-                  <div className="flex items-center gap-1.5 justify-end">
-                    <span className="text-[14px] text-gray-400 line-through font-medium">{totalPrice.toLocaleString()}원</span>
-                    <span className="text-xl font-black text-amber-600">0원</span>
-                  </div>
-                ) : isTumblerSelected ? (
-                  // 텀블러 할인 적용 시: 원가에 취소선 + 할인가 강조 표시
-                  <div className="flex flex-col items-end gap-0.5">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[11px] bg-emerald-100 text-emerald-700 font-black px-1.5 py-0.5 rounded-full">
-                        텀블러 -{(tumblerDiscount * quantity).toLocaleString()}원
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[13px] text-gray-400 line-through font-medium">
-                        {((unitPrice + tumblerDiscount) * quantity).toLocaleString()}원
-                      </span>
-                      <span className="text-xl font-black text-emerald-600">{totalPrice.toLocaleString()}원</span>
-                    </div>
-                  </div>
+                {showPrice ? (
+                  <>
+                    <p className="text-[11px] text-gray-500 font-medium mb-0.5">총 주문 금액</p>
+                    {isEventMode ? (
+                      <div className="flex items-center gap-1.5 justify-end">
+                        <span className="text-[14px] text-gray-400 line-through font-medium">{totalPrice.toLocaleString()}원</span>
+                        <span className="text-xl font-black text-amber-600">0원</span>
+                      </div>
+                    ) : isTumblerSelected ? (
+                      <div className="flex flex-col items-end gap-0.5">
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] bg-emerald-100 text-emerald-700 font-black px-1.5 py-0.5 rounded-full">
+                            텀블러 -{(tumblerDiscount * quantity).toLocaleString()}원
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[13px] text-gray-400 line-through font-medium">
+                            {((unitPrice + tumblerDiscount) * quantity).toLocaleString()}원
+                          </span>
+                          <span className="text-xl font-black text-emerald-600">{totalPrice.toLocaleString()}원</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+                    )}
+                  </>
                 ) : (
-                  <p className="text-xl font-bold text-gray-900">{totalPrice.toLocaleString()}원</p>
+                  // 가격 표시 OFF 시: 텀블러 선택했을 때만 할인 적용 안내 텍스트 표시
+                  isTumblerSelected && (
+                    <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-100 text-emerald-700 font-black px-2 py-1 rounded-full">
+                      ♻️ 텀블러 할인 적용중
+                    </span>
+                  )
                 )}
               </div>
             </div>

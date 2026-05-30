@@ -175,6 +175,8 @@ class Setting(Base):
     require_phone = Column(Boolean, default=True) # 전화번호 필수 입력 여부
     # 토스 송금 설정 - supertoss:// 딥링크를 활용한 간편 송금
     toss_enabled = Column(Boolean, default=False) # 토스 송금 활성화 여부 (기존 계좌 정보 활용)
+    # 가격 표시 토글 설정
+    show_price = Column(Boolean, default=True) # 가격 표시 여부
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

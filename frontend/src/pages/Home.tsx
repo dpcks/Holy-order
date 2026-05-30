@@ -281,6 +281,7 @@ export const Home = () => {
                     key={menu.id}
                     menu={menu}
                     isEventMode={!!activeEvent?.is_event_mode}
+                    showPrice={shopSettings?.show_price ?? true}
                     onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                     onShowToast={showToast}
                   />
@@ -302,6 +303,7 @@ export const Home = () => {
                   key={menu.id}
                   menu={menu}
                   isEventMode={!!activeEvent?.is_event_mode}
+                  showPrice={shopSettings?.show_price ?? true}
                   onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
                   onShowToast={showToast}
                 />
@@ -386,7 +388,7 @@ export const Home = () => {
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
+const MenuCard = ({ menu, isEventMode = false, showPrice = true, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, showPrice?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
   const handleCardClick = () => {
     if (!menu.is_available) {
       onShowToast(`'${menu.name}' 메뉴는 현재 품절입니다.`, 'error');
@@ -454,12 +456,14 @@ const MenuCard = ({ menu, isEventMode = false, onClick, onShowToast }: { menu: M
       )}
       {/* 이벤트 모드: 기존 가격 취소선 + 0원 표시 */}
       {isEventMode ? (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[13px] text-gray-400 line-through font-medium">{menu.price.toLocaleString()}원</span>
-          <span className="font-black text-amber-600 text-[15px]">0원</span>
-        </div>
+        showPrice && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] text-gray-400 line-through font-medium">{menu.price.toLocaleString()}원</span>
+            <span className="font-black text-amber-600 text-[15px]">0원</span>
+          </div>
+        )
       ) : (
-        <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
+        showPrice && <p className="font-bold text-primary text-[15px]">{menu.price.toLocaleString()}원</p>
       )}
     </div>
   );

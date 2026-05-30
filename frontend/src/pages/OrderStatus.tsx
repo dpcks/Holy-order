@@ -71,6 +71,7 @@ export const OrderStatus = () => {
     }
   });
 
+  const showPrice = setting?.show_price ?? true;
   const loading = loadingOrder;
 
   // 주문 상태 완료(COMPLETED) 또는 취소(CANCELLED) 시 자동 관리 로직
@@ -464,12 +465,14 @@ export const OrderStatus = () => {
               </span>
             </div>
             <div className="px-6 py-6 flex flex-col gap-5">
-              <div className="text-center">
-                <p className="text-[12px] text-gray-500 font-bold uppercase tracking-widest mb-1.5">Total Amount Due</p>
-                <p className="text-[42px] font-black text-[#1A0A0A] tracking-tight leading-none">
-                  {totalAmount.toLocaleString()}<span className="text-[20px] font-bold ml-1 text-gray-400">원</span>
-                </p>
-              </div>
+              {showPrice && (
+                <div className="text-center">
+                  <p className="text-[12px] text-gray-500 font-bold uppercase tracking-widest mb-1.5">Total Amount Due</p>
+                  <p className="text-[42px] font-black text-[#1A0A0A] tracking-tight leading-none">
+                    {totalAmount.toLocaleString()}<span className="text-[20px] font-bold ml-1 text-gray-400">원</span>
+                  </p>
+                </div>
+              )}
               
               <div className="h-[1px] w-full bg-gray-50 border-t border-dashed border-gray-200" />
               
@@ -612,15 +615,19 @@ export const OrderStatus = () => {
                 <h5 className="font-black text-[#1A0A0A] text-[15px] truncate mb-0.5">{item.menu_name_snapshot}</h5>
                 <p className="text-gray-400 text-[12px] font-bold">수량 {item.quantity}개 {item.options_text ? `· ${item.options_text}` : ''}</p>
               </div>
-              <span className="text-[15px] font-black text-gray-900">
-                ₩{(order?.payment_method === 'FREE' || order?.total_price === 0) ? 0 : item.sub_total.toLocaleString()}
-              </span>
+              {showPrice && (
+                <span className="text-[15px] font-black text-gray-900">
+                  ₩{(order?.payment_method === 'FREE' || order?.total_price === 0) ? 0 : item.sub_total.toLocaleString()}
+                </span>
+              )}
             </div>
           ))}
-          <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between items-center">
-            <span className="text-gray-400 text-[11px] font-black uppercase tracking-[0.2em]">Total Price</span>
-            <span className="font-black text-[22px] text-primary tracking-tight">₩{totalAmount.toLocaleString()}</span>
-          </div>
+          {showPrice && (
+            <div className="mt-6 pt-5 border-t border-gray-100 flex justify-between items-center">
+              <span className="text-gray-400 text-[11px] font-black uppercase tracking-[0.2em]">Total Price</span>
+              <span className="font-black text-[22px] text-primary tracking-tight">₩{totalAmount.toLocaleString()}</span>
+            </div>
+          )}
         </div>
 
         <div className="w-full bg-gray-900 rounded-3xl p-5 flex gap-4 items-center border border-gray-800 shadow-xl relative overflow-hidden">

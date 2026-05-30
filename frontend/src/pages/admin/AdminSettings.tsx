@@ -280,6 +280,9 @@ export const AdminSettings = () => {
                         <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${localSettings.toss_enabled ? 'bg-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-100 text-gray-500'}`}>
                           토스:{localSettings.toss_enabled ? '활성' : '비활성'}
                         </span>
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${localSettings.show_price ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                          가격표시:{localSettings.show_price ? '활성' : '비활성'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -804,6 +807,38 @@ export const AdminSettings = () => {
                    </span>
                    {localSettings.toss_enabled && (
                      <p className="text-[11px] font-bold opacity-60">사용자 앱에서 '토스 송금' 버튼이 노출됩니다.</p>
+                   )}
+                </div>
+              </div>
+
+              {/* 가격 표시 설정 */}
+              <div className="bg-white rounded-[32px] p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${localSettings.show_price ? 'bg-amber-50 text-amber-500' : 'bg-gray-50 text-gray-400'}`}>
+                      <CreditCard size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-gray-900">가격 표시 토글</h3>
+                      <p className="text-[11px] font-bold text-gray-400">사용자 화면 가격 및 합계 표시 여부</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleUpdate({ show_price: !localSettings.show_price })}
+                    disabled={saving}
+                    className={`relative w-16 h-8 rounded-full transition-all duration-500 p-1 ${localSettings.show_price ? 'bg-amber-500 shadow-lg shadow-amber-500/30' : 'bg-gray-200 shadow-inner'}`}
+                  >
+                    <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-all duration-500 flex items-center justify-center ${localSettings.show_price ? 'translate-x-8' : 'translate-x-0'}`}>
+                      <CreditCard size={12} className={localSettings.show_price ? 'text-amber-500' : 'text-gray-300'} />
+                    </div>
+                  </button>
+                </div>
+                <div className={`p-4 rounded-2xl border flex flex-col gap-1 text-center ${localSettings.show_price ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
+                   <span className="text-[13px] font-black uppercase tracking-wider">
+                     현재: {localSettings.show_price ? '사용자 화면에 가격 표시됨' : '사용자 화면에 가격 숨김됨'}
+                   </span>
+                   {!localSettings.show_price && (
+                     <p className="text-[11px] font-bold opacity-60">가격표시 토글이 OFF입니다. 메뉴 가격 및 장바구니 합계가 보이지 않습니다.</p>
                    )}
                 </div>
               </div>
