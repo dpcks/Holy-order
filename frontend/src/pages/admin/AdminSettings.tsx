@@ -682,17 +682,17 @@ export const AdminSettings = () => {
                           <Clock size={12} className="text-gray-400" />
                           {admin.last_login_at
                             ? (() => {
-                                // 9시간이 빠른 경우(데이터가 이미 KST인 경우)를 대비해 Z를 제거하고 파싱
-                                const d = new Date(admin.last_login_at.replace('Z', ''));
-                                return d.toLocaleString('ko-KR', { 
-                                  timeZone: 'Asia/Seoul',
-                                  month: 'long', 
-                                  day: 'numeric', 
-                                  hour: '2-digit', 
-                                  minute: '2-digit',
-                                  hour12: false
-                                });
-                              })()
+                              // 9시간이 빠른 경우(데이터가 이미 KST인 경우)를 대비해 Z를 제거하고 파싱
+                              const d = new Date(admin.last_login_at.replace('Z', ''));
+                              return d.toLocaleString('ko-KR', {
+                                timeZone: 'Asia/Seoul',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false
+                              });
+                            })()
                             : '접속 기록 없음'}
                         </span>
                       </div>
@@ -767,9 +767,9 @@ export const AdminSettings = () => {
                   </button>
                 </div>
                 <div className={`p-4 rounded-2xl border text-center ${localSettings.require_phone ? 'bg-blue-50 border-blue-100 text-blue-700' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
-                   <span className="text-[13px] font-black uppercase tracking-wider">
-                     현재: {localSettings.require_phone ? '전화번호 필수 입력' : '전화번호 입력 생략 가능'}
-                   </span>
+                  <span className="text-[13px] font-black uppercase tracking-wider">
+                    현재: {localSettings.require_phone ? '전화번호 필수 입력' : '전화번호 입력 생략 가능'}
+                  </span>
                 </div>
               </div>
 
@@ -802,12 +802,12 @@ export const AdminSettings = () => {
                   </button>
                 </div>
                 <div className={`p-4 rounded-2xl border flex flex-col gap-1 text-center ${localSettings.toss_enabled ? 'bg-[#0064FF]/5 border-[#0064FF]/10 text-[#0064FF]' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
-                   <span className="text-[13px] font-black uppercase tracking-wider">
-                     현재: {localSettings.toss_enabled ? '토스 송금 활성화됨' : '토스 송금 비활성'}
-                   </span>
-                   {localSettings.toss_enabled && (
-                     <p className="text-[11px] font-bold opacity-60">사용자 앱에서 '토스 송금' 버튼이 노출됩니다.</p>
-                   )}
+                  <span className="text-[13px] font-black uppercase tracking-wider">
+                    현재: {localSettings.toss_enabled ? '토스 송금 활성화됨' : '토스 송금 비활성'}
+                  </span>
+                  {localSettings.toss_enabled && (
+                    <p className="text-[11px] font-bold opacity-60">사용자 앱에서 '토스 송금' 버튼이 노출됩니다.</p>
+                  )}
                 </div>
               </div>
 
@@ -819,7 +819,7 @@ export const AdminSettings = () => {
                       <CreditCard size={18} />
                     </div>
                     <div>
-                      <h3 className="font-black text-gray-900">가격 표시 토글</h3>
+                      <h3 className="font-black text-gray-900">가격 표시</h3>
                       <p className="text-[11px] font-bold text-gray-400">사용자 화면 가격 및 합계 표시 여부</p>
                     </div>
                   </div>
@@ -834,23 +834,23 @@ export const AdminSettings = () => {
                   </button>
                 </div>
                 <div className={`p-4 rounded-2xl border flex flex-col gap-1 text-center ${localSettings.show_price ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-gray-50 border-gray-100 text-gray-500'}`}>
-                   <span className="text-[13px] font-black uppercase tracking-wider">
-                     현재: {localSettings.show_price ? '사용자 화면에 가격 표시됨' : '사용자 화면에 가격 숨김됨'}
-                   </span>
-                   {!localSettings.show_price && (
-                     <p className="text-[11px] font-bold opacity-60">가격표시 토글이 OFF입니다. 메뉴 가격 및 장바구니 합계가 보이지 않습니다.</p>
-                   )}
+                  <span className="text-[13px] font-black uppercase tracking-wider">
+                    현재: {localSettings.show_price ? '사용자 화면에 가격 표시됨' : '사용자 화면에 가격 숨김됨'}
+                  </span>
+                  {!localSettings.show_price && (
+                    <p className="text-[11px] font-bold opacity-60">가격표시 토글이 OFF입니다. 메뉴 가격 및 장바구니 합계가 보이지 않습니다.</p>
+                  )}
                 </div>
               </div>
             </div>
 
             <div className="p-6 bg-gray-50 border-t border-gray-100 shrink-0">
-               <button
-                 onClick={() => setIsOrderSettingsModalOpen(false)}
-                 className="w-full py-4 bg-black text-white rounded-2xl font-black text-sm hover:bg-gray-800 transition-all active:scale-[0.98]"
-               >
-                 닫기
-               </button>
+              <button
+                onClick={() => setIsOrderSettingsModalOpen(false)}
+                className="w-full py-4 bg-black text-white rounded-2xl font-black text-sm hover:bg-gray-800 transition-all active:scale-[0.98]"
+              >
+                닫기
+              </button>
             </div>
           </div>
         </div>
@@ -888,7 +888,7 @@ export const AdminSettings = () => {
                 <div key={index} className="relative pl-10 border-l-2 border-gray-100 group">
                   {/* 타임라인 마커 */}
                   <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full border-4 border-white shadow-md transition-colors duration-300 ${index === 0 ? 'bg-primary' : 'bg-gray-200'}`} />
-                  
+
                   <div className="space-y-4">
                     <div className="flex items-center gap-3">
                       <span className={`text-[11px] font-black px-2 py-0.5 rounded-md ${index === 0 ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500'}`}>
@@ -896,11 +896,11 @@ export const AdminSettings = () => {
                       </span>
                       <span className="text-sm font-bold text-gray-400">{note.date}</span>
                     </div>
-                    
+
                     <h3 className="text-xl font-black text-gray-900 leading-tight">
                       {note.title}
                     </h3>
-                    
+
                     <ul className="space-y-4">
                       {note.updates.map((update, i) => (
                         <li key={i} className="flex items-start gap-3 group/item">

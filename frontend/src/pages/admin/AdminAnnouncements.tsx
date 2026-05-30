@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import {
   Plus, Megaphone, Power, PowerOff, Trash2, Edit3, BarChart3,
-  X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon
+  X, PartyPopper, Bell, Calendar, ChevronDown, Image as ImageIcon, Eye, Gift
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
@@ -49,6 +49,7 @@ export const AdminAnnouncements = () => {
   const [reportData, setReportData] = useState<AnnouncementReportResponse | null>(null);
   const [reportTarget, setReportTarget] = useState<Announcement | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [previewItem, setPreviewItem] = useState<Announcement | null>(null);
 
   // 폼 상태
   const [formData, setFormData] = useState({
@@ -163,6 +164,14 @@ export const AdminAnnouncements = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // 10MB 크기 제한
+    const MAX_SIZE_MB = 10;
+    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+      showToast(`이미지 크기가 ${MAX_SIZE_MB}MB를 초과합니다. 더 작은 파일을 선택해주세요.`, 'error');
+      e.target.value = '';
+      return;
+    }
 
     setIsUploading(true);
     try {
@@ -300,6 +309,15 @@ export const AdminAnnouncements = () => {
                   {/* 액션 버튼 */}
                   <div className="flex items-center gap-1.5 shrink-0">
                     <button
+                      onClick={() => setPreviewItem(item)}
+                      className="p-2 rounded-lg hover:bg-amber-50 text-gray-400 hover:text-amber-500 transition-colors"
+                      title="사용자 화면 미리보기"
+                      aria-label="이벤트 미리보기"
+                      tabIndex={0}
+                    >
+                      <Eye size={16} />
+                    </button>
+                    <button
                       onClick={() => handleShowReport(item)}
                       className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-blue-600 transition-colors"
                       title="정산 리포트"
@@ -398,6 +416,7 @@ export const AdminAnnouncements = () => {
                   </div>
                   <div className="flex-1">
                     <p className="text-[11px] text-gray-400 mb-2">클릭하여 이미지를 업로드하거나 기존 이미지 URL을 입력하세요.</p>
+                    <p className="text-[10px] text-amber-500 font-bold mb-2">⚠️ 최대 10MB 이하 이미지만 업로드 가능</p>
                     <input value={formData.image_url} onChange={(e) => setFormData(p => ({ ...p, image_url: e.target.value }))}
                       className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-200"
                       placeholder="https://..." />
@@ -510,6 +529,46 @@ export const AdminAnnouncements = () => {
                 {editingItem ? '수정' : '생성'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 사용자 화면 미리보기 모달 */}
+      {previewItem && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={() => setPreviewItem(null)}>
+          <div className="w-full max-w-[400px] animate-in zoom-in-95 duration-300" onClick={(e) => e.stopPropagation()}>
+            {/* 사용자 화면에서 실제 보이는 웰콤 모달 UI */}
+            <div className="bg-white w-full rounded-3xl shadow-2xl overflow-hidden">
+              {previewItem.image_url && (
+                <img src={previewItem.image_url} alt={previewItem.title} className="w-full h-48 object-cover" />
+              )}
+              <div className="p-6 text-center">
+                <div className={`w-14 h-14 ${previewItem.is_event_mode ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gray-100'} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                  {previewItem.is_event_mode ? (
+                    <PartyPopper size={28} className="text-white" />
+                  ) : (
+                    <Megaphone size={28} className="text-gray-600" />
+                  )}
+                </div>
+                <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{previewItem.title}</h2>
+                {previewItem.content && (
+                  <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep whitespace-pre-wrap">{previewItem.content}</p>
+                )}
+                {previewItem.sponsor_name && (
+                  <p className="text-[13px] font-bold text-amber-600 mb-4">
+                    {previewItem.sponsor_name} {previewItem.sponsor_duty || ''}님의 사랑으로 준비되었습니다 ❤️
+                  </p>
+                )}
+                <button
+                  onClick={() => setPreviewItem(null)}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-2xl font-black text-[14px] shadow-lg"
+                >
+                  {previewItem.is_event_mode ? '감사히 주문하기 ☕' : '주문하기'}
+                </button>
+              </div>
+            </div>
+            {/* 안내 텍스트 */}
+            <p className="text-center text-white/60 text-[11px] font-bold mt-3">클릭하여 닫기</p>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift } from 'lucide-react';
+import { MapPin, Coffee, PartyPopper, Gift, Megaphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
@@ -361,12 +361,16 @@ export const Home = () => {
               <img src={activeEvent.image_url} alt={activeEvent.title} className="w-full h-48 object-cover" />
             )}
             <div className="p-6 text-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <PartyPopper size={28} className="text-white" />
+              <div className={`w-14 h-14 ${activeEvent.is_event_mode ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gray-100'} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                {activeEvent.is_event_mode ? (
+                  <PartyPopper size={28} className="text-white" />
+                ) : (
+                  <Megaphone size={28} className="text-gray-600" />
+                )}
               </div>
               <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{activeEvent.title}</h2>
               {activeEvent.content && (
-                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep">{activeEvent.content}</p>
+                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep whitespace-pre-wrap">{activeEvent.content}</p>
               )}
               {activeEvent.sponsor_name && (
                 <p className="text-[13px] font-bold text-amber-600 mb-4">
