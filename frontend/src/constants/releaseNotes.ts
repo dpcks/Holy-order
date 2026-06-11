@@ -17,6 +17,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.3.6',
+    date: '2026-06-11',
+    title: '시스템 안정화 및 주요 버그 수정',
+    updates: [
+      { text: '골든벨(이벤트) 모드 진행 후 정산 리포트에서 텀블러 할인이 비정상적으로 높게 집계되던 통계 오류 완벽 수정', isNew: true },
+      { text: '아이패드에서 관리자 화면 스크롤이 두 번 겹쳐서 되거나 화면 하단에 흰 여백이 생기던 레이아웃 문제 해결', isNew: true },
+      { text: '사용자 스마트폰 화면에서 메뉴 카테고리(커피, 논커피 등) 탭이 간혹 보이지 않던 버그 수정' },
+      { text: '일부 환경에서 일반 사용자 화면의 위아래 스크롤이 먹통이 되던 현상 해결' }
+    ]
+  },
+  {
     version: 'v1.3.5',
     date: '2026-05-30',
     title: '사용자 화면 개선 및 이벤트 관리 기능 강화',
