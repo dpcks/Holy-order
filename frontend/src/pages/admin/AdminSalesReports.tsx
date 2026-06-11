@@ -349,7 +349,7 @@ export const AdminSalesReports = () => {
               </div>
 
               {/* 상세 요약 그리드 */}
-              <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2 overflow-x-auto scrollbar-hide">
+              <div className="mt-auto pt-4 border-t border-gray-100 flex gap-2 overflow-x-auto hide-scrollbar">
                 {Object.entries(stats.trend_data || {})
                   .filter(([_, d]) => d.count > 0 || period === '주차별') // 주차별은 비어있어도 구조 파악을 위해 보여줌
                   .map(([k, d]) => (

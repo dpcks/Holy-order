@@ -428,7 +428,7 @@ export const OrderStatus = () => {
       </header>
 
       {activeOrders.length > 1 && (
-        <div className="px-6 py-3 flex gap-2 overflow-x-auto scrollbar-hide bg-white border-b border-gray-50">
+        <div className="px-6 py-3 flex gap-2 overflow-x-auto hide-scrollbar bg-white border-b border-gray-50">
           {activeOrders.map((activeOrder) => (
             <button
               key={activeOrder.id}

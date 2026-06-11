@@ -250,7 +250,7 @@ export const Home = () => {
           </div>
 
           {/* Category Tabs */}
-          <div className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto scrollbar-hide">
+          <div className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
             {categories.map((cat) => (
               <button
                 key={cat.id}
