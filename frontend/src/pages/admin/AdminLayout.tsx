@@ -247,6 +247,18 @@ export const AdminLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // [아이패드 이중 스크롤 방지] 관리자 레이아웃 진입 시 body 스크롤 잠금
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    html.style.overflow = 'hidden';
+    body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = '';
+      body.style.overflow = '';
+    };
+  }, []);
+
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 
   // 알림음 토글 핸들러
