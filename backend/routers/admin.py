@@ -1013,15 +1013,18 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db),
     order_ids = [o.id for o in orders]
     total_items = db.query(func.sum(models.OrderItem.quantity)).filter(models.OrderItem.order_id.in_(order_ids)).scalar() or 0
 
-    # 메뉴별 판매 현황 집계 (기본가 기준 revenue + 텀블러 할인 집계)
+    # 메뉴별 판매 현황 집계 (기본가 기준 revenue + 텀블러 할인 명시적 집계)
     menu_breakdown_raw = (
         db.query(
             models.OrderItem.menu_name_snapshot,
             func.sum(models.OrderItem.quantity).label("count"),
-            # revenue는 메뉴 기본가 기준 (옵션 제외) - 정산 참고용
             func.sum(models.OrderItem.menu_price_snapshot * models.OrderItem.quantity).label("revenue"),
-            # 실제 결제된 sub_total 합계 (텀블러 할인 반영)
-            func.sum(models.OrderItem.sub_total).label("sub_total_sum")
+            func.sum(
+                case(
+                    (models.OrderItem.options_text.like('%텀블러%'), models.OrderItem.quantity * 500),
+                    else_=0
+                )
+            ).label("tumbler_discount_total")
         )
         .filter(models.OrderItem.order_id.in_(order_ids))
         .group_by(models.OrderItem.menu_name_snapshot)
@@ -1030,10 +1033,7 @@ def get_announcement_report(announcement_id: int, db: Session = Depends(get_db),
     menu_breakdown = []
     for r in menu_breakdown_raw:
         base_revenue = int(r.revenue)
-        actual_revenue = int(r.sub_total_sum) if r.sub_total_sum else base_revenue
-        # 텀블러 할인액 = 기본가 합계 - 실제 결제 합계
-        # (sub_total이 0이면 이벤트 무료 제공이므로 할인 계산 제외)
-        tumbler_disc = max(0, base_revenue - actual_revenue) if actual_revenue > 0 else 0
+        tumbler_disc = int(r.tumbler_discount_total) if r.tumbler_discount_total else 0
         menu_breakdown.append({
             "name": r.menu_name_snapshot,
             "count": int(r.count),
