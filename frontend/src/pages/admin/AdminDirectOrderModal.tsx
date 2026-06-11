@@ -261,7 +261,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
             <h3 className="text-[14px] font-black text-gray-800 mb-4 tracking-tight shrink-0">메뉴 선택</h3>
             
             {/* Category Tabs */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 scrollbar-hide">
+            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 shrink-0 hide-scrollbar">
               {categories.map(cat => (
                 <button
                   key={cat.id}
