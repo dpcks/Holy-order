@@ -332,18 +332,6 @@ export const AdminIngredients = () => {
 
       {/* 가로 스크롤 보드 영역 */}
       <main className="flex-1 relative overflow-hidden flex flex-col">
-        <button 
-          onClick={() => scrollByAmount(-350)}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/80 backdrop-blur border border-gray-200 rounded-full flex items-center justify-center text-gray-600 shadow-lg hover:bg-white transition-all hidden md:flex"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <button 
-          onClick={() => scrollByAmount(350)}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/80 backdrop-blur border border-gray-200 rounded-full flex items-center justify-center text-gray-600 shadow-lg hover:bg-white transition-all hidden md:flex"
-        >
-          <ChevronRight size={20} />
-        </button>
 
         <div 
           ref={scrollContainerRef}
@@ -441,7 +429,7 @@ export const AdminIngredients = () => {
                       </div>
                       
                       {item.memo && (
-                        <p className="mt-3 text-[11px] text-gray-400 truncate w-full border-t border-gray-50 pt-2">
+                        <p className="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-100 truncate w-full">
                           📝 {item.memo}
                         </p>
                       )}
