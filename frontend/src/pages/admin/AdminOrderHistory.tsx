@@ -136,12 +136,13 @@ export const AdminOrderHistory = () => {
   };
 
   const { data: historyData, isLoading: loading } = useQuery({
-    queryKey: QK.orders.history(page, filterParams),
+    // [중요] limit를 queryKey에 포함시켜야 limit 변경 시 새로운 API 요청이 발생함
+    queryKey: [...QK.orders.history(page, filterParams), limit],
     queryFn: async ({ queryKey }) => {
-      // QK.orders.history 구조: ['orders', 'history', page, filters]
-      const [, , currentPage, filters] = queryKey as [string, string, number, OrderHistoryFilters];
+      // queryKey 구조: ['orders', 'history', page, filters, limit]
+      const [, , currentPage, filters, pageLimit] = queryKey as [string, string, number, OrderHistoryFilters, number];
 
-      let url = `/admin/orders/history?page=${currentPage}&limit=${limit}`;
+      let url = `/admin/orders/history?page=${currentPage}&limit=${pageLimit}`;
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
 
@@ -156,7 +157,7 @@ export const AdminOrderHistory = () => {
       const res = await apiClient.get<OrderListResponse, StandardResponse<OrderListResponse>>(url);
       return (res.success && res.data) ? res.data : null;
     },
-    staleTime: 1000 * 60, // 1분 캐시
+    staleTime: 0, // limit 변경 시 항상 최신 데이터 보장
     placeholderData: (prev) => prev,
   });
 
