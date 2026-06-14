@@ -216,6 +216,8 @@ export const AdminSalesReports = () => {
   const bankTransferTotal = stats?.payment_method_sales?.BANK_TRANSFER || 0;
   const tossTotal = stats?.payment_method_sales?.TOSS || 0;
   const cashTotal = stats?.payment_method_sales?.CASH || 0;
+  // 섬김(이벤트) = FREE(사역자) + VOLUNTEER(식당봉사) 주문의 original_price 합산
+  const eventServiceTotal = (stats?.payment_method_sales?.FREE || 0) + (stats?.payment_method_sales?.VOLUNTEER || 0);
   const dutyData = stats ? groupDuty(stats.duty_breakdown) : [];
 
   return (
@@ -291,7 +293,7 @@ export const AdminSalesReports = () => {
             {/* KPI 카드 4개 */}
             <div className="col-span-3 grid grid-cols-4 gap-4">
               {[
-                { icon: TrendingUp, label: '총 매출액', value: `₩${stats.total_sales.toLocaleString()}`, sub: '취소 제외', color: 'text-gray-900' },
+                { icon: TrendingUp, label: '총 매출액', value: `₩${stats.total_sales.toLocaleString()}`, sub: '이벤트 섬김 포함', color: 'text-gray-900' },
                 { icon: ShoppingBag, label: '총 주문 건수', value: `${stats.total_orders}건`, sub: '기준 기간 내 접수', color: 'text-gray-900' },
                 { icon: BarChart2, label: '객단가', value: `₩${stats.avg_order_value.toLocaleString()}`, sub: '평균 주문 금액', color: 'text-gray-900' },
                 { icon: Star, label: '최고 인기 메뉴', value: stats.top_menus?.[0]?.name || '-', sub: '해당 기간 1위', color: 'text-white', bg: 'bg-primary' },
@@ -316,23 +318,28 @@ export const AdminSalesReports = () => {
               ))}
             </div>
 
-            {/* 결제 수단별 통계 */}
             <div className="col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
               <h2 className="font-bold text-gray-900 text-[14px] mb-4">결제 수단별 통계</h2>
               <div className="flex flex-col gap-4">
                 {[
-                  { label: '계좌이체', amount: bankTransferTotal, total: stats.total_sales, color: 'bg-[#1A0A0A]' },
-                  { label: '토스송금', amount: tossTotal, total: stats.total_sales, color: 'bg-[#0064FF]' },
-                  { label: '현금', amount: cashTotal, total: stats.total_sales, color: 'bg-orange-500' },
+                  { label: '계좌이체', amount: bankTransferTotal, color: 'bg-[#1A0A0A]' },
+                  { label: '토스송금', amount: tossTotal, color: 'bg-[#0064FF]' },
+                  { label: '현금', amount: cashTotal, color: 'bg-orange-500' },
+                  { label: '섬김(이벤트)', amount: eventServiceTotal, color: 'bg-emerald-500' },
                 ].map((item, i) => {
-                  const pct = stats.total_sales > 0 ? Math.round((item.amount / stats.total_sales) * 100) : 0;
+                  // 게이지 최대값: 현금+계좌+토스+이벤트 전체 합계
+                  const grandTotal = bankTransferTotal + tossTotal + cashTotal + eventServiceTotal;
+                  const pct = grandTotal > 0 ? Math.round((item.amount / grandTotal) * 100) : 0;
                   return (
                     <div key={i}>
                       <div className="flex justify-between mb-1.5">
-                        <span className="text-[13px] font-semibold text-gray-700">{item.label}</span>
+                        <span className="text-[13px] font-semibold text-gray-700 flex items-center gap-1.5">
+                          {item.label === '섬김(이벤트)' && <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-black">♥ 후원</span>}
+                          {item.label}
+                        </span>
                         <span className="text-[13px] font-bold text-gray-900">{pct}% (₩{item.amount.toLocaleString()})</span>
                       </div>
-                      <ProgressBar value={item.amount} max={stats.total_sales} color={item.color} />
+                      <ProgressBar value={item.amount} max={grandTotal} color={item.color} />
                     </div>
                   );
                 })}
@@ -515,6 +522,12 @@ export const AdminSalesReports = () => {
                             <span className="text-[13px] font-semibold text-gray-600">현금 (시스템 상)</span>
                             <span className="text-[13px] font-bold text-gray-900">₩{cashTotal.toLocaleString()}</span>
                           </div>
+                          {eventServiceTotal > 0 && (
+                            <div className="flex justify-between mb-1.5">
+                              <span className="text-[13px] font-semibold text-emerald-700">♥ 섬김(이벤트)</span>
+                              <span className="text-[13px] font-bold text-emerald-700">₩{eventServiceTotal.toLocaleString()}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between items-center bg-gray-50 p-2.5 rounded-lg mt-2 border border-gray-100">
                             <span className="text-[13px] font-bold text-gray-700">실제 현금 보유액</span>
                             <div className="flex items-center gap-1">
