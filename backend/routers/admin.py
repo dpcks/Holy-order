@@ -393,15 +393,24 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         start_date = target_date
         end_date = target_date
 
-    # 대상 기간 전체 주문 (취소 및 소프트삭제 제외)
+    # 대상 기간 전체 주문 (취소 및 소프트삭제 제외) - 결제 완료된 일반 주문
     revenue_orders = db.query(models.Order).filter(
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
         models.Order.status.notin_(["PENDING", "CANCELLED"]),
-        models.Order.payment_method.notin_(["FREE", "VOLUNTEER"]), # 무료 주문(사역자/식당봉사/이벤트)은 실제 매출액 계산에서 제외
+        models.Order.payment_method.notin_(["FREE", "VOLUNTEER"]),
         models.Order.is_active == True
     ).all()
-    
+
+    # 이벤트(섬김) 주문 - FREE/VOLUNTEER 결제 수단, original_price 기준으로 집계
+    event_orders = db.query(models.Order).filter(
+        models.Order.order_date >= start_date,
+        models.Order.order_date <= end_date,
+        models.Order.status.notin_(["PENDING", "CANCELLED"]),
+        models.Order.payment_method.in_(["FREE", "VOLUNTEER"]),
+        models.Order.is_active == True
+    ).all()
+
     # 대상 기간 전체 주문 (PENDING 포함, CANCELLED 및 소프트삭제 제외) - 카운트용
     all_orders = db.query(models.Order).filter(
         models.Order.order_date >= start_date,
@@ -411,8 +420,12 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     ).all()
 
     total_orders = len(all_orders)
-    total_sales = sum(o.total_price for o in revenue_orders)
-    avg_order_value = round(total_sales / len(revenue_orders)) if revenue_orders else 0
+    # 일반 결제 매출액
+    normal_sales = sum(o.total_price for o in revenue_orders)
+    # 이벤트(섬김) 주문은 original_price(실제 메뉴 가치) 기준으로 합산
+    event_sales = sum(o.original_price or 0 for o in event_orders)
+    total_sales = normal_sales + event_sales
+    avg_order_value = round(total_sales / (len(revenue_orders) + len(event_orders))) if (revenue_orders or event_orders) else 0
 
     # 상태별 카운트
     status_counts = {}
@@ -459,6 +472,13 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
 
     # 트렌드 데이터(trend_data) 가공
     trend_data = {}
+    # 매출액 계산 시 이벤트 주문은 original_price 사용, 일반 주문은 total_price 사용
+    def get_order_revenue(o: models.Order) -> int:
+        """주문의 통계용 매출액을 반환. 이벤트 주문은 original_price(실제 메뉴 가치) 기준."""
+        if o.payment_method in ["FREE", "VOLUNTEER"]:
+            return o.original_price or 0
+        return o.total_price
+
     if type == "monthly":
         # 월별 통계 (1월, 2월...)
         for i in range(1, 13):
@@ -467,42 +487,26 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             month_key = f"{o.order_date.month}월"
             trend_data[month_key]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[month_key]["revenue"] += o.total_price
-            
+                trend_data[month_key]["revenue"] += get_order_revenue(o)
+
     elif type == "weekly":
         # 주차별 통계 (1주차, 2주차...)
         for i in range(1, 6):
             trend_data[f"{i}주차"] = {"count": 0, "revenue": 0}
-            
+
         for o in all_orders:
             week_num = (o.order_date.day - 1) // 7 + 1
             week_key = f"{week_num}주차"
             trend_data[week_key]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[week_key]["revenue"] += o.total_price
-            
+                trend_data[week_key]["revenue"] += get_order_revenue(o)
+
     else: # daily
         # 시간대별 통계 (09, 10...)
         for i in range(9, 16):
             trend_data[str(i)] = {"count": 0, "revenue": 0}
-            
-        hourly_raw = (
-            db.query(func.extract("hour", models.Order.created_at).label("hour"), func.count(models.Order.id).label("cnt"), func.sum(func.coalesce(models.Order.original_price, models.Order.total_price)).label("rev"))
-            .filter(
-                models.Order.order_date == target_date, 
-                models.Order.status.notin_(["CANCELLED"]),
-                models.Order.is_active == True
-            )
-            .group_by(func.extract("hour", models.Order.created_at))
-            .all()
-        )
-        for r in hourly_raw:
-            kst_hour = (int(r.hour) + 9) % 24
-            # PENDING도 count에는 포함되지만 revenue는 어떻게 할 것인가?
-            # 위 쿼리는 취소된 것만 빼고 전부 합침. PENDING 매출을 제외하려면 파이썬에서 계산하는게 안전함.
-            pass
-            
-        # 파이썬에서 집계 (안전함)
+
+        # 파이썬에서 집계 (이벤트 주문 original_price 반영)
         for o in all_orders:
             kst_hour = (o.created_at.hour + 9) % 24
             hour_str = str(kst_hour)
@@ -510,20 +514,39 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
                 trend_data[hour_str] = {"count": 0, "revenue": 0}
             trend_data[hour_str]["count"] += 1
             if o.status not in ["PENDING", "CANCELLED"]:
-                trend_data[hour_str]["revenue"] += o.total_price
+                trend_data[hour_str]["revenue"] += get_order_revenue(o)
 
-    payment_raw = (
+    # 일반 결제 수단별 집계 (total_price 기준)
+    normal_payment_raw = (
         db.query(models.Order.payment_method, func.sum(models.Order.total_price))
         .filter(
             models.Order.order_date >= start_date,
             models.Order.order_date <= end_date,
             models.Order.status.notin_(["PENDING", "CANCELLED"]),
+            models.Order.payment_method.notin_(["FREE", "VOLUNTEER"]),
             models.Order.is_active == True
         )
         .group_by(models.Order.payment_method)
         .all()
     )
-    payment_method_sales = {r[0]: int(r[1]) for r in payment_raw}
+    payment_method_sales = {r[0]: int(r[1]) for r in normal_payment_raw}
+
+    # 이벤트(섬김) 주문은 original_price 기준으로 별도 집계
+    event_payment_raw = (
+        db.query(models.Order.payment_method, func.sum(models.Order.original_price))
+        .filter(
+            models.Order.order_date >= start_date,
+            models.Order.order_date <= end_date,
+            models.Order.status.notin_(["PENDING", "CANCELLED"]),
+            models.Order.payment_method.in_(["FREE", "VOLUNTEER"]),
+            models.Order.is_active == True
+        )
+        .group_by(models.Order.payment_method)
+        .all()
+    )
+    for r in event_payment_raw:
+        if r[1]:  # NULL 방지
+            payment_method_sales[r[0]] = int(r[1])
 
     return {
         "success": True,
