@@ -1,41 +1,33 @@
 /*
 [File Role]
-관리자 전용 재고 관리 페이지.
-재료/소모품의 CRUD와 부족 재고 알림 카드를 제공합니다.
-자동 차감이나 레시피 연동 없이, 관리자가 수동으로 재고를 관리하는 데 초점을 맞춥니다.
+관리자 전용 재고 관리 페이지 (Kanban Board 스타일).
+기존 CRUD(추가/수정/삭제) 및 세부 정보, 메모 관리 기능을 유지하면서
+가로 스크롤 레이아웃과 퀵 필터를 제공하며, 개별 카드 내에서 인라인 수량 조절이 가능합니다.
 */
 
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
-  Package, Plus, Search, AlertTriangle, Pencil, Trash2,
-  X, Save, ChevronDown
+  Package, Plus, Search, AlertTriangle, Minus,
+  Pencil, Trash2, X, Save, ChevronDown
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
-import { Skeleton } from '../../components/ui/Skeleton';
 import type { StandardResponse, Ingredient, IngredientCreate, IngredientUpdate } from '../../types';
 
 // 카테고리 옵션 목록
 const CATEGORY_OPTIONS = ['재료', '소모품'] as const;
-
-// 테이블 로우 스켈레톤
-const TableRowSkeleton = () => (
-  <tr className="border-b border-gray-50">
-    <td className="px-6 py-5"><Skeleton className="h-5 w-24" /></td>
-    <td className="px-6 py-5"><Skeleton className="h-6 w-16 rounded-full" /></td>
-    <td className="px-6 py-5"><div className="flex justify-center gap-1"><Skeleton className="h-5 w-8" /><Skeleton className="h-4 w-6" /></div></td>
-    <td className="px-6 py-5 text-center"><Skeleton className="h-5 w-12 mx-auto" /></td>
-    <td className="px-6 py-5"><Skeleton className="h-6 w-16 rounded-full" /></td>
-    <td className="px-6 py-5"><Skeleton className="h-4 w-20" /></td>
-    <td className="px-6 py-5"><div className="flex justify-center gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></div></td>
-  </tr>
-);
+type FilterType = '전체' | '소모품' | '재료' | '주문 필요';
 
 export const AdminIngredients = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCategory, setFilterCategory] = useState<string>('전체');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('전체');
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
 
   // 모달 상태
   const [showModal, setShowModal] = useState(false);
@@ -66,20 +58,6 @@ export const AdminIngredients = () => {
     },
   });
 
-  // [React Query] 저재고 알림 목록 조회
-  const { data: rawAlerts = [] } = useQuery({
-    queryKey: QK.ingredients.alerts,
-    queryFn: async () => {
-      const res = await apiClient.get<StandardResponse<Ingredient[]>, StandardResponse<Ingredient[]>>('/admin/ingredients/alerts');
-      return (res.success && res.data) ? res.data : [];
-    },
-  });
-
-  const lowStockItems = rawAlerts.filter(item => {
-    const ratio = item.current_stock / item.alert_threshold;
-    return item.alert_threshold > 0 && (ratio <= 0.2 || item.current_stock === 0);
-  });
-
   // [React Query] 저장(CRUD) Mutation
   const saveMutation = useMutation({
     mutationFn: async ({ editingItem, formData }: { editingItem: Ingredient | null; formData: IngredientCreate }) => {
@@ -95,6 +73,10 @@ export const AdminIngredients = () => {
         setMessage({ type: 'success', text: `'${formData.name}' 항목이 ${editingItem ? '수정' : '추가'}되었습니다.` });
         queryClient.invalidateQueries({ queryKey: QK_DOMAIN.ingredients });
         handleCloseModal();
+        if (selectedItem && editingItem && selectedItem.id === editingItem.id) {
+           // 상세 모달이 열려있었다면 닫기
+           handleCloseDetailModal();
+        }
       }
     },
     onError: () => setMessage({ type: 'error', text: '저장 중 오류가 발생했습니다.' }),
@@ -123,7 +105,27 @@ export const AdminIngredients = () => {
     }
   }, [message]);
 
-  // 모달 열기 (추가/수정)
+  // 수량 조절 핸들러 (Inline Editing -> API 호출)
+  const handleUpdateStock = (e: React.MouseEvent, item: Ingredient, delta: number) => {
+    e.stopPropagation(); // 카드 클릭 이벤트(상세보기) 방지
+    const newStock = Math.max(0, item.current_stock + delta);
+    if (newStock === item.current_stock) return;
+
+    saveMutation.mutate({
+      editingItem: item,
+      formData: {
+        name: item.name,
+        category: item.category || '재료',
+        unit: item.unit || '',
+        current_stock: newStock,
+        alert_threshold: item.alert_threshold,
+        memo: item.memo || '',
+        display_order: item.display_order,
+      }
+    });
+  };
+
+  // 모달 제어 함수들
   const handleOpenModal = (item?: Ingredient) => {
     if (item) {
       setEditingItem(item);
@@ -151,13 +153,11 @@ export const AdminIngredients = () => {
     setShowModal(true);
   };
 
-  // 상세 모달 열기
   const handleOpenDetail = (item: Ingredient) => {
     setSelectedItem(item);
     setShowDetailModal(true);
   };
 
-  // 모달 닫기
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingItem(null);
@@ -168,7 +168,6 @@ export const AdminIngredients = () => {
     setSelectedItem(null);
   };
 
-  // 상세 모달에서 수정 모드로 전환
   const handleEditFromDetail = () => {
     if (!selectedItem) return;
     const itemToEdit = selectedItem;
@@ -176,8 +175,6 @@ export const AdminIngredients = () => {
     handleOpenModal(itemToEdit);
   };
 
-  // 저장 (ONSUCCESS는 useMutation 내부에서 코르한 이유로
-  // mutationFn에서는 editingItem을 주입해야 함)
   const handleSave = async () => {
     if (!formData.name.trim()) {
       setMessage({ type: 'error', text: '품목명을 입력해주세요.' });
@@ -186,259 +183,267 @@ export const AdminIngredients = () => {
     saveMutation.mutate({ editingItem, formData });
   };
 
-  // 삭제
-  const handleDelete = async (item: Ingredient) => {
-    if (!confirm(`'${item.name}' 항목을 삭제하시겠습니까?`)) return;
-    deleteMutation.mutate(item);
-  };
 
-  // 검색 및 카테고리 필터링
-  const filteredIngredients = ingredients.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = filterCategory === '전체' || item.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   // 재고 상태 확인 헬퍼
   const getStockStatus = (item: Ingredient) => {
     if (item.alert_threshold <= 0) return 'NORMAL';
     const ratio = item.current_stock / item.alert_threshold;
-    if (ratio <= 0.2 || item.current_stock === 0) return 'CRITICAL'; // 20% 이하: 주문필요
-    if (ratio <= 0.5) return 'WARNING'; // 50% 이하: 주의
+    if (ratio <= 0.2 || item.current_stock === 0) return 'CRITICAL';
+    if (ratio <= 0.5) return 'WARNING';
     return 'NORMAL';
   };
 
+  // 마우스 드래그 스크롤 핸들러
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollContainerRef.current) return;
+    setIsDragging(true);
+    setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+    setScrollLeft(scrollContainerRef.current.scrollLeft);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollContainerRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - scrollContainerRef.current.offsetLeft;
+    const walk = (x - startX) * 2; // 스크롤 속도 배율
+    scrollContainerRef.current.scrollLeft = scrollLeft - walk;
+  };
+
+
+
+  // 통계 계산
+  const totalItemsCount = ingredients.length;
+  const criticalItemsCount = ingredients.filter(i => getStockStatus(i) === 'CRITICAL').length;
+  const safeItemsCount = totalItemsCount - criticalItemsCount;
+
+  // 필터링 적용
+  const filteredItems = ingredients.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    let matchesFilter = true;
+    if (activeFilter === '소모품') matchesFilter = item.category === '소모품';
+    if (activeFilter === '재료') matchesFilter = item.category === '재료';
+    if (activeFilter === '주문 필요') matchesFilter = getStockStatus(item) === 'CRITICAL';
+    
+    return matchesSearch && matchesFilter;
+  });
+
+  // 카테고리 기둥(Column)별 분리
+  const columns = [
+    { title: '🔴 주문 필요 (CRITICAL)', items: filteredItems.filter(i => getStockStatus(i) === 'CRITICAL'), color: 'bg-red-50', borderColor: 'border-red-100', headerColor: 'text-red-800' },
+    { title: '🟡 재료 (INGREDIENTS)', items: filteredItems.filter(i => i.category === '재료'), color: 'bg-blue-50/50', borderColor: 'border-blue-100', headerColor: 'text-blue-800' },
+    { title: '📦 소모품 (SUPPLIES)', items: filteredItems.filter(i => i.category === '소모품'), color: 'bg-purple-50/50', borderColor: 'border-purple-100', headerColor: 'text-purple-800' }
+  ];
+
   return (
-    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
-      {/* 헤더 */}
-      <header className="bg-white px-8 py-5 flex items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-black/10">
-            <Package className="text-white" size={24} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">재고 관리</h1>
-            <p className="text-[13px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Inventory Management</p>
-          </div>
+    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans select-none relative">
+      {/* 알림 메시지 팝업 */}
+      {message && (
+        <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-full flex items-center gap-3 animate-in fade-in slide-in-from-top-4 ${
+          message.type === 'success'
+            ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/20'
+            : 'bg-red-500 text-white shadow-xl shadow-red-500/20'
+        }`}>
+          <span className="text-sm font-black">{message.text}</span>
         </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-black text-white px-5 py-3 rounded-2xl font-bold text-sm flex items-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.97] shadow-lg shadow-black/10"
-        >
-          <Plus size={18} />
-          재고 추가
-        </button>
-      </header>
+      )}
 
-      <main className="flex-1 overflow-auto p-8 custom-scrollbar">
-        <div className="max-w-6xl mx-auto space-y-6">
-
-          {/* 부족 재고 알림 카드 */}
-          {lowStockItems.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-[28px] p-6 border border-amber-200/60 shadow-sm">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
-                  <AlertTriangle size={22} />
-                </div>
-                <div>
-                  <h2 className="text-lg font-black text-red-900 tracking-tight">재고 주문필요 알림</h2>
-                  <p className="text-[12px] text-red-600 font-bold">
-                    {lowStockItems.length}개 항목의 재고가 매우 부족합니다
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {lowStockItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-white rounded-2xl p-4 border border-red-200/50 flex items-center justify-between group hover:shadow-md transition-all cursor-pointer"
-                    onClick={() => handleOpenDetail(item)}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`${item.name} 상세보기`}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleOpenDetail(item); }}
-                  >
-                    <div className="min-w-0">
-                      <p className="font-bold text-gray-900 text-sm truncate">{item.name}</p>
-                      <p className="text-[11px] text-red-600 font-semibold mt-0.5">
-                        {item.category && <span className="text-gray-400 mr-1">{item.category}</span>}
-                        현재 {item.current_stock}{item.unit || '개'} (주문필요)
-                      </p>
-                    </div>
-                    <div className="w-8 h-8 bg-red-50 text-red-400 rounded-lg flex items-center justify-center shrink-0 ml-3 group-hover:bg-red-100 transition-colors">
-                      <ChevronDown size={14} className="-rotate-90" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* 검색 및 필터 */}
+      {/* 헤더 및 요약 대시보드 */}
+      <header className="bg-white px-8 py-5 border-b border-gray-200 shrink-0 z-20 shadow-sm flex flex-col gap-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-black/10">
+              <Package className="text-white" size={24} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">재고 관리 보드</h1>
+              <p className="text-[13px] text-gray-400 font-bold uppercase tracking-wider mt-0.5">Inventory Kanban</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="relative w-64">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="품목명 검색..."
+                placeholder="품목 검색..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-4 py-3 text-sm font-medium focus:outline-none focus:ring-4 focus:ring-black/5 focus:border-gray-300 transition-all"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-black/5 focus:bg-white transition-all"
               />
             </div>
-            <div className="relative">
-              <select
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="appearance-none bg-white border border-gray-200 rounded-2xl px-5 py-3 pr-10 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-black/5 focus:border-gray-300 transition-all cursor-pointer"
-              >
-                <option value="전체">전체</option>
-                {CATEGORY_OPTIONS.map((cat) => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            {/* 기존 재고 추가 버튼 복구 */}
+            <button
+              onClick={() => handleOpenModal()}
+              className="bg-black text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-gray-800 transition-all active:scale-[0.97] shadow-lg shadow-black/10"
+            >
+              <Plus size={18} />
+              재고 추가
+            </button>
+          </div>
+        </div>
+
+        {/* 미니 대시보드 & 퀵 필터 */}
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex gap-3">
+            <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 flex items-center gap-3">
+              <span className="text-xs font-bold text-gray-500">총 품목</span>
+              <span className="text-base font-black text-gray-900">{totalItemsCount}</span>
+            </div>
+            <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 flex items-center gap-3">
+              <span className="text-xs font-bold text-emerald-600">안전 재고</span>
+              <span className="text-base font-black text-emerald-700">{safeItemsCount}</span>
+            </div>
+            <div className="bg-red-50 px-4 py-2 rounded-xl border border-red-100 flex items-center gap-3">
+              <span className="text-xs font-bold text-red-600 flex items-center gap-1"><AlertTriangle size={14} /> 주문 필요</span>
+              <span className="text-base font-black text-red-700">{criticalItemsCount}</span>
             </div>
           </div>
 
-          {/* 재고 목록 테이블 */}
-          <div className="bg-white rounded-[28px] shadow-sm border border-gray-100 overflow-hidden">
-            {loading ? (
-              <tbody className="divide-y divide-gray-50">
-                {Array.from({ length: 5 }).map((_, i) => <TableRowSkeleton key={i} />)}
-              </tbody>
-            ) : filteredIngredients.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                <Package size={48} className="mb-3 opacity-30" />
-                <p className="font-bold text-sm">
-                  {searchQuery || filterCategory !== '전체' ? '검색 결과가 없습니다.' : '등록된 재고 항목이 없습니다.'}
-                </p>
-                {!searchQuery && filterCategory === '전체' && (
-                  <button
-                    onClick={() => handleOpenModal()}
-                    className="mt-4 text-primary text-sm font-bold hover:underline"
-                  >
-                    + 첫 번째 항목 추가하기
-                  </button>
-                )}
+          <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+            {(['전체', '소모품', '재료', '주문 필요'] as const).map(filter => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={`px-4 py-1.5 text-[13px] font-bold rounded-lg transition-all ${
+                  activeFilter === filter ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* 가로 스크롤 보드 영역 */}
+      <main className="flex-1 relative overflow-hidden flex flex-col">
+
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-4 snap-x custom-scrollbar cursor-grab active:cursor-grabbing"
+          onMouseDown={handleMouseDown}
+          onMouseLeave={handleMouseLeave}
+          onMouseUp={handleMouseUp}
+          onMouseMove={handleMouseMove}
+        >
+          {loading ? (
+             <div className="w-full flex items-center justify-center text-gray-400 font-bold">로딩 중...</div>
+          ) : columns.map((col, idx) => (
+            <div 
+              key={idx} 
+              className={`flex-1 min-w-[320px] flex flex-col rounded-[24px] border shadow-sm snap-center ${col.color} ${col.borderColor}`}
+            >
+              {/* 기둥 헤더 */}
+              <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between shrink-0">
+                <h2 className={`text-[14px] font-black tracking-tight ${col.headerColor}`}>{col.title}</h2>
+                <span className="bg-white/60 px-2 py-0.5 rounded-md text-[12px] font-black text-gray-600 shadow-sm">
+                  {col.items.length}
+                </span>
               </div>
-            ) : (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">품목명</th>
-                    <th className="text-left text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">카테고리</th>
-                    <th className="text-center text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">현재 재고</th>
-                    <th className="text-center text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">기준 수량</th>
-                    <th className="text-left text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">상태</th>
-                    <th className="text-left text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">메모</th>
-                    <th className="text-center text-[11px] font-black text-gray-400 uppercase tracking-widest px-6 py-4">관리</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIngredients.map((item) => {
-                    const status = getStockStatus(item);
-                    return (
-                      <tr
-                        key={item.id}
-                        className={`border-b border-gray-50 transition-colors hover:bg-gray-100/50 cursor-pointer ${
-                          status === 'CRITICAL' ? 'bg-red-50/40' : status === 'WARNING' ? 'bg-amber-50/40' : ''
-                        }`}
-                        onClick={() => handleOpenDetail(item)}
-                      >
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            {status === 'CRITICAL' && (
-                              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
-                            )}
-                            {status === 'WARNING' && (
-                              <div className="w-2 h-2 bg-amber-500 rounded-full shrink-0" />
-                            )}
-                            <span className="font-bold text-gray-900 text-sm">{item.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.category && (
-                            <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
-                              item.category === '재료'
-                                ? 'bg-blue-50 text-blue-600'
-                                : 'bg-purple-50 text-purple-600'
-                            }`}>
-                              {item.category}
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className={`font-black text-sm ${
-                            status === 'CRITICAL' ? 'text-red-600' : status === 'WARNING' ? 'text-amber-600' : 'text-gray-900'
+
+              {/* 기둥 내 세로 스크롤 영역 */}
+              <div className="flex-1 overflow-y-auto p-3 custom-scrollbar space-y-3">
+                {col.items.map(item => {
+                  const status = getStockStatus(item);
+                  const isCritical = status === 'CRITICAL';
+                  // 프로그레스 바 계산
+                  const ratio = Math.min(1, item.current_stock / Math.max(1, item.alert_threshold));
+                  const progressColor = isCritical ? 'bg-red-500' : status === 'WARNING' ? 'bg-amber-500' : 'bg-emerald-500';
+
+                  return (
+                    <div 
+                      key={item.id} 
+                      className={`bg-white rounded-2xl p-4 shadow-sm border transition-all hover:shadow-md cursor-pointer ${
+                        isCritical ? 'border-red-200 shadow-red-100' : 'border-gray-100'
+                      }`}
+                      onMouseDown={(e) => e.stopPropagation()} // 드래그 방지
+                      onClick={() => handleOpenDetail(item)} // 카드 클릭 시 상세(기존 기능) 모달
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="min-w-0 pr-2">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full mb-1.5 inline-block ${
+                            item.category === '재료' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'
                           }`}>
+                            {item.category}
+                          </span>
+                          <h3 className="font-bold text-gray-900 text-sm truncate">{item.name}</h3>
+                        </div>
+                        {isCritical && (
+                          <div className="bg-red-100 text-red-600 w-6 h-6 rounded-lg flex items-center justify-center shrink-0 animate-pulse">
+                            <AlertTriangle size={14} />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 인라인 수량 조절 */}
+                      <div className="flex items-center justify-between bg-gray-50 rounded-xl p-1 border border-gray-100 mb-3">
+                        <button 
+                          onClick={(e) => handleUpdateStock(e, item, -1)}
+                          disabled={saving}
+                          className="w-8 h-8 rounded-lg bg-white text-gray-600 shadow-sm flex items-center justify-center hover:bg-gray-100 hover:text-red-500 transition-colors active:scale-95 disabled:opacity-50"
+                        >
+                          <Minus size={16} />
+                        </button>
+                        <div className="flex items-baseline gap-0.5 px-2">
+                          <span className={`text-lg font-black ${isCritical ? 'text-red-600' : 'text-gray-900'}`}>
                             {item.current_stock}
                           </span>
-                          <span className="text-gray-400 text-[11px] ml-1">{item.unit || '개'}</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="font-bold text-sm text-gray-500">
-                            {item.alert_threshold}
-                          </span>
-                          <span className="text-gray-400 text-[11px] ml-1">{item.unit || '개'}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          {status === 'CRITICAL' ? (
-                            <span className="text-[11px] font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-full">
-                              🚨 주문필요
-                            </span>
-                          ) : status === 'WARNING' ? (
-                            <span className="text-[11px] font-black text-amber-600 bg-amber-100 px-2.5 py-1 rounded-full">
-                              ⚠️ 주의
-                            </span>
-                          ) : (
-                            <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
-                              ✅ 정상
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className="text-[12px] text-gray-500 truncate max-w-[120px] block">
-                            {item.memo || '-'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(item);
-                              }}
-                              className="w-8 h-8 bg-gray-100 text-gray-400 rounded-lg flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all"
-                              aria-label={`${item.name} 삭제`}
-                              title="삭제"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                          <span className="text-[11px] font-bold text-gray-400">{item.unit || '개'}</span>
+                        </div>
+                        <button 
+                          onClick={(e) => handleUpdateStock(e, item, 1)}
+                          disabled={saving}
+                          className="w-8 h-8 rounded-lg bg-white text-gray-600 shadow-sm flex items-center justify-center hover:bg-gray-100 hover:text-blue-500 transition-colors active:scale-95 disabled:opacity-50"
+                        >
+                          <Plus size={16} />
+                        </button>
+                      </div>
 
-          {/* 하단 메시지 알림 */}
-          {message && (
-            <div className={`p-5 rounded-3xl flex items-center justify-center gap-3 animate-in slide-in-from-bottom-2 ${
-              message.type === 'success'
-                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20'
-                : 'bg-red-500 text-white shadow-lg shadow-red-500/20'
-            }`}>
-              <span className="text-[14px] font-black">{message.text}</span>
+                      {/* 프로그레스 바 */}
+                      <div>
+                        <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1">
+                          <span>기준치 {item.alert_threshold}{item.unit || '개'}</span>
+                          <span>{Math.round(ratio * 100)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${progressColor}`}
+                            style={{ width: `${ratio * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                      
+                      {item.memo && (
+                        <p className="mt-3 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-100 truncate w-full">
+                          📝 {item.memo}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+                {col.items.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-32 text-gray-400">
+                    <Package size={24} className="opacity-20 mb-2" />
+                    <span className="text-xs font-bold">항목이 없습니다</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </main>
 
-      {/* 상세 정보 모달 */}
+      {/* ============================== */}
+      {/* 1. 기존 상세 정보 모달 복구 */}
+      {/* ============================== */}
       {showDetailModal && selectedItem && (
         <div
           className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
@@ -543,7 +548,9 @@ export const AdminIngredients = () => {
         </div>
       )}
 
-      {/* 추가/수정 모달 */}
+      {/* ============================== */}
+      {/* 2. 기존 추가/수정 모달 복구 */}
+      {/* ============================== */}
       {showModal && (
         <div
           className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
