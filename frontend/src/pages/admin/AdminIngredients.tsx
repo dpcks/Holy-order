@@ -7,7 +7,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import {
-  Package, Plus, Search, AlertTriangle, Minus, ChevronLeft, ChevronRight,
+  Package, Plus, Search, AlertTriangle, Minus,
   Pencil, Trash2, X, Save, ChevronDown
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -183,10 +183,7 @@ export const AdminIngredients = () => {
     saveMutation.mutate({ editingItem, formData });
   };
 
-  const handleDelete = async (item: Ingredient) => {
-    if (!confirm(`'${item.name}' 항목을 삭제하시겠습니까?`)) return;
-    deleteMutation.mutate(item);
-  };
+
 
   // 재고 상태 확인 헬퍼
   const getStockStatus = (item: Ingredient) => {
@@ -221,11 +218,7 @@ export const AdminIngredients = () => {
     scrollContainerRef.current.scrollLeft = scrollLeft - walk;
   };
 
-  const scrollByAmount = (amount: number) => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollBy({ left: amount, behavior: 'smooth' });
-    }
-  };
+
 
   // 통계 계산
   const totalItemsCount = ingredients.length;
