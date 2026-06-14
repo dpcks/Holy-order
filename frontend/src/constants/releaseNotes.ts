@@ -17,6 +17,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.0',
+    date: '2026-06-14',
+    title: '재고 관리 화면 고도화 및 정산 통계 개선',
+    updates: [
+      { text: '관리자 재고 관리 보드를 직관적인 칸반(Kanban) 스타일 레이아웃으로 전면 개편', isNew: true },
+      { text: '각 품목 카드 내에서 즉각적인 수량 조절(+ / -) 기능 도입 (API 실시간 연동)', isNew: true },
+      { text: '위험 재고(주문 필요) 항목이 카테고리 상관없이 눈에 띄도록 다중 표시 로직 적용', isNew: true },
+      { text: '카드 내 메모 텍스트 가시성 강화를 위한 디자인 리뉴얼' },
+      { text: '이벤트(골든벨/섬김)로 발생한 전액 할인 주문도 관리자 총 매출액 및 현금(섬김) 통계에 합산되도록 로직 개편' }
+    ]
+  },
+  {
     version: 'v1.3.6',
     date: '2026-06-11',
     title: '시스템 안정화 및 주요 버그 수정',
