@@ -246,8 +246,8 @@ export const AdminIngredients = () => {
   // 카테고리 기둥(Column)별 분리
   const columns = [
     { title: '🔴 주문 필요 (CRITICAL)', items: filteredItems.filter(i => getStockStatus(i) === 'CRITICAL'), color: 'bg-red-50', borderColor: 'border-red-100', headerColor: 'text-red-800' },
-    { title: '🟡 재료 (INGREDIENTS)', items: filteredItems.filter(i => getStockStatus(i) !== 'CRITICAL' && i.category === '재료'), color: 'bg-blue-50/50', borderColor: 'border-blue-100', headerColor: 'text-blue-800' },
-    { title: '📦 소모품 (SUPPLIES)', items: filteredItems.filter(i => getStockStatus(i) !== 'CRITICAL' && i.category === '소모품'), color: 'bg-purple-50/50', borderColor: 'border-purple-100', headerColor: 'text-purple-800' }
+    { title: '🟡 재료 (INGREDIENTS)', items: filteredItems.filter(i => i.category === '재료'), color: 'bg-blue-50/50', borderColor: 'border-blue-100', headerColor: 'text-blue-800' },
+    { title: '📦 소모품 (SUPPLIES)', items: filteredItems.filter(i => i.category === '소모품'), color: 'bg-purple-50/50', borderColor: 'border-purple-100', headerColor: 'text-purple-800' }
   ];
 
   return (
@@ -347,7 +347,7 @@ export const AdminIngredients = () => {
 
         <div 
           ref={scrollContainerRef}
-          className="flex-1 overflow-x-auto overflow-y-hidden flex gap-6 p-6 snap-x custom-scrollbar cursor-grab active:cursor-grabbing"
+          className="flex-1 overflow-x-auto overflow-y-hidden flex gap-4 p-4 snap-x custom-scrollbar cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown}
           onMouseLeave={handleMouseLeave}
           onMouseUp={handleMouseUp}
@@ -358,7 +358,7 @@ export const AdminIngredients = () => {
           ) : columns.map((col, idx) => (
             <div 
               key={idx} 
-              className={`shrink-0 w-80 max-w-[85vw] flex flex-col rounded-3xl border shadow-sm snap-center ${col.color} ${col.borderColor}`}
+              className={`flex-1 min-w-[320px] flex flex-col rounded-[24px] border shadow-sm snap-center ${col.color} ${col.borderColor}`}
             >
               {/* 기둥 헤더 */}
               <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between shrink-0">
