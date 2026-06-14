@@ -105,11 +105,13 @@ export const AdminPaymentLogs = () => {
   };
 
   const { data: logsData, isLoading: loading } = useQuery({
-    queryKey: QK.payments.list(page, filterParams),
+    // [중요] limit를 queryKey에 포함시켜야 limit 변경 시 새로운 API 요청이 발생함
+    queryKey: [...QK.payments.list(page, filterParams), limit],
     queryFn: async ({ queryKey }) => {
-      const [,, currentPage, filters] = queryKey as [string, string, number, PaymentLogFilters];
+      // queryKey 구조: ['payments', 'list', page, filters, limit]
+      const [,, currentPage, filters, pageLimit] = queryKey as [string, string, number, PaymentLogFilters, number];
       
-      let url = `/admin/payments/logs?page=${currentPage}&limit=${limit}`;
+      let url = `/admin/payments/logs?page=${currentPage}&limit=${pageLimit}`;
       if (filters.start_date) url += `&start_date=${filters.start_date}`;
       if (filters.end_date) url += `&end_date=${filters.end_date}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
@@ -127,7 +129,7 @@ export const AdminPaymentLogs = () => {
       const res = await apiClient.get<PaymentLogListResponse, StandardResponse<PaymentLogListResponse>>(url);
       return (res.success && res.data) ? res.data : null;
     },
-    staleTime: 1000 * 60, // 1분 캐시
+    staleTime: 0, // limit 변경 시 항상 최신 데이터 보장
     placeholderData: (prev) => prev,
   });
 
