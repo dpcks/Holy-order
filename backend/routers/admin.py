@@ -602,8 +602,14 @@ def get_payment_logs(
     
     total_pages = (total_count + limit - 1) // limit
     
+    items = []
+    for log in logs:
+        item = schemas.PaymentLogResponse.model_validate(log)
+        item.order_number = log.order.order_number if log.order else None
+        items.append(item)
+    
     data = {
-        "items": logs,
+        "items": items,
         "total_count": total_count,
         "page": page,
         "limit": limit,
