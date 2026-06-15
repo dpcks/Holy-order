@@ -95,9 +95,9 @@ export const AdminOrderHistory = () => {
   useEffect(() => {
     sessionStorage.setItem('adminOrderHistoryPage', page.toString());
     sessionStorage.setItem('adminOrderHistoryLimit', limit.toString());
-    sessionStorage.setItem('adminOrderHistorySearch', searchQuery);
-    sessionStorage.setItem('adminOrderHistoryStatus', statusFilter);
-    sessionStorage.setItem('adminOrderHistoryPayment', paymentMethodFilter);
+    sessionStorage.setItem('adminOrderHistorySearch', searchQuery || '');
+    sessionStorage.setItem('adminOrderHistoryStatus', statusFilter || '');
+    sessionStorage.setItem('adminOrderHistoryPayment', paymentMethodFilter || '');
   }, [page, limit, searchQuery, statusFilter, paymentMethodFilter]);
 
   const getPageNumbers = () => {
