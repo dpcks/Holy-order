@@ -17,6 +17,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.1',
+    date: '2026-06-15',
+    title: '이벤트 주문 결제수단 표시 개선',
+    updates: [
+      { text: '관리자 화면 주문 현황 및 내역에서 이벤트(섬김의 시간) 주문 시 결제수단이 "사역자" 대신 "섬김후원"으로 명확하게 표시되도록 개선', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.0',
     date: '2026-06-14',
     title: '재고 관리 화면 고도화 및 정산 통계 개선',
