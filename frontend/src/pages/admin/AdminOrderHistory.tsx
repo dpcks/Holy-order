@@ -77,19 +77,28 @@ export const AdminOrderHistory = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialOrderId = searchParams.get('order_id');
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [page, setPage] = useState(() => Number(sessionStorage.getItem('adminOrderHistoryPage')) || 1);
+  const [limit, setLimit] = useState(() => Number(sessionStorage.getItem('adminOrderHistoryLimit')) || 20);
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get('search') || sessionStorage.getItem('adminOrderHistorySearch') || '');
   const [focusedOrderId, setFocusedOrderId] = useState<string | null>(initialOrderId);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   // 필터 상태
-  const [statusFilter, setStatusFilter] = useState<OrderHistoryFilters['status'] | ''>('');
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState<OrderHistoryFilters['payment_method'] | ''>('');
+  const [statusFilter, setStatusFilter] = useState<OrderHistoryFilters['status'] | ''>(() => (sessionStorage.getItem('adminOrderHistoryStatus') as any) || '');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState<OrderHistoryFilters['payment_method'] | ''>(() => (sessionStorage.getItem('adminOrderHistoryPayment') as any) || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // 상태를 sessionStorage에 지속적으로 저장
+  useEffect(() => {
+    sessionStorage.setItem('adminOrderHistoryPage', page.toString());
+    sessionStorage.setItem('adminOrderHistoryLimit', limit.toString());
+    sessionStorage.setItem('adminOrderHistorySearch', searchQuery);
+    sessionStorage.setItem('adminOrderHistoryStatus', statusFilter);
+    sessionStorage.setItem('adminOrderHistoryPayment', paymentMethodFilter);
+  }, [page, limit, searchQuery, statusFilter, paymentMethodFilter]);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -116,14 +125,33 @@ export const AdminOrderHistory = () => {
 
   const isMobile = windowWidth < 1280; // 아이패드 프로 등 대형 태블릿 포함을 위해 임계값 상향
 
-  // react-date-range 상태
-  const [dateRange, setDateRange] = useState<Range[]>([
-    {
+  // react-date-range 상태 (sessionStorage 연동)
+  const getInitialDateRange = (): Range[] => {
+    const saved = sessionStorage.getItem('adminOrderHistoryDateRange');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return [{
+          startDate: parsed[0].startDate ? new Date(parsed[0].startDate) : undefined,
+          endDate: parsed[0].endDate ? new Date(parsed[0].endDate) : undefined,
+          key: 'selection'
+        }];
+      } catch (e) {
+        // 파싱 에러 무시
+      }
+    }
+    return [{
       startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
       endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
       key: 'selection'
-    }
-  ]);
+    }];
+  };
+
+  const [dateRange, setDateRange] = useState<Range[]>(getInitialDateRange);
+
+  useEffect(() => {
+    sessionStorage.setItem('adminOrderHistoryDateRange', JSON.stringify(dateRange));
+  }, [dateRange]);
 
   // [React Query] 주문 내역 조회
   // filterParams를 OrderHistoryFilters 타입에 맞게 구성
@@ -177,13 +205,21 @@ export const AdminOrderHistory = () => {
   }, []);
 
   const handleResetFilters = () => {
-    setDateRange([{ startDate: undefined, endDate: undefined, key: 'selection' }]);
+    const defaultDate = [{ startDate: undefined, endDate: undefined, key: 'selection' }];
+    setDateRange(defaultDate);
     setStatusFilter('');
     setPaymentMethodFilter('');
     setSearchQuery('');
     setFocusedOrderId(null);
     setSearchParams({});
     setPage(1);
+
+    // sessionStorage 초기화
+    sessionStorage.removeItem('adminOrderHistoryDateRange');
+    sessionStorage.removeItem('adminOrderHistoryStatus');
+    sessionStorage.removeItem('adminOrderHistoryPayment');
+    sessionStorage.removeItem('adminOrderHistorySearch');
+    sessionStorage.setItem('adminOrderHistoryPage', '1');
   };
 
   const handleDateSelect = (ranges: RangeKeyDict) => {
