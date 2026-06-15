@@ -364,7 +364,7 @@ export const AdminPaymentLogs = () => {
                       to={`/admin/history?order_id=${log.order_id}`}
                       className="text-[14px] font-black text-gray-900 underline decoration-gray-200 underline-offset-4 hover:text-primary hover:decoration-primary/30 transition-all"
                     >
-                      Order #{log.raw_data?.order_number || log.order_id}
+                      Order #{log.order_number || log.raw_data?.order_number || log.order_id}
                     </Link>
                   </td>
                   <td className="py-5">

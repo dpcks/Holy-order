@@ -132,6 +132,7 @@ class PaymentLogResponse(BaseModel):
     sender_name: Optional[str] = None
     raw_data: Optional[Any] = None
     created_at: datetime
+    order_number: Optional[int] = None
     
     model_config = ConfigDict(from_attributes=True)
 

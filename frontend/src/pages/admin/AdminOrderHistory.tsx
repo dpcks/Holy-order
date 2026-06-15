@@ -193,6 +193,19 @@ export const AdminOrderHistory = () => {
   const totalCount = historyData?.total_count ?? 0;
   const totalPages = historyData?.total_pages ?? 0;
 
+  // order_id 파라미터로 접근 시 주문 상세 모달 자동 오픈
+  const [hasAutoOpened, setHasAutoOpened] = useState(false);
+
+  useEffect(() => {
+    if (initialOrderId && orders.length > 0 && !hasAutoOpened) {
+      const order = orders.find(o => String(o.id) === initialOrderId);
+      if (order) {
+        handleOpenDetail(order);
+        setHasAutoOpened(true);
+      }
+    }
+  }, [initialOrderId, orders, hasAutoOpened]);
+
   // 날짜 선택기 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -178,6 +178,7 @@ export interface OrderListResponse {
 export interface PaymentLog {
   id: number;
   order_id: number;
+  order_number: number | null;
   log_type: string;
   amount: number;
   sender_name: string | null;
