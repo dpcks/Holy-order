@@ -417,9 +417,9 @@ export const AdminOrderManagement = () => {
                                   : order.payment_method === 'TOSS'
                                     ? 'bg-[#0064FF]/10 border-[#0064FF]/20 p-0 overflow-hidden'
                                     : order.payment_method === 'FREE'
-                                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100 px-2.5 py-1 gap-1.5'
+                                      ? (order.announcement_id ? 'bg-amber-50 text-amber-600 border-amber-100 px-2.5 py-1 gap-1.5' : 'bg-emerald-50 text-emerald-600 border-emerald-100 px-2.5 py-1 gap-1.5')
                                       : order.payment_method === 'VOLUNTEER'
-                                        ? 'bg-amber-50 text-amber-600 border-amber-100 px-2.5 py-1 gap-1.5'
+                                        ? 'bg-purple-50 text-purple-600 border-purple-100 px-2.5 py-1 gap-1.5'
                                         : 'bg-blue-50 text-blue-600 border-blue-100 px-2.5 py-1 gap-1.5'
                                 }`}>
                                 {order.payment_method === 'TOSS' ? (
@@ -427,7 +427,7 @@ export const AdminOrderManagement = () => {
                                 ) : (
                                   <>
                                     {order.payment_method === 'CASH' ? <Wallet size={12} /> : <Building2 size={12} />}
-                                    {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? '사역자' : order.payment_method === 'VOLUNTEER' ? '식당봉사' : '계좌'}
+                                    {order.payment_method === 'CASH' ? '현금' : order.payment_method === 'FREE' ? (order.announcement_id ? '섬김후원' : '사역자') : order.payment_method === 'VOLUNTEER' ? '식당봉사' : '계좌'}
                                   </>
                                 )}
                               </div>
