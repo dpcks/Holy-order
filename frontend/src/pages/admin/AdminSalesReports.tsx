@@ -159,13 +159,20 @@ const groupDuty = (duty_breakdown: Record<string, number>) => {
 
 export const AdminSalesReports = () => {
   const queryClient = useQueryClient();
-  const [period, setPeriod] = useState<'주일' | '주차별' | '월별'>('주일');
+  const [period, setPeriod] = useState<'주일' | '주차별' | '월별'>(() => (sessionStorage.getItem('adminSalesPeriod') as any) || '주일');
   const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = sessionStorage.getItem('adminSalesDate');
+    if (saved) return saved;
     const today = new Date();
     const offset = today.getTimezoneOffset() * 60000;
     const localISOTime = (new Date(today.getTime() - offset)).toISOString().split('T')[0];
     return localISOTime;
   });
+
+  useEffect(() => {
+    sessionStorage.setItem('adminSalesPeriod', period);
+    sessionStorage.setItem('adminSalesDate', selectedDate);
+  }, [period, selectedDate]);
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportActualCash, setReportActualCash] = useState('');
