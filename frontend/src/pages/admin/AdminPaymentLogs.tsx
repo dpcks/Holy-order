@@ -38,12 +38,12 @@ const LOG_TYPE_LABELS: Record<string, { label: string; className: string }> = {
 
 export const AdminPaymentLogs = () => {
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(() => Number(sessionStorage.getItem('adminPaymentLogsPage')) || 1);
+  const [limit, setLimit] = useState(() => Number(sessionStorage.getItem('adminPaymentLogsLimit')) || 20);
+  const [searchQuery, setSearchQuery] = useState(() => sessionStorage.getItem('adminPaymentLogsSearch') || '');
 
   // 필터 상태
-  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState(() => sessionStorage.getItem('adminPaymentLogsPayment') || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -54,6 +54,14 @@ export const AdminPaymentLogs = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // 상태를 sessionStorage에 저장
+  useEffect(() => {
+    sessionStorage.setItem('adminPaymentLogsPage', page.toString());
+    sessionStorage.setItem('adminPaymentLogsLimit', limit.toString());
+    sessionStorage.setItem('adminPaymentLogsSearch', searchQuery);
+    sessionStorage.setItem('adminPaymentLogsPayment', paymentMethodFilter);
+  }, [page, limit, searchQuery, paymentMethodFilter]);
 
   // [WebSocket] 실시간 결제 정보 동기화
   useEffect(() => {
@@ -86,14 +94,33 @@ export const AdminPaymentLogs = () => {
     return pages;
   };
 
-  // react-date-range 상태
-  const [dateRange, setDateRange] = useState<Range[]>([
-    {
+  // react-date-range 상태 (sessionStorage 연동)
+  const getInitialDateRange = (): Range[] => {
+    const saved = sessionStorage.getItem('adminPaymentLogsDateRange');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return [{
+          startDate: parsed[0].startDate ? new Date(parsed[0].startDate) : undefined,
+          endDate: parsed[0].endDate ? new Date(parsed[0].endDate) : undefined,
+          key: 'selection'
+        }];
+      } catch (e) {
+        // 무시
+      }
+    }
+    return [{
       startDate: startOfWeek(new Date(), { weekStartsOn: 1 }),
       endDate: endOfWeek(new Date(), { weekStartsOn: 1 }),
       key: 'selection'
-    }
-  ]);
+    }];
+  };
+
+  const [dateRange, setDateRange] = useState<Range[]>(getInitialDateRange);
+
+  useEffect(() => {
+    sessionStorage.setItem('adminPaymentLogsDateRange', JSON.stringify(dateRange));
+  }, [dateRange]);
 
   // [React Query] 입금 내역 조회 - 필터 변경 시 자동 리페치
   const filterParams: PaymentLogFilters = {
@@ -153,6 +180,11 @@ export const AdminPaymentLogs = () => {
     setPaymentMethodFilter('');
     setSearchQuery('');
     setPage(1);
+
+    sessionStorage.removeItem('adminPaymentLogsDateRange');
+    sessionStorage.removeItem('adminPaymentLogsPayment');
+    sessionStorage.removeItem('adminPaymentLogsSearch');
+    sessionStorage.setItem('adminPaymentLogsPage', '1');
   };
 
   const handleDateSelect = (ranges: RangeKeyDict) => {
