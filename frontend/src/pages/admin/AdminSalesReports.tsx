@@ -20,85 +20,6 @@ const ProgressBar = ({ value, max, color = 'bg-[#1A0A0A]' }: { value: number; ma
   </div>
 );
 
-const OrderTypePieChart = ({ qrCount, directCount }: { qrCount: number; directCount: number }) => {
-  const [hoveredType, setHoveredType] = useState<'qr' | 'direct' | null>(null);
-  const total = qrCount + directCount;
-  const qrPct = total > 0 ? (qrCount / total) * 100 : 0;
-
-  return (
-    <div className="mt-6 pt-6 border-t border-gray-100 flex items-center justify-between gap-4">
-      <div className="flex-1">
-        <h3 className="font-bold text-gray-900 text-[13px] mb-3">주문 유형 (QR/현장)</h3>
-        <div className="flex flex-col gap-2">
-          <div 
-            className={`flex items-center gap-2 cursor-pointer transition-opacity ${hoveredType && hoveredType !== 'qr' ? 'opacity-30' : 'opacity-100'}`}
-            onMouseEnter={() => setHoveredType('qr')}
-            onMouseLeave={() => setHoveredType(null)}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span className="text-[12px] font-semibold text-gray-700">QR 주문</span>
-            <span className="text-[12px] font-bold text-gray-900 ml-auto">{qrPct.toFixed(0)}%</span>
-          </div>
-          <div 
-            className={`flex items-center gap-2 cursor-pointer transition-opacity ${hoveredType && hoveredType !== 'direct' ? 'opacity-30' : 'opacity-100'}`}
-            onMouseEnter={() => setHoveredType('direct')}
-            onMouseLeave={() => setHoveredType(null)}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-[#1A0A0A]" />
-            <span className="text-[12px] font-semibold text-gray-700">현장 주문</span>
-            <span className="text-[12px] font-bold text-gray-900 ml-auto">{total > 0 ? (100 - qrPct).toFixed(0) : 0}%</span>
-          </div>
-        </div>
-      </div>
-      
-      <div className="relative w-[88px] h-[88px] shrink-0" onMouseLeave={() => setHoveredType(null)}>
-        {/* SVG is rotated -90deg so dash starts from top */}
-        <svg viewBox="0 0 32 32" className="w-full h-full -rotate-90 drop-shadow-sm">
-          {/* 현장 주문 (나머지 퍼센트) */}
-          {total > 0 && (
-            <circle 
-              r="15.915" cx="16" cy="16" fill="transparent" stroke="#1A0A0A" strokeWidth="5.5" 
-              strokeDasharray={`${100 - qrPct} ${qrPct}`} strokeDashoffset={-qrPct}
-              className="transition-all duration-300 cursor-pointer"
-              style={{ opacity: hoveredType === 'qr' ? 0.2 : 1 }}
-              onMouseEnter={() => setHoveredType('direct')}
-            />
-          )}
-          {/* QR 주문 (퍼센트만큼) */}
-          {qrPct > 0 && (
-            <circle 
-              r="15.915" cx="16" cy="16" fill="transparent" stroke="#10B981" strokeWidth="5.5" 
-              strokeDasharray={`${qrPct} ${100 - qrPct}`} strokeDashoffset="0"
-              className="transition-all duration-300 cursor-pointer drop-shadow-sm"
-              style={{ opacity: hoveredType === 'direct' ? 0.2 : 1 }}
-              onMouseEnter={() => setHoveredType('qr')}
-            />
-          )}
-        </svg>
-        
-        {/* 중앙 툴팁 오버레이 */}
-        <div className="absolute inset-0 m-auto flex flex-col items-center justify-center pointer-events-none w-16 h-16 bg-white rounded-full shadow-sm z-10">
-          {hoveredType === 'qr' ? (
-            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-200">
-              <span className="text-[10px] font-bold text-gray-500 mb-[-3px]">QR</span>
-              <span className="text-[14px] font-black text-emerald-600">{qrCount}건</span>
-            </div>
-          ) : hoveredType === 'direct' ? (
-            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-200">
-              <span className="text-[10px] font-bold text-gray-500 mb-[-3px]">현장</span>
-              <span className="text-[14px] font-black text-gray-900">{directCount}건</span>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-200">
-              <span className="text-[10px] font-bold text-gray-400 mb-[-3px]">총</span>
-              <span className="text-[12px] font-black text-gray-700">{total}건</span>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // 도넛 차트 (SVG)
 const DonutChart = ({ data }: { data: { label: string; value: number; color: string }[] }) => {
@@ -381,7 +302,15 @@ export const AdminSalesReports = () => {
             <div className="col-span-3 grid grid-cols-4 gap-4">
               {[
                 { icon: TrendingUp, label: '총 매출액', value: `₩${stats.total_sales.toLocaleString()}`, sub: '이벤트 섬김 포함', color: 'text-gray-900' },
-                { icon: ShoppingBag, label: '총 주문 건수', value: `${stats.total_orders}건`, sub: '기준 기간 내 접수', color: 'text-gray-900' },
+                { 
+                  icon: ShoppingBag, 
+                  label: '총 주문 건수', 
+                  value: `${stats.total_orders}건`, 
+                  sub: stats.total_orders > 0 && stats.order_type_counts 
+                    ? `QR주문 ${stats.order_type_counts.qr}건 • 현장주문 ${stats.order_type_counts.direct}건` 
+                    : '기준 기간 내 접수', 
+                  color: 'text-gray-900' 
+                },
                 { icon: BarChart2, label: '객단가', value: `₩${stats.avg_order_value.toLocaleString()}`, sub: '평균 주문 금액', color: 'text-gray-900' },
                 { icon: Star, label: '최고 인기 메뉴', value: stats.top_menus?.[0]?.name || '-', sub: '해당 기간 1위', color: 'text-white', bg: 'bg-primary' },
               ].map((card, i) => (
@@ -431,10 +360,6 @@ export const AdminSalesReports = () => {
                   );
                 })}
               </div>
-              <OrderTypePieChart 
-                qrCount={stats.order_type_counts?.qr || 0} 
-                directCount={stats.order_type_counts?.direct || 0} 
-              />
             </div>
 
             {/* 트렌드 현황 */}
