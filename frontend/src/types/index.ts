@@ -135,6 +135,7 @@ export interface ReportStats {
   duty_breakdown: Record<string, number>;
   trend_data: Record<string, { count: number, revenue: number }>;
   payment_method_sales: Record<string, number>;
+  order_type_counts: { qr: number; direct: number };
 }
 
 
