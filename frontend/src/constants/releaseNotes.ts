@@ -21,7 +21,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     date: '2026-06-17',
     title: '통계 및 입금 로그 화면 사용성 고도화',
     updates: [
-      { text: '정산 및 통계 화면에 QR주문/현장주문 비율을 한눈에 볼 수 있는 인터랙티브 도넛 차트 추가', isNew: true },
+      { text: '정산 및 통계 화면의 총 주문 건수에 QR주문 및 현장주문 건수 구분 표시 추가', isNew: true },
       { text: '입금 승인 내역에서 모든 결제 유형의 주문번호 표시 기준 통일', isNew: true },
       { text: '입금 승인 내역의 주문번호 클릭 시 주문 내역 화면으로 이동하며 상세 모달이 자동 오픈되도록 개선', isNew: true }
     ]
