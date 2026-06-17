@@ -427,6 +427,9 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     total_sales = normal_sales + event_sales
     avg_order_value = round(total_sales / (len(revenue_orders) + len(event_orders))) if (revenue_orders or event_orders) else 0
 
+    qr_count = sum(1 for o in all_orders if o.user_id is not None)
+    direct_count = sum(1 for o in all_orders if o.user_id is None)
+
     # 상태별 카운트
     status_counts = {}
     for o in all_orders:
@@ -558,7 +561,8 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             "top_menus": top_menus,
             "duty_breakdown": duty_breakdown,
             "trend_data": trend_data, # hourly_orders -> trend_data 변경
-            "payment_method_sales": payment_method_sales
+            "payment_method_sales": payment_method_sales,
+            "order_type_counts": {"qr": qr_count, "direct": direct_count}
         },
         "message": "통계 데이터를 조회했습니다."
     }
