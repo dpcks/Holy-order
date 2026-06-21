@@ -131,7 +131,12 @@ export interface ReportStats {
   avg_order_value: number;
   top_menu: string | null;
   status_counts: Record<string, number>;
-  top_menus: { name: string; count: number; revenue: number }[];
+  top_menus: {
+    name: string;
+    count: number;
+    free_count?: number;
+    revenue: number;
+  }[];
   duty_breakdown: Record<string, number>;
   trend_data: Record<string, { count: number, revenue: number }>;
   payment_method_sales: Record<string, number>;

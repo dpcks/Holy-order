@@ -407,7 +407,14 @@ export const AdminSalesReports = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13px] font-bold text-gray-900 truncate">{menu.name}</p>
-                        <p className="text-[11px] text-gray-400">판매 {menu.count}건</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <p className="text-[11px] text-gray-500 font-medium">총 {menu.count}건</p>
+                          {(menu.free_count ?? 0) > 0 && (
+                            <span className="text-[10px] text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded-md font-semibold">
+                              (무료 {menu.free_count}건 포함)
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span className="text-[13px] font-black text-gray-900">₩{menu.revenue.toLocaleString()}</span>
                     </div>
@@ -455,10 +462,15 @@ export const AdminSalesReports = () => {
                             <td className="py-5">
                               <p className="text-[15px] font-black text-gray-900">{m.name}</p>
                             </td>
-                            <td className="py-5 text-right">
+                            <td className="py-5 text-right flex flex-col items-end gap-1">
                               <span className="px-2.5 py-1 bg-primary/5 text-primary rounded-lg text-[13px] font-black">
-                                {m.count.toLocaleString()}건
+                                총 {m.count.toLocaleString()}건
                               </span>
+                              {(m.free_count ?? 0) > 0 && (
+                                <span className="text-[11px] font-semibold text-gray-400 mt-1">
+                                  사역자/봉사 {m.free_count}건 포함
+                                </span>
+                              )}
                             </td>
                             <td className="py-5 text-right text-[15px] font-bold text-gray-900">
                               ₩{m.revenue.toLocaleString()}

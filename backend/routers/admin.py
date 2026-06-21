@@ -402,12 +402,13 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         models.Order.is_active == True
     ).all()
 
-    # 이벤트(섬김) 주문 - FREE/VOLUNTEER 결제 수단, original_price 기준으로 집계
+    # 이벤트(섬김) 주문 - FREE/VOLUNTEER 결제 수단이면서 이벤트(announcement_id)에 속한 주문만 집계
     event_orders = db.query(models.Order).filter(
         models.Order.order_date >= start_date,
         models.Order.order_date <= end_date,
         models.Order.status.notin_(["PENDING", "CANCELLED"]),
         models.Order.payment_method.in_(["FREE", "VOLUNTEER"]),
+        models.Order.announcement_id.isnot(None),
         models.Order.is_active == True
     ).all()
 
@@ -435,12 +436,31 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     for o in all_orders:
         status_counts[o.status] = status_counts.get(o.status, 0) + 1
 
-    # 인기 메뉴 TOP 5
+    # 인기 메뉴 TOP 5 (무료 주문 건수 분리)
     top_menus_raw = (
         db.query(
             models.OrderItem.menu_name_snapshot,
             func.sum(models.OrderItem.quantity).label("total_qty"),
-            func.sum(models.OrderItem.sub_total).label("total_revenue"),
+            func.sum(
+                case(
+                    (
+                        models.Order.payment_method.in_(["FREE", "VOLUNTEER"]) & 
+                        models.Order.announcement_id.is_(None), 
+                        models.OrderItem.quantity
+                    ),
+                    else_=0
+                )
+            ).label("free_qty"),
+            func.sum(
+                case(
+                    (
+                        models.Order.payment_method.in_(["FREE", "VOLUNTEER"]) & 
+                        models.Order.announcement_id.is_(None), 
+                        0
+                    ),
+                    else_=models.OrderItem.sub_total
+                )
+            ).label("total_revenue"),
         )
         .join(models.Order, models.Order.id == models.OrderItem.order_id)
         .filter(
@@ -455,7 +475,12 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         .all()
     )
     top_menus = [
-        {"name": r.menu_name_snapshot, "count": int(r.total_qty), "revenue": int(r.total_revenue)}
+        {
+            "name": r.menu_name_snapshot, 
+            "count": int(r.total_qty), 
+            "free_count": int(getattr(r, "free_qty", 0) or 0),
+            "revenue": int(r.total_revenue or 0)
+        }
         for r in top_menus_raw
     ]
 
@@ -479,7 +504,9 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     def get_order_revenue(o: models.Order) -> int:
         """주문의 통계용 매출액을 반환. 이벤트 주문은 original_price(실제 메뉴 가치) 기준."""
         if o.payment_method in ["FREE", "VOLUNTEER"]:
-            return o.original_price or 0
+            if o.announcement_id is not None:
+                return o.original_price or 0
+            return 0
         return o.total_price
 
     if type == "monthly":
@@ -534,7 +561,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     )
     payment_method_sales = {r[0]: int(r[1]) for r in normal_payment_raw}
 
-    # 이벤트(섬김) 주문은 original_price 기준으로 별도 집계
+    # 이벤트(섬김) 주문은 original_price 기준으로 별도 집계 (이벤트 주문에 한함)
     event_payment_raw = (
         db.query(models.Order.payment_method, func.sum(models.Order.original_price))
         .filter(
@@ -542,6 +569,7 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             models.Order.order_date <= end_date,
             models.Order.status.notin_(["PENDING", "CANCELLED"]),
             models.Order.payment_method.in_(["FREE", "VOLUNTEER"]),
+            models.Order.announcement_id.isnot(None),
             models.Order.is_active == True
         )
         .group_by(models.Order.payment_method)
