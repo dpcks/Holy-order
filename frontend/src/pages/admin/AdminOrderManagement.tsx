@@ -1,14 +1,15 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX, Plus } from 'lucide-react';
+import { RefreshCw, CheckCircle, MessageSquare, Phone, Wallet, Building2, Volume2, VolumeX, Plus, ListChecks } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { AdminDirectOrderModal } from './AdminDirectOrderModal';
+import { AdminPreparingSummaryModal } from './AdminPreparingSummaryModal';
 import type { StandardResponse } from '../../api/client';
-import type { Order, DashboardStats } from '../../types';
+import type { Order, DashboardStats, SettingResponse } from '../../types';
 import { TossLogo } from '../../components/ui/TossLogo';
 
 // 상태 전이 정의
@@ -19,9 +20,9 @@ const STATUS_TRANSITIONS: Record<string, { label: string; next: string; color: s
 };
 
 const COLUMNS = [
-  { status: 'PENDING', label: '입금 확인대기', color: 'text-orange-600', dot: 'bg-orange-400' },
-  { status: 'PREPARING', label: '제조 중', color: 'text-primary', dot: 'bg-primary' },
-  { status: 'READY', label: '수령 대기', color: 'text-green-600', dot: 'bg-green-400' },
+  { status: 'PENDING', label: '입금 확인대기', color: 'text-orange-600', dot: 'bg-orange-400', cardBorder: 'border-l-orange-400' },
+  { status: 'PREPARING', label: '제조 중', color: 'text-primary', dot: 'bg-primary', cardBorder: 'border-l-primary' },
+  { status: 'READY', label: '수령 대기', color: 'text-green-600', dot: 'bg-green-400', cardBorder: 'border-l-green-400' },
 ];
 
 // 경과 시간 계산 헬퍼
@@ -64,10 +65,10 @@ const OptionBadges = ({ text }: { text: string | null }) => {
           <span
             key={i}
             className={`text-[10px] font-black px-2 py-0.5 rounded-md leading-none flex items-center h-5 border ${isIce ? 'bg-blue-100 text-blue-600 border-blue-200' :
-                isHot ? 'bg-red-100 text-red-600 border-red-200' :
-                  isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
-                    isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
-                      'bg-gray-100 text-gray-500 border-gray-200'
+              isHot ? 'bg-red-100 text-red-600 border-red-200' :
+                isShot ? 'bg-yellow-100 text-yellow-700 border-yellow-300' :
+                  isTumblr ? 'bg-green-100 text-green-700 border-green-300' :
+                    'bg-gray-100 text-gray-500 border-gray-200'
               }`}
           >
             {trimmed}
@@ -87,7 +88,7 @@ type AdminOutletContext = {
 
 // 주문 카드 스켈레톤
 const OrderCardSkeleton = () => (
-  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm space-y-5">
+  <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
     <div className="flex justify-between items-center">
       <Skeleton className="h-8 w-20" />
       <Skeleton className="h-5 w-16" />
@@ -112,6 +113,7 @@ export const AdminOrderManagement = () => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [now, setNow] = useState<number>(Date.now());
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSummaryModalOpen, setIsSummaryModalOpen] = useState(false);
 
   // [React Query] 주문 보드 데이터 조회
   const { data: orders = [], isLoading: loadingOrders } = useQuery({
@@ -132,6 +134,16 @@ export const AdminOrderManagement = () => {
       return (res.success && res.data) ? res.data : { total_orders: 0, total_sales: 0 };
     },
     staleTime: 1000 * 60, // 통계는 1분 정도 캐시 가능
+  });
+
+  // [React Query] 시스템 설정 조회
+  const { data: settings } = useQuery({
+    queryKey: QK.settings.main,
+    queryFn: async () => {
+      const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings');
+      return (res.success && res.data) ? res.data : null;
+    },
+    staleTime: 1000 * 60 * 5, // 설정은 자주 변경되지 않으므로 5분 캐시
   });
 
   // [React Query] Mutations
@@ -313,15 +325,15 @@ export const AdminOrderManagement = () => {
 
   return (
     <div className="relative flex flex-col h-full bg-[#F9FAFB] overflow-hidden">
-      <header className="bg-white border-b border-gray-200 px-6 xl:px-8 py-3 xl:py-5 flex items-center justify-between shrink-0 shadow-sm z-10">
+      <header className="bg-white border-b border-gray-200 px-5 xl:px-6 py-2 xl:py-3 flex items-center justify-between shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-6">
           <div>
             <div className="flex items-center gap-2 xl:gap-3 mb-0.5 xl:mb-1">
               <h1 className="text-xl xl:text-2xl font-black text-gray-900 tracking-tight">실시간 주문 현황</h1>
               <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
                 <span className={`w-1.5 h-1.5 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
-                    wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
-                      'bg-red-400'
+                  wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
+                    'bg-red-400'
                   }`}></span>
                 <span className="text-[12px] text-gray-900 font-bold uppercase tracking-wider">
                   {wsStatus === 'CONNECTED' ? '실시간' : wsStatus === 'RECONNECTING' ? '재연결중' : '오프라인'}
@@ -358,11 +370,10 @@ export const AdminOrderManagement = () => {
                 audioRef.current.play().catch(e => console.warn('오디오 재생 실패:', e));
               }
             }}
-            className={`p-3 rounded-xl transition-all border ${
-              isSoundEnabled
-                ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
-                : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 hover:text-gray-600'
-            }`}
+            className={`p-3 rounded-xl transition-all border ${isSoundEnabled
+              ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/20'
+              : 'bg-gray-50 text-gray-400 border-gray-100 hover:bg-gray-100 hover:text-gray-600'
+              }`}
             aria-label={isSoundEnabled ? '알림음 끄기' : '알림음 켜기'}
             tabIndex={0}
             title={isSoundEnabled ? '알림음 ON (클릭하여 끄기)' : '알림음 OFF (클릭하여 켜기)'}
@@ -381,14 +392,25 @@ export const AdminOrderManagement = () => {
                 <div className="flex items-center justify-between mb-6 px-1">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full shadow-sm ${col.dot}`} />
-                    <span className={`font-black text-[17px] tracking-tight ${col.color}`}>{col.label}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-black text-[17px] tracking-tight ${col.color}`}>{col.label}</span>
+                      {col.status === 'PREPARING' && colOrders.length >= 3 && (
+                        <button
+                          onClick={() => setIsSummaryModalOpen(true)}
+                          className="flex items-center gap-1.5 bg-emerald-600 text-white hover:bg-emerald-700 px-3 py-1.5 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:shadow-[0_6px_16px_rgba(0,0,0,0.15)] transform hover:-translate-y-0.5 active:scale-95 transition-all duration-200 text-[12px] font-black group"
+                        >
+                          <ListChecks size={14} className="group-hover:rotate-12 transition-transform" />
+                          총 제조메뉴
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <span className="bg-[#1A0A0A] text-white text-[12px] font-black px-3 py-1 rounded-full shadow-lg">
                     {colOrders.length}
                   </span>
                 </div>
 
-                <div className="flex flex-col gap-5 overflow-y-auto pr-2 custom-scrollbar">
+                <div className="flex flex-col gap-3 overflow-y-auto pr-2 custom-scrollbar">
                   {loading ? (
                     // 스켈레톤 로더
                     Array.from({ length: 3 }).map((_, i) => <OrderCardSkeleton key={i} />)
@@ -404,7 +426,7 @@ export const AdminOrderManagement = () => {
                       return (
                         <div
                           key={order.id}
-                          className="bg-white rounded-3xl p-4 xl:p-6 shadow-[0_4px_20_rgba(0,0,0,0.03)] border border-gray-100 hover:shadow-[0_10px_30px_rgba(0,0,0,0.08)] transition-all group animate-in fade-in slide-in-from-bottom-4 duration-500 relative"
+                          className={`bg-white rounded-2xl p-4 shadow-sm border border-gray-100 border-l-[4px] ${col.cardBorder} hover:shadow-md transition-all group animate-in fade-in slide-in-from-bottom-3 duration-300 relative`}
                         >
                           {/* 헤더: 주문번호 & 결제수단 & 경과시간 */}
                           <div className="flex items-center justify-between mb-5">
@@ -413,14 +435,14 @@ export const AdminOrderManagement = () => {
                                 #{order.order_number}
                               </span>
                               <div className={`flex items-center rounded-lg text-[10px] font-black border ${order.payment_method === 'CASH'
-                                  ? 'bg-orange-50 text-orange-600 border-orange-100 px-2.5 py-1 gap-1.5'
-                                  : order.payment_method === 'TOSS'
-                                    ? 'bg-[#0064FF]/10 border-[#0064FF]/20 p-0 overflow-hidden'
-                                    : order.payment_method === 'FREE'
-                                      ? (order.announcement_id ? 'bg-amber-50 text-amber-600 border-amber-100 px-2.5 py-1 gap-1.5' : 'bg-emerald-50 text-emerald-600 border-emerald-100 px-2.5 py-1 gap-1.5')
-                                      : order.payment_method === 'VOLUNTEER'
-                                        ? 'bg-purple-50 text-purple-600 border-purple-100 px-2.5 py-1 gap-1.5'
-                                        : 'bg-blue-50 text-blue-600 border-blue-100 px-2.5 py-1 gap-1.5'
+                                ? 'bg-orange-50 text-orange-600 border-orange-100 px-2.5 py-1 gap-1.5'
+                                : order.payment_method === 'TOSS'
+                                  ? 'bg-[#0064FF]/10 border-[#0064FF]/20 p-0 overflow-hidden'
+                                  : order.payment_method === 'FREE'
+                                    ? (order.announcement_id ? 'bg-amber-50 text-amber-600 border-amber-100 px-2.5 py-1 gap-1.5' : 'bg-emerald-50 text-emerald-600 border-emerald-100 px-2.5 py-1 gap-1.5')
+                                    : order.payment_method === 'VOLUNTEER'
+                                      ? 'bg-purple-50 text-purple-600 border-purple-100 px-2.5 py-1 gap-1.5'
+                                      : 'bg-blue-50 text-blue-600 border-blue-100 px-2.5 py-1 gap-1.5'
                                 }`}>
                                 {order.payment_method === 'TOSS' ? (
                                   <TossLogo size={24} className="px-1" />
@@ -440,17 +462,19 @@ export const AdminOrderManagement = () => {
                           </div>
 
                           {/* 주문자 정보 (이름, 직분, 전화번호) */}
-                          <div className="flex flex-col gap-1 mb-5 pb-5 border-b border-gray-50">
+                          <div className={`flex flex-col gap-1 border-b border-gray-50 ${settings?.require_phone ? 'mb-5 pb-5' : 'mb-3 pb-3'}`}>
                             <div className="flex items-center gap-2">
                               <span className="text-[16px] font-black text-gray-900">{order.user_name_snapshot || '손님'}</span>
                               <span className="text-[11px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded tracking-tighter">
                                 {order.user_duty_snapshot}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-gray-400">
-                              <Phone size={12} />
-                              <span className="text-[13px] font-bold tracking-tight">{formatPhone(order.user_phone_snapshot)}</span>
-                            </div>
+                            {settings?.require_phone && (
+                              <div className="flex items-center gap-1.5 text-gray-400">
+                                <Phone size={12} />
+                                <span className="text-[13px] font-bold tracking-tight">{formatPhone(order.user_phone_snapshot)}</span>
+                              </div>
+                            )}
                           </div>
 
                           {/* 메뉴 리스트 & 옵션 */}
@@ -458,8 +482,8 @@ export const AdminOrderManagement = () => {
                             {order.items.map((item, idx) => (
                               <div key={idx} className="flex flex-col gap-1">
                                 <div className="flex items-center justify-between">
-                                  <p className="text-[15px] font-black text-gray-800 leading-snug">
-                                    {item.menu_name_snapshot} <span className="text-primary text-[13px] ml-1.5 font-black uppercase">x {item.quantity}</span>
+                                  <p className="text-[15px] font-black text-gray-900 leading-snug">
+                                    {item.menu_name_snapshot} <span className="text-primary text-[14px] ml-1.5 font-black uppercase">x {item.quantity}</span>
                                   </p>
                                 </div>
                                 <OptionBadges text={item.options_text} />
@@ -530,28 +554,28 @@ export const AdminOrderManagement = () => {
 
 
 
-      <footer className="bg-[#1A0A0A] px-6 xl:px-10 py-3 xl:py-5 flex items-center justify-between shrink-0 text-white shadow-2xl">
-        <div className="flex items-center gap-6 xl:gap-12">
+      <footer className="bg-[#1A0A0A] px-5 xl:px-8 py-2 xl:py-3 flex items-center justify-between shrink-0 text-white shadow-2xl">
+        <div className="flex items-center gap-4 xl:gap-8">
           <div>
-            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>
-            <p className="text-xl xl:text-2xl font-black">{orders.length}<span className="text-[10px] xl:text-xs font-bold text-white/40 ml-1">Orders</span></p>
+            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Today Orders</p>
+            <p className="text-lg xl:text-xl font-black">{orders.length}<span className="text-[10px] font-bold text-white/40 ml-1">Orders</span></p>
           </div>
-          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
+          <div className="w-[1px] h-6 xl:h-8 bg-white/10" />
           <div>
-            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
-            <p className="text-xl xl:text-2xl font-black">₩{stats.total_sales.toLocaleString()}</p>
+            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Total Revenue</p>
+            <p className="text-lg xl:text-xl font-black">₩{stats.total_sales.toLocaleString()}</p>
           </div>
-          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
+          <div className="w-[1px] h-6 xl:h-8 bg-white/10" />
           <div>
-            <p className="text-[9px] xl:text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Orders</p>
-            <p className="text-xl xl:text-2xl font-black">{stats.total_orders}<span className="text-[10px] xl:text-xs font-bold text-white/40 ml-1">Total</span></p>
+            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Total Orders</p>
+            <p className="text-lg xl:text-xl font-black">{stats.total_orders}<span className="text-[10px] font-bold text-white/40 ml-1">Total</span></p>
           </div>
         </div>
         <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
           }`}>
           <div className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
-              wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
-                'bg-red-500'
+            wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
+              'bg-red-500'
             }`} />
           <span className="text-[11px] font-bold uppercase tracking-widest text-white/60">
             {wsStatus === 'CONNECTED' ? 'Real-time Connected' :
@@ -570,10 +594,8 @@ export const AdminOrderManagement = () => {
         <Plus size={32} className="group-hover:rotate-90 transition-transform duration-300" />
       </button>
 
-      <AdminDirectOrderModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
+      <AdminDirectOrderModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      <AdminPreparingSummaryModal isOpen={isSummaryModalOpen} onClose={() => setIsSummaryModalOpen(false)} orders={orders} />
     </div>
   );
 };

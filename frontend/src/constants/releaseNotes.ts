@@ -17,6 +17,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.3',
+    date: new Date().toISOString().split('T')[0], // 자동으로 오늘 날짜 입력
+    title: '실시간 주문 보드 전면 개편 및 바리스타 편의성 극대화',
+    updates: [
+      { text: '실시간 주문 현황 보드를 컴팩트한 세로 3열 칸반 레이아웃으로 개편하여 한눈에 더 많은 주문을 파악할 수 있도록 개선', isNew: true },
+      { text: '바리스타 전용 [총 제조메뉴] 요약 모달 신규 추가 (가장 오래 기다린 손님의 메뉴부터 직관적으로 쳐낼 수 있도록 정렬 로직 적용)', isNew: true },
+      { text: '시스템 설정에서 전화번호 입력을 OFF할 경우 주문 카드에서도 전화번호가 숨겨지며 한층 더 콤팩트해지도록 최적화', isNew: true },
+      { text: '주문 카드 내 메뉴명을 크고 선명한 폰트와 컬러로 강조하여 바쁜 환경에서도 가독성을 극대화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.2',
     date: '2026-06-17',
     title: '통계 및 입금 로그 화면 사용성 고도화',
