@@ -314,6 +314,9 @@ export const MenuDetail = () => {
             </div>
           )}
         </div>
+
+        {/* 여백 확보용 스페이서 - 하단 고정 탭바 높이보다 더 여유있게 확보 */}
+        <div className="h-40 w-full" />
       </main>
 
       {/* 하단 Sticky 주문 바 */}
