@@ -4,7 +4,7 @@
  * - 사용자가 앱을 설치하도록 유도하는 후킹 카피와 함께 알림 혜택을 강조합니다.
  */
 import { useState, useCallback } from 'react';
-import { X, Bell, Share, Plus, Globe, Smartphone, ChevronRight } from 'lucide-react';
+import { X, Bell, Share, Plus, Globe, Smartphone } from 'lucide-react';
 
 interface PwaInstallGuideModalProps {
   onClose: () => void;
@@ -21,6 +21,7 @@ const IOS_STEPS = [
     title: '공유 버튼 누르기',
     desc: '화면 하단 가운데 있는 공유 버튼을 눌러주세요.',
     tip: '사파리(Safari)에서만 동작합니다.',
+    image: '/img/guide/ios-step1.png',
   },
   {
     icon: Plus,
@@ -30,6 +31,7 @@ const IOS_STEPS = [
     title: '홈 화면에 추가 선택',
     desc: '아래로 스크롤하여 "홈 화면에 추가"를 눌러주세요.',
     tip: '',
+    image: '/img/guide/ios-step2.png',
   },
   {
     icon: Bell,
@@ -39,6 +41,7 @@ const IOS_STEPS = [
     title: '추가 후 앱 실행 & 알림 허용',
     desc: '홈 화면의 앱 아이콘을 눌러 실행한 뒤, 알림 허용 팝업에서 "허용"을 눌러주세요!',
     tip: '이제부터 음료가 완성되면 바로 알림이 울려요 🔔',
+    image: '/img/guide/ios-step3.png',
   },
 ];
 
@@ -51,6 +54,7 @@ const ANDROID_STEPS = [
     title: '크롬 메뉴 열기',
     desc: '크롬(Chrome) 브라우저 주소창 우측의 ⋮ 버튼을 눌러주세요.',
     tip: '삼성 인터넷 등 다른 브라우저에서도 비슷한 방법으로 추가할 수 있어요.',
+    image: '/img/guide/android-step1.png',
   },
   {
     icon: Smartphone,
@@ -60,6 +64,7 @@ const ANDROID_STEPS = [
     title: '홈 화면에 추가 선택',
     desc: '메뉴에서 "홈 화면에 추가" 또는 "앱 설치"를 선택하세요.',
     tip: '',
+    image: '/img/guide/android-step2.png',
   },
   {
     icon: Bell,
@@ -69,6 +74,7 @@ const ANDROID_STEPS = [
     title: '앱 실행 & 알림 허용',
     desc: '홈 화면의 앱 아이콘으로 실행하면 알림 허용 팝업이 뜹니다. "허용"을 눌러주세요!',
     tip: '메뉴 준비 완료 알림이 바로 울려요 🔔',
+    image: '/img/guide/android-step3.png',
   },
 ];
 
@@ -160,37 +166,48 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
         </div>
 
         {/* 단계별 가이드 */}
-        <div className="px-6 py-4 space-y-3 max-h-[340px] overflow-y-auto">
+        <div className="px-6 py-4 space-y-4 max-h-[420px] overflow-y-auto">
           {steps.map((s, index) => {
             const Icon = s.icon;
             return (
               <div
                 key={s.step}
-                className="flex gap-4 items-start bg-gray-50 rounded-2xl p-4 border border-gray-100"
+                className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden"
               >
-                {/* 스텝 번호 & 아이콘 */}
-                <div className="flex flex-col items-center gap-1.5 shrink-0">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">STEP</span>
-                  <div className={`w-11 h-11 ${s.iconBg} rounded-2xl flex items-center justify-center`}>
-                    <Icon size={20} className={s.iconColor} />
+                {/* 스텝 이미지 */}
+                <div className="relative w-full h-44 bg-gray-100 overflow-hidden">
+                  <img
+                    src={s.image}
+                    alt={s.title}
+                    className="w-full h-full object-cover object-top"
+                  />
+                  {/* 스텝 번호 뱃지 */}
+                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                    <div className={`w-8 h-8 ${s.iconBg} rounded-xl flex items-center justify-center shadow-md border border-white/60`}>
+                      <Icon size={16} className={s.iconColor} />
+                    </div>
+                    <span className="bg-[#1A0A0A]/80 backdrop-blur-sm text-white text-[11px] font-black px-2.5 py-1 rounded-full">
+                      STEP {s.step}
+                    </span>
                   </div>
-                  <span className="text-[18px] font-black text-gray-200">{s.step}</span>
                 </div>
 
                 {/* 설명 */}
-                <div className="flex-1 pt-1">
+                <div className="p-4">
                   <h4 className="font-black text-gray-900 text-[14px] mb-1">{s.title}</h4>
                   <p className="text-gray-500 text-[12px] font-medium leading-relaxed break-keep">{s.desc}</p>
                   {s.tip && (
-                    <p className="mt-1.5 text-[11px] font-bold text-primary bg-primary/5 px-2.5 py-1 rounded-lg inline-block">
+                    <p className="mt-2 text-[11px] font-bold text-primary bg-primary/5 px-2.5 py-1.5 rounded-lg inline-block">
                       💡 {s.tip}
                     </p>
                   )}
                 </div>
 
-                {/* 화살표 (마지막 제외) */}
+                {/* 다음 단계 화살표 */}
                 {index < steps.length - 1 && (
-                  <ChevronRight size={16} className="text-gray-300 shrink-0 mt-3" />
+                  <div className="flex justify-center pb-3 text-gray-300">
+                    <span className="text-[20px]">↓</span>
+                  </div>
                 )}
               </div>
             );
