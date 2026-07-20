@@ -175,11 +175,11 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
                 className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden"
               >
                 {/* 스텝 이미지 */}
-                <div className="relative w-full h-44 bg-gray-100 overflow-hidden">
+                <div className="relative w-full h-64 bg-gray-100 overflow-hidden flex items-center justify-center">
                   <img
                     src={s.image}
                     alt={s.title}
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-contain"
                   />
                   {/* 스텝 번호 뱃지 */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
