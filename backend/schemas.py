@@ -446,3 +446,19 @@ class IngredientResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ===============================
+# Push Subscriptions (푸시 알림 구독)
+# ===============================
+class PushKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+class PushSubscriptionKeys(BaseModel):
+    endpoint: str
+    keys: PushKeys
+
+class PushSubscriptionCreate(BaseModel):
+    subscription: PushSubscriptionKeys
+

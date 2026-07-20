@@ -18,6 +18,58 @@ export const OrderStatus = () => {
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const [isConfirmingToss, setIsConfirmingToss] = useState(false);
 
+  // PWA 알림 권한 획득 유도 모달 상태 추가
+
+
+  // Base64 VAPID 키 변환 헬퍼
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  // 서비스 워커 구독 및 백엔드 전송
+  const registerPushSubscription = async (orderId: number) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      const res = await apiClient.get<{ publicKey: string }, StandardResponse<{ publicKey: string }>>('/orders/vapid-key');
+      if (!res.success || !res.data?.publicKey) {
+        console.error('VAPID 키 조회 실패');
+        return;
+      }
+      
+      const vapidPublicKey = res.data.publicKey;
+      const registration = await navigator.serviceWorker.ready;
+      
+      let subscription = await registration.pushManager.getSubscription();
+      
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+        });
+      }
+      
+      await apiClient.post(`/orders/${orderId}/push-subscribe`, {
+        subscription: subscription
+      });
+      console.log('✅ [Push] 푸시 알림 등록 완료');
+    } catch (e) {
+      console.error('❌ [Push] 푸시 구독 등록 실패:', e);
+    }
+  };
+
+
+
   // iOS 알림 관련 상태
   const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   const [isReadyFlash, setIsReadyFlash] = useState(false);
@@ -197,17 +249,6 @@ export const OrderStatus = () => {
     audioRef.current = new Audio('/mp3/ready.mp3');
     audioRef.current.load();
 
-    // 알림 권한 요청 (지원 환경에서만 실행)
-    if ('Notification' in window) {
-      try {
-        if (Notification.permission === 'default') {
-          Notification.requestPermission();
-        }
-      } catch (e) {
-        console.warn('Notification 권한 요청 실패:', e);
-      }
-    }
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('📱 [Visibility] 화면 활성화 - 상태 갱신');
@@ -227,6 +268,21 @@ export const OrderStatus = () => {
       if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     };
   }, [connectWebSocket, queryClient]);
+
+  // 주문 정보를 기반으로 권한 상태에 따른 자동 푸시 알림 흐름 제어
+  useEffect(() => {
+    if (!id || !order) return;
+    // 준비 완료/수령 완료/취소된 주문은 등록하지 않음
+    if (order.status === 'READY' || order.status === 'COMPLETED' || order.status === 'CANCELLED') return;
+
+    const isPushSupported = 'serviceWorker' in navigator && 'PushManager' in window;
+    if (!isPushSupported) return;
+
+    if (Notification.permission === 'granted') {
+      // 이미 권한이 있으면 완전 자동으로 백그라운드 등록
+      registerPushSubscription(Number(id));
+    }
+  }, [id, order]);
 
   // iOS 안내 배너 노출 타이밍 제어
   useEffect(() => {
@@ -284,8 +340,9 @@ export const OrderStatus = () => {
         }
       }
 
-      // 2. 소리 알림 (재시도 로직 포함)
+      // 2. 소리 알림 (화면이 활성화되어 있을 때만 - 백그라운드 재생 방지)
       const playAudio = (retry = false) => {
+        if (document.hidden) return; // iOS에서 백그라운드일 때 미디어 플레이어로 뜨는 현상 방지
         if (!audioRef.current) return;
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(err => {
@@ -629,6 +686,8 @@ export const OrderStatus = () => {
             </div>
           )}
         </div>
+
+
 
         <div className="w-full bg-gray-900 rounded-3xl p-5 flex gap-4 items-center border border-gray-800 shadow-xl relative overflow-hidden">
           <div className="bg-white/10 p-3 rounded-2xl shrink-0"><Coffee className="text-primary" size={22} /></div>

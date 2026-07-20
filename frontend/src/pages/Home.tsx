@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift, Megaphone } from 'lucide-react';
+import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
@@ -23,6 +23,26 @@ export const Home = () => {
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  // 푸시 알림 권한 상태 관리
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>(
+    'Notification' in window ? Notification.permission : 'default'
+  );
+
+  const handleAllowPush = async () => {
+    if (!('Notification' in window)) return;
+    try {
+      const permission = await Notification.requestPermission();
+      setPushPermission(permission);
+      if (permission === 'granted') {
+        showToast('메뉴 완료 푸시 알림이 활성화되었습니다! 🔔', 'success');
+      } else {
+        showToast('알림이 차단되어 있습니다. 기기 설정에서 알림을 켜주세요!', 'error');
+      }
+    } catch (e) {
+      console.error('Notification 요청 에러:', e);
+    }
+  };
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
@@ -211,7 +231,11 @@ export const Home = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-6 shadow-2xl relative">
-      <Header showSearch showCart onSearchChange={setSearchQuery} />
+      <Header 
+        showSearch 
+        showCart 
+        onSearchChange={setSearchQuery} 
+      />
 
       {/* 이벤트 배너 (검색 여부와 상관없이 노출) */}
       {activeEvent && activeEvent.is_event_mode && (
@@ -241,9 +265,20 @@ export const Home = () => {
       {!searchQuery ? (
         <>
 
-          {/* Store Selector */}
-          <div className="px-4 py-4 flex justify-end">
-            <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg">
+          {/* Store Selector & Push Permission */}
+          <div className="px-4 py-4 flex justify-between items-center">
+            <div className="flex-1">
+              {pushPermission !== 'granted' && 'Notification' in window && (
+                <button 
+                  onClick={handleAllowPush}
+                  className="flex items-center gap-1.5 bg-teal-50 text-teal-700 px-3 py-2 rounded-lg border border-teal-100 shadow-sm active:scale-95 transition-transform"
+                >
+                  <Bell size={16} className={pushPermission === 'default' ? 'animate-bounce' : ''} />
+                  <span className="font-semibold text-sm">알림 허용</span>
+                </button>
+              )}
+            </div>
+            <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg shrink-0">
               <MapPin size={16} className="text-primary" />
               <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
             </button>
