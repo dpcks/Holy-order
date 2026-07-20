@@ -71,9 +71,7 @@ export const OrderStatus = () => {
 
 
   // iOS 알림 관련 상태
-  const [isAudioUnlocked, setIsAudioUnlocked] = useState(false);
   const [isReadyFlash, setIsReadyFlash] = useState(false);
-  const [showIosNotice, setShowIosNotice] = useState(false);
 
   // iOS 감지 헬퍼
   const isIos = useCallback(() => {
@@ -90,7 +88,6 @@ export const OrderStatus = () => {
   const retryCountRef = useRef(0);
   const isUnmountingRef = useRef(false);
   const prevStatusRef = useRef<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const passedOrderNumber = location.state?.orderNumber;
   const passedTotal = location.state?.total;
@@ -245,10 +242,6 @@ export const OrderStatus = () => {
 
     connectWebSocket();
 
-    // 알림음 설정 (로컬 파일 우선)
-    audioRef.current = new Audio('/mp3/ready.mp3');
-    audioRef.current.load();
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         console.log('📱 [Visibility] 화면 활성화 - 상태 갱신');
@@ -284,42 +277,7 @@ export const OrderStatus = () => {
     }
   }, [id, order]);
 
-  // iOS 안내 배너 노출 타이밍 제어
-  useEffect(() => {
-    if (isIos() && !isAudioUnlocked) {
-      setShowIosNotice(true);
-    }
-  }, [isIos, isAudioUnlocked]);
-
-  // 오디오 언락 메커니즘 (첫 터치 시 무음 재생 후 해제)
-  useEffect(() => {
-    if (isAudioUnlocked) return;
-
-    const unlockAudio = () => {
-      if (!audioRef.current) return;
-      audioRef.current.play().then(() => {
-        audioRef.current?.pause();
-        if (audioRef.current) audioRef.current.currentTime = 0;
-        setIsAudioUnlocked(true);
-        setShowIosNotice(false);
-        console.log('🔊 [Audio] 브라우저 오디오 재생 잠금 해제 성공');
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('touchstart', unlockAudio);
-      }).catch(() => {
-        console.warn('🔊 [Audio] 언락 대기 중 (사용자 상호작용 필요)');
-      });
-    };
-
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
-
-    return () => {
-      window.removeEventListener('click', unlockAudio);
-      window.removeEventListener('touchstart', unlockAudio);
-    };
-  }, [isAudioUnlocked]);
-
-  // 주문 상태 변경 감지 및 알림 발송 (진동/소리/시각적 피드백)
+  // 주문 상태 변경 감지 및 알림 발송 (진동/시각적 피드백/푸시 알림)
   useEffect(() => {
     if (!order) return;
 
@@ -340,23 +298,7 @@ export const OrderStatus = () => {
         }
       }
 
-      // 2. 소리 알림 (화면이 활성화되어 있을 때만 - 백그라운드 재생 방지)
-      const playAudio = (retry = false) => {
-        if (document.hidden) return; // iOS에서 백그라운드일 때 미디어 플레이어로 뜨는 현상 방지
-        if (!audioRef.current) return;
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(err => {
-          if (!retry) {
-            console.warn('🔊 [Audio] 1차 재생 실패, 200ms 후 재시도합니다.');
-            setTimeout(() => playAudio(true), 200);
-          } else {
-            console.warn('🔊 [Audio] 최종 소리 재생 실패. 브라우저 정책에 의해 차단됨.', err);
-          }
-        });
-      };
-      playAudio();
-
-      // 3. 브라우저 알림 (권한이 있는 경우만 안전하게 호출)
+      // 2. 브라우저 알림 (권한이 있는 경우만 안전하게 호출)
       if ('Notification' in window) {
         try {
           if (Notification.permission === 'granted') {
@@ -444,15 +386,7 @@ export const OrderStatus = () => {
   const currentIndex = activeOrders.findIndex(o => o.id === id);
 
   return (
-    <div className={`flex flex-col min-h-screen w-full max-w-[500px] mx-auto pb-8 shadow-2xl relative transition-colors duration-700 ${isReadyFlash ? 'bg-primary/10' : 'bg-[#F9FAFB]'}`}>
-
-      {/* iOS 안내 배너 */}
-      {showIosNotice && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-gray-900/95 backdrop-blur text-white text-center py-3.5 text-[13px] font-bold animate-in slide-in-from-top flex items-center justify-center gap-2 shadow-xl cursor-pointer">
-          <PartyPopper size={16} className="text-amber-400" />
-          알림음을 받으려면 화면을 한 번 터치해주세요
-        </div>
-      )}
+    <div className={`flex flex-col min-h-screen w-full max-w-[500px] mx-auto pb-8 relative transition-colors duration-700 ${isReadyFlash ? 'bg-primary/10' : 'bg-[#F9FAFB]'}`}>
 
       <header className="flex items-center justify-between px-6 h-16 bg-[#F9FAFB]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
         <div className="w-10">
@@ -636,15 +570,15 @@ export const OrderStatus = () => {
             <div className="absolute top-[42px] left-10 right-10 h-1.5 bg-gray-100 z-0 rounded-full" />
             <div className="absolute top-[42px] left-10 h-1.5 bg-primary z-0 transition-all duration-1000 ease-in-out rounded-full shadow-[0_0_10px_rgba(255,75,75,0.3)]" style={{ width: (isReady || isCompleted) ? 'calc(100% - 5rem)' : isPreparing ? 'calc(50% - 2.5rem)' : '0%' }} />
             <div className="flex flex-col items-center gap-3">
-              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white shadow-xl rotate-0' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><CheckCircle2 size={28} /></div>
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${!isPending ? 'bg-[#1A0A0A] text-white rotate-0 shadow-sm' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><CheckCircle2 size={28} /></div>
               <span className={`text-[13px] font-black ${!isPending ? 'text-[#1A0A0A]' : 'text-gray-400'}`}>입금 확인</span>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${isPreparing ? 'bg-primary text-white shadow-[0_10px_25px_rgba(255,75,75,0.4)] scale-110' : (isReady || isCompleted) ? 'bg-[#1A0A0A] text-white shadow-xl' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><Coffee size={28} /></div>
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${isPreparing ? 'bg-primary text-white shadow-[0_10px_25px_rgba(255,75,75,0.4)] scale-110' : (isReady || isCompleted) ? 'bg-[#1A0A0A] text-white shadow-sm' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><Coffee size={28} /></div>
               <span className={`text-[13px] font-black ${isPreparing ? 'text-primary' : (isReady || isCompleted) ? 'text-[#1A0A0A]' : 'text-gray-400'}`}>준비 중</span>
             </div>
             <div className="flex flex-col items-center gap-3">
-              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${isReady ? 'bg-primary text-white shadow-[0_10px_25px_rgba(255,75,75,0.4)] scale-110' : isCompleted ? 'bg-[#1A0A0A] text-white shadow-xl' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><PartyPopper size={28} /></div>
+              <div className={`w-16 h-16 rounded-3xl flex items-center justify-center z-10 transition-all duration-500 ${isReady ? 'bg-primary text-white shadow-[0_10px_25px_rgba(255,75,75,0.4)] scale-110' : isCompleted ? 'bg-[#1A0A0A] text-white shadow-sm' : 'bg-white border-2 border-gray-100 text-gray-300'}`}><PartyPopper size={28} /></div>
               <span className={`text-[13px] font-black ${isReady ? 'text-primary' : isCompleted ? 'text-[#1A0A0A]' : 'text-gray-400'}`}>준비 완료</span>
             </div>
           </div>
