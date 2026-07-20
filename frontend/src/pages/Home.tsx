@@ -277,10 +277,11 @@ export const Home = () => {
               {pushPermission !== 'granted' && 'Notification' in window && (
                 <button
                   onClick={handleAllowPush}
-                  className="flex items-center gap-1.5 bg-teal-50 text-teal-700 px-3 py-2 rounded-lg border border-teal-100 shadow-sm active:scale-95 transition-transform"
+                  className="relative flex items-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-3.5 py-2 rounded-xl shadow-lg active:scale-95 transition-all"
                 >
+                  <div className="absolute inset-0 rounded-xl bg-teal-400 animate-ping opacity-20"></div>
                   <Bell size={16} className={pushPermission === 'default' ? 'animate-bounce' : ''} />
-                  <span className="font-semibold text-sm">알림 허용</span>
+                  <span className="font-black text-[13px] tracking-tight relative z-10">알림 켜기 ✨</span>
                 </button>
               )}
             </div>
