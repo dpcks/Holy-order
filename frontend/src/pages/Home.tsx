@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell } from 'lucide-react';
+import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
 import { Toast } from '../components/ui/Toast';
+import { PwaInstallGuideModal } from '../components/ui/PwaInstallGuideModal';
 import type { ToastType } from '../components/ui/Toast';
 import type { Menu, Category, StandardResponse, Announcement } from '../types';
 
@@ -20,6 +21,11 @@ export const Home = () => {
   const [activeOrders, setActiveOrders] = useState<{ id: string, orderNumber: number }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  // PWA 독립 실행(standalone) 모드 여부 감지 - 설치된 앱에서는 배너를 숨김
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || (navigator as any).standalone === true;
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -348,9 +354,36 @@ export const Home = () => {
         </div>
       )}
 
+      {/* PWA 설치 유도 배너 (설치 전 && 주문 없을 때만 노출) */}
+      {!isStandalone && activeOrders.length === 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
+          <button
+            onClick={() => setShowInstallGuide(true)}
+            className="w-full bg-gradient-to-r from-[#1A0A0A] to-[#2D1616] text-white py-3.5 px-5 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all border border-white/5"
+            aria-label="앱 설치 가이드 열기"
+          >
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 border border-primary/30 p-2 rounded-xl">
+                <Bell size={18} className="text-primary animate-pulse" />
+              </div>
+              <div className="text-left">
+                <p className="text-[13px] font-black tracking-tight leading-none mb-0.5">
+                  음료 준비 알림 받기 🔔
+                </p>
+                <p className="text-[11px] text-white/40 font-bold">홈 화면에 추가하면 바로 알림이 와요!</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 bg-primary text-white text-[11px] font-black px-3 py-1.5 rounded-xl shrink-0">
+              <Smartphone size={12} />
+              설치
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* 실시간 주문 추적 플로팅 버튼 */}
       {activeOrders.length > 0 && (
-        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
           <button
             onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
             className="w-full bg-[#1A0A0A] text-white py-4 px-6 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all"
@@ -384,6 +417,11 @@ export const Home = () => {
         isVisible={!!toast}
         onClose={() => setToast(null)}
       />
+
+      {/* PWA 설치 가이드 모달 */}
+      {showInstallGuide && (
+        <PwaInstallGuideModal onClose={() => setShowInstallGuide(false)} />
+      )}
 
       {/* 웰컴 모달 */}
       {showWelcomeModal && activeEvent && (
