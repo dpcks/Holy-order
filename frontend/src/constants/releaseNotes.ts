@@ -28,7 +28,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
   },
   {
     version: 'v1.4.3',
-    date: '2026-07-20',
+    date: '2026-06-22',
     title: '실시간 주문 보드 전면 개편 및 바리스타 편의성 극대화',
     updates: [
       { text: '실시간 주문 현황 보드를 컴팩트한 세로 3열 칸반 레이아웃으로 개편하여 한눈에 더 많은 주문을 파악할 수 있도록 개선', isNew: true },
