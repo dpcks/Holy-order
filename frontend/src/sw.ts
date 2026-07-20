@@ -28,6 +28,7 @@ self.addEventListener('push', (event) => {
     const options: any = {
       body: payload.body || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
       icon: payload.icon || '/pwa-192.png',
+      silent: true,
       data: {
         url: payload.url || '/'
       }
@@ -42,7 +43,8 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       self.registration.showNotification('평택중앙교회 카페', {
         body: text || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
-        icon: '/pwa-192.png'
+        icon: '/pwa-192.png',
+        silent: true
       } as any)
     );
   }

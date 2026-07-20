@@ -305,7 +305,8 @@ export const OrderStatus = () => {
             new Notification('평택중앙교회 카페', {
               body: `#${order.order_number}번 주문하신 메뉴가 준비되었습니다! 픽업대로 오세요.`,
               icon: '/logo192.png',
-              tag: `order-${order.id}`
+              tag: `order-${order.id}`,
+              silent: true
             });
           }
         } catch (err) {
