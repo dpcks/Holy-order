@@ -163,7 +163,7 @@ export const MenuDetail = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-32 shadow-2xl relative">
+    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-48 shadow-2xl relative">
       <Header title="메뉴상세" showBack showCart />
 
       <main className="flex-1">
@@ -217,8 +217,8 @@ export const MenuDetail = () => {
           </div>
         </div>
 
-        {/* 옵션 선택 섹션  pb-40 */}
-        <div className="px-4 py-4 pb-20 flex flex-col gap-8">
+        {/* 옵션 선택 섹션 */}
+        <div className="px-4 py-4 pb-32 flex flex-col gap-8">
 
           {/* ICE & HOT - 백엔드에서 해당 옵션이 있을 때만 렌더링 */}
           {tempOptions.length > 0 && (
