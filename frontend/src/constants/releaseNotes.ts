@@ -17,8 +17,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: 'v1.4.3',
+    version: 'v1.4.4',
     date: new Date().toISOString().split('T')[0], // 자동으로 오늘 날짜 입력
+    title: '백그라운드 푸시 알림 도입 및 사용자 주문 UI 개선',
+    updates: [
+      { text: '앱 설치(PWA) 지원 및 주문 완료 시 스마트폰 자체 백그라운드 푸시 알림(소리/진동) 기능 전면 도입', isNew: true },
+      { text: '사용자 주문 현황 화면에서 매번 뜨던 불편한 알림음 권한(오디오) 요구 배너 완벽 제거', isNew: true },
+      { text: '사용자 화면 스크롤 시 발생하던 하단 검은색 그림자(그라데이션) 현상 플랫(Flat) 디자인으로 깔끔하게 개선', isNew: true }
+    ]
+  },
+  {
+    version: 'v1.4.3',
+    date: '2026-07-20',
     title: '실시간 주문 보드 전면 개편 및 바리스타 편의성 극대화',
     updates: [
       { text: '실시간 주문 현황 보드를 컴팩트한 세로 3열 칸반 레이아웃으로 개편하여 한눈에 더 많은 주문을 파악할 수 있도록 개선', isNew: true },
