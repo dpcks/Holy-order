@@ -237,10 +237,10 @@ export const Home = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-6 shadow-2xl relative">
-      <Header 
-        showSearch 
-        showCart 
-        onSearchChange={setSearchQuery} 
+      <Header
+        showSearch
+        showCart
+        onSearchChange={setSearchQuery}
       />
 
       {/* 이벤트 배너 (검색 여부와 상관없이 노출) */}
@@ -275,7 +275,7 @@ export const Home = () => {
           <div className="px-4 py-4 flex justify-between items-center">
             <div className="flex-1">
               {pushPermission !== 'granted' && 'Notification' in window && (
-                <button 
+                <button
                   onClick={handleAllowPush}
                   className="flex items-center gap-1.5 bg-teal-50 text-teal-700 px-3 py-2 rounded-lg border border-teal-100 shadow-sm active:scale-95 transition-transform"
                 >
@@ -368,9 +368,9 @@ export const Home = () => {
               </div>
               <div className="text-left">
                 <p className="text-[13px] font-black tracking-tight leading-none mb-0.5">
-                  음료 준비 알림 받기 🔔
+                  카페 주문 어플 설치하기 🔔
                 </p>
-                <p className="text-[11px] text-white/40 font-bold">홈 화면에 추가하면 바로 알림이 와요!</p>
+                <p className="text-[11px] text-white/40 font-bold">앱을 설치하면 바로 알림이 와요!</p>
               </div>
             </div>
             <div className="flex items-center gap-1.5 bg-primary text-white text-[11px] font-black px-3 py-1.5 rounded-xl shrink-0">
