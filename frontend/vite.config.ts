@@ -1,12 +1,52 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(), 
     tailwindcss(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      manifest: {
+        name: '평택중앙교회 카페',
+        short_name: '중앙교회 카페',
+        description: '평택중앙교회 스마트 주문 시스템',
+        theme_color: '#0D9488',
+        background_color: '#F9FAFB',
+        display: 'standalone',
+        start_url: '/',
+        orientation: 'portrait',
+        icons: [
+          {
+            src: 'pwa-192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: 'pwa-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      },
+      devOptions: {
+        enabled: true,
+        type: 'module'
+      }
+    })
   ],
   build: {
     // 벤더 청크 분리 외에 개별적인 청크 사이즈 경고 수치 조정

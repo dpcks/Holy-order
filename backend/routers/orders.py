@@ -335,3 +335,46 @@ async def confirm_toss_payment(order_id: int, db: Session = Depends(get_db)):
     })
     
     return schemas.StandardResponse(success=True, data={"id": order.id, "status": order.status}, message="토스 송금이 확인되었습니다. 제조를 시작합니다.")
+
+
+from config import settings
+
+@router.get("/orders/vapid-key", response_model=schemas.StandardResponse[dict])
+def get_vapid_key():
+    """웹 푸시 구독 신청용 VAPID 퍼블릭 키를 조회합니다."""
+    return schemas.StandardResponse(
+        success=True,
+        data={"publicKey": settings.VAPID_PUBLIC_KEY},
+        message="VAPID 공개키를 조회했습니다."
+    )
+
+@router.post("/orders/{order_id}/push-subscribe", response_model=schemas.StandardResponse)
+def subscribe_push(order_id: int, sub_data: schemas.PushSubscriptionCreate, db: Session = Depends(get_db)):
+    """특정 주문 번호에 대해 완료 알림 수신을 위한 브라우저 푸시 구독을 등록합니다."""
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="주문을 찾을 수 없습니다.")
+        
+    subscription = sub_data.subscription
+    
+    # 중복 등록 방지: 엔드포인트가 이미 등록되어 있다면 해당 구독 레코드의 order_id만 업데이트
+    existing = db.query(models.PushSubscription).filter(
+        models.PushSubscription.endpoint == subscription.endpoint
+    ).first()
+    
+    if existing:
+        existing.order_id = order_id
+        existing.p256dh = subscription.keys.p256dh
+        existing.auth = subscription.keys.auth
+    else:
+        new_sub = models.PushSubscription(
+            order_id=order_id,
+            endpoint=subscription.endpoint,
+            p256dh=subscription.keys.p256dh,
+            auth=subscription.keys.auth
+        )
+        db.add(new_sub)
+        
+    db.commit()
+    return schemas.StandardResponse(success=True, message="푸시 알림 구독이 등록되었습니다.")
+

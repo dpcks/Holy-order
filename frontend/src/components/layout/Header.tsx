@@ -15,6 +15,7 @@ interface HeaderProps {
   showSearch?: boolean;
   onSearchChange?: (query: string) => void;
   rightElement?: ReactNode;
+  leftElement?: ReactNode;
 }
 
 export const Header = ({
@@ -23,7 +24,8 @@ export const Header = ({
   showCart = true,
   showSearch = false,
   onSearchChange,
-  rightElement
+  rightElement,
+  leftElement
 }: HeaderProps) => {
   const navigate = useNavigate();
   const { totalCount } = useCart();
@@ -53,6 +55,8 @@ export const Header = ({
               <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-gray-800">
                 <ChevronLeft size={24} />
               </button>
+            ) : leftElement ? (
+              leftElement
             ) : (
               <img
                 src="/img/ptcc_logo.png"

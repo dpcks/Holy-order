@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     CORS_ORIGINS: str = '["*"]'
+    VAPID_PUBLIC_KEY: str
+    VAPID_PRIVATE_KEY: str
+    VAPID_CLAIM_EMAIL: str = "admin@example.com"
 
     model_config = SettingsConfigDict(env_file=os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env"))
 

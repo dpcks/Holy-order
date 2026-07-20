@@ -238,3 +238,22 @@ class Ingredient(Base):
     display_order = Column(Integer, default=0)                 # 정렬 순서
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# ==========================================
+# 6. 푸시 알림 구독 (Push Subscriptions)
+# ==========================================
+
+class PushSubscription(Base):
+    """모바일 PWA 푸시 알림을 발송하기 위해 브라우저 구독 정보를 저장하는 모델"""
+    __tablename__ = "push_subscriptions"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=True, index=True) # 알림을 발송할 특정 주문 연결
+    endpoint = Column(String, unique=True, index=True, nullable=False)            # 브라우저별 푸시 수신 주소
+    p256dh = Column(String, nullable=False)                                      # 공개 키
+    auth = Column(String, nullable=False)                                        # 인증 비밀 키
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    order = relationship("Order", backref="push_subscriptions") # 주문에서 구독 정보 역참조 지원
+

@@ -158,6 +158,50 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     order.status = next_status.value
     db.commit()
     
+    # 제조완료(READY) 상태로 전이될 때 해당 주문에 등록된 브라우저로 웹 푸시 알림 발송
+    if next_status == schemas.OrderStatusEnum.READY:
+        from pywebpush import webpush, WebPushException
+        import json
+        from config import settings
+        
+        subscriptions = db.query(models.PushSubscription).filter(
+            models.PushSubscription.order_id == order_id
+        ).all()
+        
+        if subscriptions:
+            for sub in subscriptions:
+                try:
+                    webpush(
+                        subscription_info={
+                            "endpoint": sub.endpoint,
+                            "keys": {
+                                "p256dh": sub.p256dh,
+                                "auth": sub.auth
+                            }
+                        },
+                        data=json.dumps({
+                            "title": "평택중앙교회 카페",
+                            "body": "제조가 완료 되었습니다. 메뉴를 픽업해주세요",
+                            "icon": "/pwa-192.png",
+                            "badge": "/pwa-192.png",
+                            "url": f"/order/status/{order.id}"
+                        }),
+                        vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                        vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIM_EMAIL}"}
+                    )
+                except WebPushException as e:
+                    # 410 Gone 등 구독 만료 또는 유효하지 않은 구독 삭제
+                    if e.response is not None and e.response.status_code in [404, 410]:
+                        db.delete(sub)
+                except Exception as e:
+                    print(f"❌ [WebPush Error] {e}")
+            
+            # 발송 완료 후 해당 주문의 일회성 구독 정보 삭제 (DB 최적화)
+            db.query(models.PushSubscription).filter(
+                models.PushSubscription.order_id == order_id
+            ).delete()
+            db.commit()
+    
     # 실시간 알림 전송 (JSON 구조화)
     await manager.broadcast({
         "type": "ORDER_UPDATED",
