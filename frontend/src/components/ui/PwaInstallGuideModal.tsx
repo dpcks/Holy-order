@@ -3,7 +3,7 @@
  * - 아이폰(iOS)과 갤럭시(Android) 두 가지 OS별 설치 방법을 단계별로 안내합니다.
  * - 사용자가 앱을 설치하도록 유도하는 후킹 카피와 함께 알림 혜택을 강조합니다.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { X, Bell, Share, Plus, Globe, Smartphone } from 'lucide-react';
 
 interface PwaInstallGuideModalProps {
@@ -85,6 +85,15 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
 
   const steps = activeTab === 'ios' ? IOS_STEPS : ANDROID_STEPS;
 
+  // 모달이 열려있는 동안 배경 페이지 스크롤 완전 차단
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose();
   }, [onClose]);
@@ -94,8 +103,10 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
       className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center"
       onClick={handleBackdropClick}
     >
+      {/* 모달 패널: 전체를 하나의 스크롤로 통일 */}
       <div
-        className="bg-white w-full max-w-[480px] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300"
+        className="bg-white w-full max-w-[480px] rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto overscroll-contain animate-in slide-in-from-bottom-8 sm:zoom-in-95 duration-300"
+        style={{ maxHeight: '92dvh' }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 - 후킹 카피 */}
@@ -165,8 +176,8 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
           </button>
         </div>
 
-        {/* 단계별 가이드 */}
-        <div className="px-6 py-4 space-y-4 max-h-[420px] overflow-y-auto">
+        {/* 단계별 가이드 - 스크롤은 모달 패널이 담당하므로 내부 스크롤 없음 */}
+        <div className="px-6 py-4 space-y-4">
           {steps.map((s, index) => {
             const Icon = s.icon;
             return (
