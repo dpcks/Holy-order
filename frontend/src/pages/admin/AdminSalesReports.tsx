@@ -175,6 +175,7 @@ export const AdminSalesReports = () => {
     sessionStorage.setItem('adminSalesDate', selectedDate);
   }, [period, selectedDate]);
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [isTopCustomersModalOpen, setIsTopCustomersModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportActualCash, setReportActualCash] = useState('');
   const [reportMemo, setReportMemo] = useState('');
@@ -249,10 +250,14 @@ export const AdminSalesReports = () => {
           <div className="flex items-center gap-2">
             {/* 상단 버튼 그룹 */}
             <div className="flex gap-1.5 mr-1">
-              {/* TODO: CSV 내보내기 기능 구현 */}
-              {/* <button className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm">
-                <Download size={14} />CSV
-              </button> */}
+              {period !== '주일' && (
+                <button
+                  onClick={() => setIsTopCustomersModalOpen(true)}
+                  className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  🏆 단골 성도
+                </button>
+              )}
               <button
                 onClick={() => setIsReportModalOpen(true)}
                 className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
@@ -302,14 +307,14 @@ export const AdminSalesReports = () => {
             <div className="col-span-3 grid grid-cols-4 gap-4">
               {[
                 { icon: TrendingUp, label: '총 매출액', value: `₩${stats.total_sales.toLocaleString()}`, sub: '이벤트 섬김 포함', color: 'text-gray-900' },
-                { 
-                  icon: ShoppingBag, 
-                  label: '총 주문 건수', 
-                  value: `${stats.total_orders}건`, 
-                  sub: stats.total_orders > 0 && stats.order_type_counts 
-                    ? `QR주문 ${stats.order_type_counts.qr}건 • 현장주문 ${stats.order_type_counts.direct}건` 
-                    : '기준 기간 내 접수', 
-                  color: 'text-gray-900' 
+                {
+                  icon: ShoppingBag,
+                  label: '총 주문 건수',
+                  value: `${stats.total_orders}건`,
+                  sub: stats.total_orders > 0 && stats.order_type_counts
+                    ? `앱주문 ${stats.order_type_counts.app || 0}건 • QR주문 ${stats.order_type_counts.qr}건 • 현장주문 ${stats.order_type_counts.direct}건`
+                    : '기준 기간 내 접수',
+                  color: 'text-gray-900'
                 },
                 { icon: BarChart2, label: '객단가', value: `₩${stats.avg_order_value.toLocaleString()}`, sub: '평균 주문 금액', color: 'text-gray-900' },
                 { icon: Star, label: '최고 인기 메뉴', value: stats.top_menus?.[0]?.name || '-', sub: '해당 기간 1위', color: 'text-white', bg: 'bg-primary' },
@@ -422,7 +427,6 @@ export const AdminSalesReports = () => {
                 </div>
               )}
             </div>
-
             {/* 메뉴별 상세 통계 모달 */}
             {isMenuModalOpen && (
               <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -606,6 +610,80 @@ export const AdminSalesReports = () => {
                 </div>
               </div>
             )}
+
+            {/* 단골 성도 랭킹 모달 */}
+            {isTopCustomersModalOpen && (
+              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsTopCustomersModalOpen(false)} />
+                <div className="relative bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in duration-300">
+                  <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 shrink-0">
+                    <div>
+                      <h3 className="text-2xl font-black text-gray-900 tracking-tight">단골 성도 랭킹</h3>
+                      <p className="text-[13px] text-gray-500 font-bold mt-1 uppercase tracking-wider">Top Customers</p>
+                    </div>
+                    <button
+                      onClick={() => setIsTopCustomersModalOpen(false)}
+                      className="p-3 hover:bg-gray-200 rounded-full transition-colors text-gray-400 hover:text-gray-600"
+                    >
+                      <X size={28} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-gray-50/30">
+                    <div className="grid grid-cols-2 gap-8">
+                      {/* 최다 방문자 */}
+                      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
+                        <h2 className="font-bold text-gray-900 text-[15px] flex items-center gap-2">
+                          🏆 최다 방문자 TOP 3
+                        </h2>
+                        {(!stats.top_customers_by_count || stats.top_customers_by_count.length === 0) ? (
+                          <p className="text-gray-400 text-sm text-center py-4">데이터가 없습니다.</p>
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {stats.top_customers_by_count.map((c, i) => (
+                              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50 hover:bg-primary/5 transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <span className={`w-7 h-7 flex items-center justify-center rounded-lg text-[12px] font-black ${i === 0 ? 'bg-amber-100 text-amber-700 shadow-sm' : i === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    {i + 1}
+                                  </span>
+                                  <span className="text-[14px] font-bold text-gray-900">{c.name}</span>
+                                </div>
+                                <span className="text-[14px] font-black text-primary">{c.count}건</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 최고 큰 손 */}
+                      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col gap-4">
+                        <h2 className="font-bold text-gray-900 text-[15px] flex items-center gap-2">
+                          💎 최고 큰 손 TOP 3
+                        </h2>
+                        {(!stats.top_customers_by_amount || stats.top_customers_by_amount.length === 0) ? (
+                          <p className="text-gray-400 text-sm text-center py-4">데이터가 없습니다.</p>
+                        ) : (
+                          <div className="flex flex-col gap-3">
+                            {stats.top_customers_by_amount.map((c, i) => (
+                              <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100/50 hover:bg-emerald-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                  <span className={`w-7 h-7 flex items-center justify-center rounded-lg text-[12px] font-black ${i === 0 ? 'bg-amber-100 text-amber-700 shadow-sm' : i === 1 ? 'bg-gray-200 text-gray-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    {i + 1}
+                                  </span>
+                                  <span className="text-[14px] font-bold text-gray-900">{c.name}</span>
+                                </div>
+                                <span className="text-[14px] font-black text-emerald-600">₩{c.amount.toLocaleString()}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             {/* 직분별 이용 현황 */}
             <div className="col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">

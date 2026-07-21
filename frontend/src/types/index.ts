@@ -74,6 +74,7 @@ export interface Order {
   user_name_snapshot: string | null;
   user_duty_snapshot: string;
   user_phone_snapshot: string | null;
+  is_pwa?: boolean;
   request: string | null;
   total_price: number;
   original_price: number | null;
@@ -140,7 +141,9 @@ export interface ReportStats {
   duty_breakdown: Record<string, number>;
   trend_data: Record<string, { count: number, revenue: number }>;
   payment_method_sales: Record<string, number>;
-  order_type_counts: { qr: number; direct: number };
+  order_type_counts: { app?: number; qr: number; direct: number };
+  top_customers_by_count?: { name: string; count: number; amount: number }[];
+  top_customers_by_amount?: { name: string; count: number; amount: number }[];
 }
 
 
@@ -190,6 +193,7 @@ export interface PaymentLog {
   sender_name: string | null;
   raw_data: any;
   created_at: string;
+  is_pwa?: boolean;
 }
 
 export interface PaymentLogListResponse {

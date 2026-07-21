@@ -368,9 +368,14 @@ export const AdminPaymentLogs = () => {
                     </Link>
                   </td>
                   <td className="py-5">
-                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight ${LOG_TYPE_LABELS[log.log_type]?.className || 'bg-gray-100 text-gray-400'
+                    <span className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight border ${
+                        log.log_type === 'CALLBACK' 
+                          ? 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                          : log.is_pwa
+                            ? 'bg-teal-50 text-teal-600 border-teal-200'
+                            : 'bg-green-50 text-green-600 border-green-100'
                       }`}>
-                      {LOG_TYPE_LABELS[log.log_type]?.label || log.log_type}
+                      {log.log_type === 'CALLBACK' ? '현장주문' : log.is_pwa ? '앱 주문' : 'QR주문'}
                     </span>
                   </td>
                   <td className="py-5">

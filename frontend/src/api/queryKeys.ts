@@ -25,6 +25,7 @@ export type OrderHistoryFilters = {
   | 'COMPLETED'
   | 'CANCELLED';
   payment_method?: 'CASH' | 'BANK_TRANSFER' | 'FREE' | 'TOSS' | 'VOLUNTEER';
+  order_type?: 'APP' | 'QR' | 'DIRECT';
   search?: string;
 };
 

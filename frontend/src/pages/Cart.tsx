@@ -218,11 +218,13 @@ export const Cart = () => {
       // 백엔드에서 sum(sub_total) == total_price 일치 여부를 검증하기 때문.
       // CartItem.sub_total은 원가(UI 표시용)이므로 여기서 텀블러 할인을 차감해 전송.
       // tumbler_discount는 백엔드 허용 최소 금액 계산을 위해 함께 전송.
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
       const orderData = {
         user_id: userId,
         payment_method: paymentMethod,
         total_price: eventFinalPrice,
         request: requests.trim() || null,
+        is_pwa: isStandalone,
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,
