@@ -163,7 +163,7 @@ export const MenuDetail = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-48 shadow-2xl relative">
+    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white relative">
       <Header title="메뉴상세" showBack showCart />
 
       <main className="flex-1">
@@ -218,7 +218,7 @@ export const MenuDetail = () => {
         </div>
 
         {/* 옵션 선택 섹션 */}
-        <div className="px-4 py-4 pb-32 flex flex-col gap-8">
+        <div className="px-4 py-4 pb-4 flex flex-col gap-8">
 
           {/* ICE & HOT - 백엔드에서 해당 옵션이 있을 때만 렌더링 */}
           {tempOptions.length > 0 && (
@@ -315,12 +315,12 @@ export const MenuDetail = () => {
           )}
         </div>
 
-        {/* 여백 확보용 스페이서 - 하단 고정 탭바 높이보다 더 여유있게 확보 */}
-        <div className="h-40 w-full" />
+        {/* 여백 확보용 스페이서 - 하단 고정 탭바 높이에 맞게 조절 */}
+        <div className="h-[150px] w-full" />
       </main>
 
       {/* 하단 Sticky 주문 바 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-[500px] mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-[500px] mx-auto z-50">
         {!menu.is_available ? (
           <div className="flex flex-col gap-3">
             <div className="bg-gray-100 text-gray-500 py-4 rounded-2xl text-center font-bold text-sm">
