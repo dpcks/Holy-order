@@ -121,7 +121,8 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         payment_method=payment_method,
         status=schemas.OrderStatusEnum.PENDING.value,
         order_number=next_order_number,
-        order_date=today
+        order_date=today,
+        is_pwa=order.is_pwa
     )
     
     try:

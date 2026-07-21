@@ -66,6 +66,7 @@ def get_orders_history(
     end_date: Optional[date] = None,
     status: Optional[str] = None,
     payment_method: Optional[str] = None,
+    order_type: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)
 ):
@@ -94,6 +95,13 @@ def get_orders_history(
         
     if payment_method:
         query = query.filter(models.Order.payment_method == payment_method)
+        
+    if order_type == "APP":
+        query = query.filter(models.Order.is_pwa == True)
+    elif order_type == "QR":
+        query = query.filter(models.Order.user_id.isnot(None), models.Order.is_pwa == False)
+    elif order_type == "DIRECT":
+        query = query.filter(models.Order.user_id.is_(None))
         
     total_count = query.count()
     offset = (page - 1) * limit
@@ -472,7 +480,8 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
     total_sales = normal_sales + event_sales
     avg_order_value = round(total_sales / (len(revenue_orders) + len(event_orders))) if (revenue_orders or event_orders) else 0
 
-    qr_count = sum(1 for o in all_orders if o.user_id is not None)
+    app_count = sum(1 for o in all_orders if getattr(o, 'is_pwa', False))
+    qr_count = sum(1 for o in all_orders if o.user_id is not None and not getattr(o, 'is_pwa', False))
     direct_count = sum(1 for o in all_orders if o.user_id is None)
 
     # 상태별 카운트
@@ -623,6 +632,32 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
         if r[1]:  # NULL 방지
             payment_method_sales[r[0]] = int(r[1])
 
+    # ------------------ 탑 3 단골 고객 ------------------
+    customer_stats = {}
+    for o in revenue_orders + event_orders:
+        name = (o.user_name_snapshot or "").strip()
+        # 불특정 다수 식별자는 통계에서 제외
+        if not name or name in ["현장 주문", "식당 봉사", "사역자", "None"]:
+            continue
+            
+        if name not in customer_stats:
+            customer_stats[name] = {"count": 0, "amount": 0}
+            
+        customer_stats[name]["count"] += 1
+        customer_stats[name]["amount"] += get_order_revenue(o)
+
+    # 1) 건수 순 (최다 방문자)
+    top_customers_by_count = sorted(
+        [{"name": k, "count": v["count"], "amount": v["amount"]} for k, v in customer_stats.items()],
+        key=lambda x: x["count"], reverse=True
+    )[:3]
+
+    # 2) 금액 순 (최고 큰 손)
+    top_customers_by_amount = sorted(
+        [{"name": k, "count": v["count"], "amount": v["amount"]} for k, v in customer_stats.items()],
+        key=lambda x: x["amount"], reverse=True
+    )[:3]
+
     return {
         "success": True,
         "data": {
@@ -634,7 +669,9 @@ def get_stats(type: str = "daily", date: str = None, db: Session = Depends(get_d
             "duty_breakdown": duty_breakdown,
             "trend_data": trend_data, # hourly_orders -> trend_data 변경
             "payment_method_sales": payment_method_sales,
-            "order_type_counts": {"qr": qr_count, "direct": direct_count}
+            "order_type_counts": {"qr": qr_count, "direct": direct_count, "app": app_count},
+            "top_customers_by_count": top_customers_by_count,
+            "top_customers_by_amount": top_customers_by_amount
         },
         "message": "통계 데이터를 조회했습니다."
     }
@@ -682,6 +719,7 @@ def get_payment_logs(
     for log in logs:
         item = schemas.PaymentLogResponse.model_validate(log)
         item.order_number = log.order.order_number if log.order else None
+        item.is_pwa = log.order.is_pwa if log.order else False
         items.append(item)
     
     data = {

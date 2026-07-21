@@ -91,6 +91,7 @@ class Order(Base):
     order_number = Column(Integer, nullable=False) # 고객에게 보여주는 당일 순번 (ex: #1, #2, #3...)
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
+    is_pwa = Column(Boolean, default=False) # PWA 앱 주문 여부
     is_active = Column(Boolean, default=True, index=True) # 소프트 삭제 여부
     deleted_at = Column(DateTime(timezone=True), nullable=True) # 삭제 일시
     

@@ -109,6 +109,7 @@ class OrderCreate(BaseModel):
     payment_method: PaymentMethodEnum
     request: Optional[str] = None
     items: List[OrderItemCreate]
+    is_pwa: Optional[bool] = False
 
 class AdminOrderCreate(BaseModel):
     user_name_snapshot: Optional[str] = "현장 주문"
@@ -133,6 +134,7 @@ class PaymentLogResponse(BaseModel):
     raw_data: Optional[Any] = None
     created_at: datetime
     order_number: Optional[int] = None
+    is_pwa: Optional[bool] = False
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -160,6 +162,7 @@ class OrderResponse(BaseModel):
     user_duty_snapshot: str
     user_name_snapshot: Optional[str] = None
     user_phone_snapshot: Optional[str] = None
+    is_pwa: Optional[bool] = False
     request: Optional[str] = None
     total_price: int
     payment_method: str

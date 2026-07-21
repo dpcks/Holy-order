@@ -87,6 +87,7 @@ export const AdminOrderHistory = () => {
   // 필터 상태
   const [statusFilter, setStatusFilter] = useState<OrderHistoryFilters['status'] | ''>(() => (sessionStorage.getItem('adminOrderHistoryStatus') as any) || '');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<OrderHistoryFilters['payment_method'] | ''>(() => (sessionStorage.getItem('adminOrderHistoryPayment') as any) || '');
+  const [orderTypeFilter, setOrderTypeFilter] = useState<OrderHistoryFilters['order_type'] | ''>(() => (sessionStorage.getItem('adminOrderHistoryType') as any) || '');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -98,7 +99,8 @@ export const AdminOrderHistory = () => {
     sessionStorage.setItem('adminOrderHistorySearch', searchQuery || '');
     sessionStorage.setItem('adminOrderHistoryStatus', statusFilter || '');
     sessionStorage.setItem('adminOrderHistoryPayment', paymentMethodFilter || '');
-  }, [page, limit, searchQuery, statusFilter, paymentMethodFilter]);
+    sessionStorage.setItem('adminOrderHistoryType', orderTypeFilter || '');
+  }, [page, limit, searchQuery, statusFilter, paymentMethodFilter, orderTypeFilter]);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -158,6 +160,7 @@ export const AdminOrderHistory = () => {
   const filterParams: OrderHistoryFilters = {
     status: statusFilter || undefined,
     payment_method: paymentMethodFilter || undefined,
+    order_type: orderTypeFilter || undefined,
     search: focusedOrderId || searchQuery || undefined,
     start_date: dateRange[0].startDate ? format(dateRange[0].startDate, 'yyyy-MM-dd') : undefined,
     end_date: dateRange[0].endDate ? format(dateRange[0].endDate, 'yyyy-MM-dd') : undefined,
@@ -173,6 +176,7 @@ export const AdminOrderHistory = () => {
       let url = `/admin/orders/history?page=${currentPage}&limit=${pageLimit}`;
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.payment_method) url += `&payment_method=${filters.payment_method}`;
+      if (filters.order_type) url += `&order_type=${filters.order_type}`;
 
       // 검색어 처리: focusedOrderId가 있으면 그것만, 없으면 일반 검색어
       if (filters.search) {
@@ -428,6 +432,21 @@ export const AdminOrderHistory = () => {
             </select>
           </div>
 
+          {/* 주문 유형 필터 */}
+          <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-xl px-3 py-1.5">
+            <Filter size={15} className="text-gray-400 ml-1" />
+            <select
+              value={orderTypeFilter}
+              onChange={(e) => { setOrderTypeFilter(e.target.value as OrderHistoryFilters['order_type'] | ''); setPage(1); }}
+              className="bg-transparent border-none outline-none text-[13px] font-semibold text-gray-700 pr-2 cursor-pointer"
+            >
+              <option value="">전체 유형</option>
+              <option value="APP">앱 주문</option>
+              <option value="QR">QR 주문</option>
+              <option value="DIRECT">현장 주문</option>
+            </select>
+          </div>
+
           {/* 결제수단 필터 */}
           <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
             <button
@@ -519,11 +538,14 @@ export const AdminOrderHistory = () => {
                     <span className="text-[14px] xl:text-[15px] font-black text-gray-900">₩{order.total_price.toLocaleString()}</span>
                   </td>
                   <td className="py-4 hidden sm:table-cell">
-                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${order.user_id
-                        ? 'bg-green-50 text-green-600 border-green-100'
-                        : 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black border ${
+                      !order.user_id 
+                        ? 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                        : order.is_pwa 
+                          ? 'bg-teal-50 text-teal-600 border-teal-200' 
+                          : 'bg-green-50 text-green-600 border-green-100'
                       }`}>
-                      {order.user_id ? 'QR주문' : '현장주문'}
+                      {order.user_id ? (order.is_pwa ? '앱 주문' : 'QR주문') : '현장주문'}
                     </div>
                   </td>
                   <td className="py-4 hidden md:table-cell">
@@ -658,11 +680,14 @@ export const AdminOrderHistory = () => {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="text-[15px] font-bold text-gray-900">주문 유형:</span>
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-black border ${selectedOrder.user_id
-                        ? 'bg-green-50 text-green-600 border-green-100'
-                        : 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-black border ${
+                        !selectedOrder.user_id 
+                          ? 'bg-[#FEE500]/20 text-[#3C1E1E] border-[#FEE500]/30'
+                          : selectedOrder.is_pwa 
+                            ? 'bg-teal-50 text-teal-600 border-teal-200' 
+                            : 'bg-green-50 text-green-600 border-green-100'
                         }`}>
-                        {selectedOrder.user_id ? 'QR 주문' : '현장 주문'}
+                        {selectedOrder.user_id ? (selectedOrder.is_pwa ? '앱 주문' : 'QR 주문') : '현장 주문'}
                       </span>
                     </div>
                     <p className="text-[15px] font-bold text-gray-900">결제수단: {selectedOrder.payment_method === 'CASH' ? '현금 결제' : '계좌 이체'}</p>

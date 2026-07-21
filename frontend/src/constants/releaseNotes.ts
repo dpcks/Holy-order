@@ -17,12 +17,21 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.5',
+    date: new Date().toISOString().split('T')[0],
+    title: '관리자 통계 강화 및 앱 주문 내역 관리 편의성 개선',
+    updates: [
+      { text: '매출 통계에 "단골 손님 랭킹" 모달 추가 (주차별/월별 최다 방문자 및 최고 큰 손 TOP 3 집계)', isNew: true },
+      { text: '주문 내역 관리 및 입금 내역 페이지에서 PWA 앱을 통한 주문을 "앱 주문" 민트색 라벨로 명확히 구분', isNew: true },
+      { text: '주문 내역 관리 상단에 "주문 유형별(앱/QR/현장) 필터" 드롭다운 신규 추가', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.4',
     date: new Date().toISOString().split('T')[0], // 자동으로 오늘 날짜 입력
     title: '백그라운드 푸시 알림 도입 및 사용자 주문 UI 개선',
     updates: [
       { text: '앱 설치(PWA) 지원 및 주문 완료 시 스마트폰 자체 백그라운드 푸시 알림(소리/진동) 기능 전면 도입', isNew: true },
-      { text: '사용자 주문 현황 화면에서 매번 뜨던 불편한 알림음 권한(오디오) 요구 배너 완벽 제거', isNew: true },
       { text: '사용자 화면 스크롤 시 발생하던 하단 검은색 그림자(그라데이션) 현상 플랫(Flat) 디자인으로 깔끔하게 개선', isNew: true }
     ]
   },
