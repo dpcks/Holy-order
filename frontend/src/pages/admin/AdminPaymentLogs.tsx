@@ -30,11 +30,7 @@ const TableRowSkeleton = () => (
   </tr>
 );
 
-const LOG_TYPE_LABELS: Record<string, { label: string; className: string }> = {
-  'APPROVED': { label: 'QR주문', className: 'bg-green-50 text-green-600 border border-green-100' },
-  'CALLBACK': { label: '현장주문', className: 'bg-[#FEE500]/20 text-[#3C1E1E] border border-[#FEE500]/30' },
-  'TOSS_AUTO': { label: 'QR주문', className: 'bg-green-50 text-green-600 border border-green-100' },
-};
+
 
 export const AdminPaymentLogs = () => {
   const queryClient = useQueryClient();
