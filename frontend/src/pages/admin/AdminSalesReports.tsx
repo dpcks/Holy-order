@@ -134,7 +134,7 @@ const TrendChart = ({ data, periodType }: { data: Record<string, { count: number
 // 직분별 고정 색상 맵
 const DUTY_COLORS: Record<string, string> = {
   '목사': '#1A0A0A',
-  '부목사': '#2D1616',
+  '부목사': '#144730',
   '강도사': '#451A1A',
   '전도사': '#5C2424',
   '사모': '#753131',
@@ -260,7 +260,7 @@ export const AdminSalesReports = () => {
               )}
               <button
                 onClick={() => setIsReportModalOpen(true)}
-                className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#2D1616] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#144730] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
               >
                 <BarChart2 size={14} />마감 리포트
               </button>
@@ -602,7 +602,7 @@ export const AdminSalesReports = () => {
                   <div className="p-5 bg-white border-t border-gray-100 shrink-0">
                     <button
                       onClick={handleDownloadReport}
-                      className="w-full py-3.5 bg-[#1A0A0A] text-white rounded-xl text-[14px] font-black hover:bg-[#2D1616] transition-all flex items-center justify-center gap-2 shadow-sm"
+                      className="w-full py-3.5 bg-[#1A0A0A] text-white rounded-xl text-[14px] font-black hover:bg-[#144730] transition-all flex items-center justify-center gap-2 shadow-sm"
                     >
                       <Download size={18} /> 이미지로 저장하기
                     </button>

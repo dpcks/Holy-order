@@ -267,7 +267,7 @@ export const AdminPaymentLogs = () => {
                     locale={ko}
                     months={windowWidth < 1024 ? 1 : 2}
                     direction={windowWidth < 640 ? 'vertical' : 'horizontal'}
-                    rangeColors={['#2D1616']}
+                    rangeColors={['#144730']}
                     showDateDisplay={false}
                     staticRanges={[
                       { label: '오늘', range: () => ({ startDate: new Date(), endDate: new Date() }), isSelected: () => false },
@@ -300,19 +300,19 @@ export const AdminPaymentLogs = () => {
           <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
             <button
               onClick={() => { setPaymentMethodFilter(''); setPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               전체
             </button>
             <button
               onClick={() => { setPaymentMethodFilter('BANK_TRANSFER'); setPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               <Building2 size={13} /> 계좌
             </button>
             <button
               onClick={() => { setPaymentMethodFilter('CASH'); setPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#2D1616] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               <Wallet size={13} /> 현금
             </button>
