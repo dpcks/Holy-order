@@ -17,6 +17,17 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.6',
+    date: new Date().toISOString().split('T')[0],
+    title: '실시간 영업 상태(Open/Close) 동기화 도입 및 PWA 주문 안정성 최적화',
+    updates: [
+      { text: '관리자의 영업 상태 변경이 사용자 화면(홈/상세/장바구니)에 1~2초 내 실시간 반영되도록 지속 WebSocket 구조 도입', isNew: true },
+      { text: 'WebSocket 유실 시 15초 단위 폴링 및 화면 활성화(Visibility/Online) 감지 기반 자동 설정 복구 로직 구축', isNew: true },
+      { text: '주문서 작성 중 영업 종료 시 강제 튕김 처리 및 POST 주문 직전 3단계 검증으로 비정상 주문 완전 차단', isNew: true },
+      { text: '공개 설정 API 캐싱 방지(Cache-Control: no-store) 및 관리자-사용자 Query Key 격리로 동기화 안정성 극대화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.5',
     date: new Date().toISOString().split('T')[0],
     title: '관리자 통계 강화 및 앱 주문 내역 관리 편의성 개선',

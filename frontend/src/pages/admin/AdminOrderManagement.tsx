@@ -138,7 +138,7 @@ export const AdminOrderManagement = () => {
 
   // [React Query] 시스템 설정 조회
   const { data: settings } = useQuery({
-    queryKey: QK.settings.main,
+    queryKey: QK.settings.admin,
     queryFn: async () => {
       const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/admin/settings');
       return (res.success && res.data) ? res.data : null;

@@ -1,4 +1,6 @@
-from models import Category, Menu, User, Order
+# pyrefly: ignore [missing-import]
+from models import Category, Menu, User, Order, Setting
+from unittest.mock import patch, MagicMock
 
 def test_create_order_happy_path(client, db_session):
     """
@@ -19,7 +21,11 @@ def test_create_order_happy_path(client, db_session):
     db_session.add(user)
     db_session.commit()
 
-    # 2. 주문 생성 API 호출
+    # 2. 주문 생성 API 호출 (영업중인 상태 필요)
+    setting = Setting(is_open=True)
+    db_session.add(setting)
+    db_session.commit()
+
     order_payload = {
         "user_id": user.id,
         "total_price": 4000,
@@ -29,7 +35,8 @@ def test_create_order_happy_path(client, db_session):
                 "menu_id": menu.id,
                 "quantity": 2,
                 "options_text": "ICE",
-                "sub_total": 4000
+                "sub_total": 4000,
+                "tumbler_discount": 0
             }
         ]
     }
@@ -48,7 +55,6 @@ def test_create_order_happy_path(client, db_session):
     order_id = data["id"]
     
     # 4. 관리자 승인(입금확인) 처리 API 호출 검증
-    # 사용자가 버튼을 누르는 대신 관리자가 입금을 확인하고 상태를 '준비중'으로 변경하는 시나리오입니다.
     status_payload = {
         "status": "PREPARING"
     }
@@ -59,14 +65,13 @@ def test_create_order_happy_path(client, db_session):
     # 5. DB 검증: 주문 상태가 PREPARING으로 변경되었는지 및 결제 로그가 남았는지
     db_order = db_session.query(Order).filter(Order.id == order_id).first()
     assert db_order.status == "PREPARING"
-    assert len(db_order.payment_logs) > 0 # PaymentLog가 정상적으로 생성되었는지 확인
-    assert db_order.payment_logs[0].amount == 4000
+    assert db_order.payment_log is not None # PaymentLog가 정상적으로 생성되었는지 확인
+    assert db_order.payment_log.amount == 4000
 
 def test_create_order_edge_case_invalid_menu(client, db_session):
     """
     [Edge Case] 
     존재하지 않는 유저 ID나 메뉴 ID로 주문을 시도했을 때, 404 에러가 정상적으로 반환되는지 검증합니다.
-    (현재 라우터 로직상 유저가 없으면 바로 404를 반환하므로 이를 중점적으로 테스트합니다.)
     """
     # 존재하지 않는 유저 ID(999)로 주문 시도
     order_payload = {
@@ -85,7 +90,7 @@ def test_create_order_edge_case_invalid_menu(client, db_session):
     
     # 404 에러 반환 검증
     assert response.status_code == 404
-    assert "User not found" in response.json()["detail"]
+    assert "사용자를 찾을 수 없거나 활성화되지 않았습니다." in response.json()["detail"]
 
 def test_data_integrity_menu_list(client, db_session):
     """
@@ -119,3 +124,74 @@ def test_data_integrity_menu_list(client, db_session):
     menu_names = [m["name"] for m in category_data["menus"]]
     assert "초코 쿠키" in menu_names
     assert "치즈 케이크" in menu_names
+
+def test_get_settings_cache_control_header(client, db_session):
+    """
+    GET /api/v1/settings 응답에 Cache-Control: no-store, max-age=0 헤더가 적용되어 있는지 검증합니다.
+    """
+    setting = Setting(is_open=True, notice="공지사항")
+    db_session.add(setting)
+    db_session.commit()
+
+    response = client.get("/api/v1/settings")
+    assert response.status_code == 200
+    assert response.headers.get("cache-control") == "no-store, max-age=0"
+    assert response.headers.get("pragma") == "no-cache"
+
+def test_put_admin_settings_broadcast(client, db_session):
+    """
+    PUT /api/v1/admin/settings 요청 시 settings가 변경되고 websocket manager.broadcast가 background task로 예약되는지 검증합니다.
+    """
+    setting = Setting(is_open=True, notice="공지사항")
+    db_session.add(setting)
+    db_session.commit()
+
+    # websocket manager.broadcast를 모킹
+    with patch("websocket.manager.broadcast") as mock_broadcast:
+        response = client.put("/api/v1/admin/settings", json={"is_open": False})
+        assert response.status_code == 200
+        # Background tasks 실행을 위해 TestClient의 context가 비워진 후 호출 여부 확인
+        # FastAPI TestClient는 응답을 반환할 때 백그라운드 태스크를 동기적으로 실행시킵니다.
+        assert mock_broadcast.called
+        # 첫 번째 호출의 인자 검증
+        called_payload = mock_broadcast.call_args[0][0]
+        assert called_payload["type"] == "SETTINGS_UPDATED"
+        assert called_payload["is_open"] is False
+        assert "is_open" in called_payload["changed_fields"]
+
+def test_create_order_fails_when_closed(client, db_session):
+    """
+    영업 상태가 False(영업 종료)일 때 주문 생성이 403 Forbidden 으로 차단되는지 검증합니다.
+    """
+    cat = Category(name="커피", display_order=1)
+    db_session.add(cat)
+    db_session.commit()
+    
+    menu = Menu(category_id=cat.id, name="아메리카노", price=2000)
+    db_session.add(menu)
+    db_session.commit()
+
+    user = User(name="김성도", phone="010-1111-2222", duty="성도")
+    db_session.add(user)
+
+    # 영업 종료 상태로 설정
+    setting = Setting(is_open=False)
+    db_session.add(setting)
+    db_session.commit()
+
+    order_payload = {
+        "user_id": user.id,
+        "total_price": 2000,
+        "payment_method": "BANK_TRANSFER",
+        "items": [
+            {
+                "menu_id": menu.id,
+                "quantity": 1,
+                "options_text": "ICE",
+                "sub_total": 2000
+            }
+        ]
+    }
+    response = client.post("/api/v1/orders", json=order_payload)
+    assert response.status_code == 403
+    assert "현재 영업 시간이 아닙니다." in response.json()["detail"]

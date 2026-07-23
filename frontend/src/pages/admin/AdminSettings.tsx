@@ -54,7 +54,7 @@ export const AdminSettings = () => {
 
   // [React Query] 데이터 조회
   const { data: settings, isLoading: loadingSettings } = useQuery({
-    queryKey: QK.settings.all,
+    queryKey: QK.settings.admin,
     queryFn: async () => {
       const res = await apiClient.get<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings');
       return res.success ? res.data : null;
@@ -90,7 +90,8 @@ export const AdminSettings = () => {
       apiClient.put<StandardResponse<SettingResponse>, StandardResponse<SettingResponse>>('/admin/settings', updatedFields),
     onSuccess: (res) => {
       if (res.success) {
-        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
+        queryClient.setQueryData(QK.settings.admin, res.data);
+        queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true });
         setLocalSettings(res.data);
         toast.success('설정이 성공적으로 저장되었습니다.');
       }

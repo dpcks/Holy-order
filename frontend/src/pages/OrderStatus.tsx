@@ -105,11 +105,13 @@ export const OrderStatus = () => {
   });
 
   const { data: setting } = useQuery({
-    queryKey: QK.settings.main,
+    queryKey: QK.settings.public,
     queryFn: async () => {
       const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings');
       return res.success ? res.data : null;
-    }
+    },
+    staleTime: 0,
+    refetchOnWindowFocus: 'always',
   });
 
   const { data: activeEvent } = useQuery({
@@ -203,7 +205,7 @@ export const OrderStatus = () => {
         }
 
         if (data.type === 'SETTINGS_UPDATED') {
-          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
+          queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true });
         }
 
         if (data.type === 'ANNOUNCEMENT_UPDATED') {
@@ -246,6 +248,8 @@ export const OrderStatus = () => {
       if (document.visibilityState === 'visible') {
         console.log('📱 [Visibility] 화면 활성화 - 상태 갱신');
         queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
+        queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true });
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
           connectWebSocket();
         }

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Body
+from fastapi import APIRouter, Depends, HTTPException, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, or_, case
 from typing import List
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from fastapi.security import OAuth2PasswordRequestForm
 import models, schemas, auth
 from database import get_db
@@ -868,8 +868,13 @@ def get_settings(db: Session = Depends(get_db), admin: models.Admin = Depends(au
     return schemas.StandardResponse(success=True, data=setting, message="설정을 조회했습니다.")
 
 @router.put("/settings", response_model=schemas.StandardResponse[schemas.SettingResponse])
-def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
-    """시스템 설정 업데이트"""
+def update_settings(
+    update_data: schemas.SettingUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    admin: models.Admin = Depends(auth.get_current_admin)
+):
+    """시스템 설정 업데이트 - commit 성공 후 BackgroundTasks를 통해 SETTINGS_UPDATED 이벤트 전송"""
     setting = db.query(models.Setting).first()
     if not setting:
         setting = models.Setting()
@@ -881,6 +886,19 @@ def update_settings(update_data: schemas.SettingUpdate, db: Session = Depends(ge
 
     db.commit()
     db.refresh(setting)
+
+    # DB commit 성공 후에만 이벤트 전송 (빈 update이면 이벤트 생략)
+    if update_dict:
+        background_tasks.add_task(
+            manager.broadcast,
+            {
+                "type": "SETTINGS_UPDATED",
+                "changed_fields": list(update_dict.keys()),
+                "is_open": setting.is_open,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+
     return schemas.StandardResponse(success=True, data=setting, message="설정이 저장되었습니다.")
 
 

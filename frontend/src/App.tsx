@@ -8,6 +8,7 @@ import { Home } from './pages/Home';
 import { MenuDetail } from './pages/MenuDetail';
 import { Cart } from './pages/Cart';
 import { OrderStatus } from './pages/OrderStatus';
+import { PublicRealtimeLayout } from './components/layout/PublicRealtimeLayout';
 
 // 관리자 페이지 (Lazy Loading)
 const AdminLayout = lazy(() => import('./pages/admin/AdminLayout').then(m => ({ default: m.AdminLayout })));
@@ -41,10 +42,13 @@ function App() {
       <Router>
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* 사용자 화면 (모바일) */}
-            <Route path="/" element={<Home />} />
-            <Route path="/menu/:id" element={<MenuDetail />} />
-            <Route path="/cart" element={<Cart />} />
+            {/* 사용자 화면 (모바일) - PublicRealtimeLayout이 WebSocket 1개를 유지 */}
+            <Route element={<PublicRealtimeLayout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/menu/:id" element={<MenuDetail />} />
+              <Route path="/cart" element={<Cart />} />
+            </Route>
+            {/* 주문 추적: 전용 WS를 사용하므로 레이아웃 밖 */}
             <Route path="/order/status/:id" element={<OrderStatus />} />
 
             {/* 관리자 화면 (데스크탑) */}
