@@ -8,8 +8,11 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# pyrefly: ignore [missing-import]
 from database import get_db
+# pyrefly: ignore [missing-import]
 from models import Base
+# pyrefly: ignore [missing-import]
 from main import app
 
 # 테스트용 SQLite 인메모리 DB 설정
@@ -40,6 +43,7 @@ def db_session():
 
 @pytest.fixture
 def mock_admin(db_session):
+    # pyrefly: ignore [missing-import]
     import models
     admin = models.Admin(
         login_id="testadmin",
@@ -54,6 +58,7 @@ def mock_admin(db_session):
 
 @pytest.fixture
 def client(db_session, mock_admin):
+    # pyrefly: ignore [missing-import]
     from auth import get_current_admin, get_current_master
     # 의존성 오버라이드: 실제 DB 연결 대신 테스트 DB 사용
     def override_get_db():
