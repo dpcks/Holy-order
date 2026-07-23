@@ -17,6 +17,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.7',
+    date: new Date().toISOString().split('T')[0],
+    title: '사용자 경험(UX) 개선 및 네이티브 앱 환경 최적화',
+    updates: [
+      { text: '상단 로고, 알림 켜기 배너, 앱 설치 가이드, 영업 종료 화면에 고해상도 맞춤형 통이미지 전면 적용', isNew: true },
+      { text: '모바일 환경에서 화면 좌우 스와이프를 통해 메뉴 카테고리를 부드럽게 이동할 수 있는 제스처 기능 신규 추가', isNew: true },
+      { text: '앱 사용성 강화를 위해 브라우저의 기본 스크롤바를 숨겨 완전한 네이티브 앱(Native App) 느낌 구현', isNew: true },
+      { text: '아이폰(iOS Safari)에서 상단 검색창 터치 시 화면이 강제로 줌인(확대)되던 불편한 버그 완벽 해결', isNew: true },
+      { text: '영업 종료 화면이 기기 화면 크기에 완벽히 고정되어 불필요하게 스크롤되지 않도록 레이아웃 고도화' }
+    ]
+  },
+  {
     version: 'v1.4.6',
     date: new Date().toISOString().split('T')[0],
     title: '실시간 영업 상태(Open/Close) 동기화 도입 및 PWA 주문 안정성 최적화',

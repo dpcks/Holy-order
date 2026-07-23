@@ -100,8 +100,49 @@ export const Home = () => {
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
   }, []);
+  // Swipe Detection States
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+  const [touchEndY, setTouchEndY] = useState<number | null>(null);
 
+  const minSwipeDistance = 50;
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
+    setTouchEndY(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchStartY(e.targetTouches[0].clientY);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+    setTouchEndY(e.targetTouches[0].clientY);
+  };
+
+  const onTouchEndEvent = () => {
+    if (!touchStartX || !touchEndX || !touchStartY || !touchEndY) return;
+    
+    const distanceX = touchStartX - touchEndX;
+    const distanceY = touchStartY - touchEndY;
+    
+    // Y축 이동이 X축 이동보다 크면 위아래 스크롤로 간주하여 무시
+    if (Math.abs(distanceY) > Math.abs(distanceX)) return;
+
+    const isLeftSwipe = distanceX > minSwipeDistance;
+    const isRightSwipe = distanceX < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = categories.findIndex(c => c.id === activeCategoryId);
+      if (currentIndex === -1) return;
+
+      if (isLeftSwipe && currentIndex < categories.length - 1) {
+        setActiveCategoryId(categories[currentIndex + 1].id);
+      } else if (isRightSwipe && currentIndex > 0) {
+        setActiveCategoryId(categories[currentIndex - 1].id);
+      }
+    }
+  };
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
   // 선택된 카테고리 저장
@@ -131,13 +172,13 @@ export const Home = () => {
   // 영업 종료 화면 렌더링
   if (!loading && shopSettings && !shopSettings.is_open) {
     return (
-      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-black font-sans relative overflow-hidden">
-        {/* 영업 종료 이미지 (배경) */}
-        <div className="absolute inset-0 bg-[#144730] flex items-center justify-center">
+      <div className="fixed inset-0 z-50 flex flex-col w-full max-w-[500px] mx-auto bg-[#144730] font-sans overflow-hidden touch-none">
+        {/* 영업 종료 이미지 */}
+        <div className="w-full flex-1 flex flex-col items-center justify-center">
           <img
-            src="/img/design/cafe_closed.svg"
-            alt="Closed"
-            className="w-full h-full object-contain"
+            src="/img/design/cafe_closed.svg?v=2"
+            alt="영업 종료"
+            className="w-full h-full object-cover"
           />
         </div>
 
@@ -223,25 +264,27 @@ export const Home = () => {
       {!searchQuery ? (
         <>
 
-          {/* Store Selector & Push Permission */}
-          <div className="px-4 py-4 flex justify-between items-center">
-            <div className="flex-1">
-              {pushPermission !== 'granted' && 'Notification' in window && (
-                <button
-                  onClick={handleAllowPush}
-                  className="relative flex items-center gap-2 bg-gradient-to-r from-teal-500 to-emerald-500 text-white px-3.5 py-2 rounded-xl shadow-lg active:scale-95 transition-all"
-                >
-                  <div className="absolute inset-0 rounded-xl bg-teal-400 animate-ping opacity-20"></div>
-                  <Bell size={16} className={pushPermission === 'default' ? 'animate-bounce' : ''} />
-                  <span className="font-black text-[13px] tracking-tight relative z-10">알림 켜기 ✨</span>
-                </button>
-              )}
-            </div>
-            <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg shrink-0">
-              <MapPin size={16} className="text-primary" />
-              <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
+          {/* 알림 권한 상태에 따른 상단 표시 */}
+          {pushPermission !== 'granted' && 'Notification' in window ? (
+            <button
+              onClick={handleAllowPush}
+              className="w-full block active:opacity-80 transition-opacity shadow-sm border-b border-black/5 mb-1 relative z-10"
+              aria-label="알림 켜기"
+            >
+              <img
+                src="/img/design/alram.svg"
+                alt="알림 켜기 배너"
+                className="w-full h-auto object-cover"
+              />
             </button>
-          </div>
+          ) : (
+            <div className="px-4 py-4 flex justify-end items-center">
+              <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg shrink-0">
+                <MapPin size={16} className="text-primary" />
+                <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
+              </button>
+            </div>
+          )}
 
           {/* Category Tabs */}
           <div className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
@@ -261,7 +304,12 @@ export const Home = () => {
           </div>
 
           {/* Normal Menu Grid */}
-          <div className="flex-1 px-4 py-6 bg-white">
+          <div 
+            className="flex-1 px-4 py-6 bg-white"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEndEvent}
+          >
             {loading ? (
               <div className="flex justify-center items-center h-40">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

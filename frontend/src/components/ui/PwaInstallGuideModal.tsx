@@ -109,62 +109,24 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
         style={{ maxHeight: '92dvh' }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 헤더 - 후킹 카피 */}
-        <div className="relative bg-gradient-to-br from-[#1A0A0A] via-[#2D1616] to-[#1A0A0A] px-6 pt-8 pb-6 text-white overflow-hidden">
-          {/* 배경 장식 */}
-          <div className="absolute top-0 right-0 w-40 h-40 bg-primary/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl" />
-
+        {/* 헤더 - 통이미지 교체 */}
+        <div className="relative overflow-hidden bg-[#d1b189]/20">
+          <img
+            src="/img/design/pwa_guide_header.svg"
+            alt="앱 설치 가이드 - 음료 준비되면 바로 알림을 받아보세요"
+            className="w-full h-auto object-cover"
+          />
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-all active:scale-90"
+            className="absolute top-4 right-4 w-8 h-8 bg-black/20 hover:bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center transition-all active:scale-90 text-white"
             aria-label="닫기"
           >
             <X size={16} />
           </button>
-
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/30">
-                <Bell size={16} className="text-white" />
-              </div>
-              <span className="text-primary font-black text-[12px] uppercase tracking-widest">앱 설치 가이드</span>
-            </div>
-
-            <h2 className="text-[22px] font-black leading-tight tracking-tight mb-2 break-keep">
-              음료 준비되면<br />
-              <span className="text-primary">바로 알림</span>을 받아보세요! 🔔
-            </h2>
-
-            <p className="text-white/60 text-[13px] font-medium leading-relaxed break-keep">
-              홈 화면에 카페 앱을 추가하면 음료 준비 완료 알림이 바로 울립니다. 음료를 놓치지 마세요!
-            </p>
-
-            {/* 혜택 태그 */}
-            <div className="flex flex-wrap gap-2 mt-4">
-              {['📳 준비 완료 알림', '⚡ 빠른 주문', '🎯 내 주문 실시간 추적'].map((tag) => (
-                <span
-                  key={tag}
-                  className="bg-white/10 border border-white/10 text-white/80 text-[11px] font-bold px-3 py-1 rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* OS 탭 선택 */}
         <div className="flex gap-2 px-6 pt-5 pb-1">
-          <button
-            onClick={() => setActiveTab('ios')}
-            className={`flex-1 py-2.5 rounded-2xl font-black text-[13px] transition-all ${activeTab === 'ios'
-              ? 'bg-[#1A0A0A] text-white shadow-md'
-              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              }`}
-          >
-            🍎 아이폰 (iPhone)
-          </button>
           <button
             onClick={() => setActiveTab('android')}
             className={`flex-1 py-2.5 rounded-2xl font-black text-[13px] transition-all ${activeTab === 'android'
@@ -172,14 +134,22 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               }`}
           >
-            🤖 갤럭시 (Android)
+            안드로이드
+          </button>
+          <button
+            onClick={() => setActiveTab('ios')}
+            className={`flex-1 py-2.5 rounded-2xl font-black text-[13px] transition-all ${activeTab === 'ios'
+              ? 'bg-[#1A0A0A] text-white shadow-md'
+              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+          >
+            아이폰
           </button>
         </div>
 
         {/* 단계별 가이드 - 스크롤은 모달 패널이 담당하므로 내부 스크롤 없음 */}
         <div className="px-6 py-4 space-y-4">
           {steps.map((s, index) => {
-            const Icon = s.icon;
             return (
               <div
                 key={s.step}
@@ -193,11 +163,8 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
                     className="w-full h-full object-contain"
                   />
                   {/* 스텝 번호 뱃지 */}
-                  <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <div className={`w-8 h-8 ${s.iconBg} rounded-xl flex items-center justify-center shadow-md border border-white/60`}>
-                      <Icon size={16} className={s.iconColor} />
-                    </div>
-                    <span className="bg-[#1A0A0A]/80 backdrop-blur-sm text-white text-[11px] font-black px-2.5 py-1 rounded-full">
+                  <div className="absolute top-3 left-3 flex items-center">
+                    <span className="bg-[#1A0A0A]/80 backdrop-blur-sm text-white text-[11px] font-black px-2.5 py-1 rounded-full shadow-md">
                       STEP {s.step}
                     </span>
                   </div>
