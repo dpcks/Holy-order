@@ -311,7 +311,7 @@ export const Home = () => {
                 key={cat.id}
                 id={`category-${cat.id}`}
                 onClick={() => setActiveCategoryId(cat.id)}
-                className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
+                className={`py-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
                   }`}
               >
                 {cat.name}
