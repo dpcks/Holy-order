@@ -15,13 +15,15 @@ URL 및 네트워크 관련 유틸리티 함수들을 정의합니다.
  * 결과는 항상 /ws 경로로 끝난다.
  */
 export const getWsUrl = (): string => {
+  const isHttpsPage = window.location.protocol === 'https:';
+
   // 1. VITE_WS_URL 최우선 (Vercel 환경변수)
   const envWsUrl = import.meta.env.VITE_WS_URL as string | undefined;
   if (envWsUrl) {
     try {
       const url = new URL(envWsUrl);
-      // https/http → wss/ws 정규화
-      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      // 페이지가 https이면 강제로 wss 사용
+      const protocol = (url.protocol === 'https:' || isHttpsPage) ? 'wss:' : 'ws:';
       return `${protocol}//${url.host}/ws`;
     } catch {
       console.error('[getWsUrl] VITE_WS_URL이 유효하지 않은 URL입니다:', envWsUrl);
@@ -34,7 +36,8 @@ export const getWsUrl = (): string => {
   if (envApiUrl) {
     try {
       const url = new URL(envApiUrl);
-      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      // 페이지가 https이면 강제로 wss 사용
+      const protocol = (url.protocol === 'https:' || isHttpsPage) ? 'wss:' : 'ws:';
       return `${protocol}//${url.host}/ws`;
     } catch {
       console.error('[getWsUrl] VITE_API_BASE_URL이 유효하지 않은 URL입니다:', envApiUrl);
@@ -42,10 +45,10 @@ export const getWsUrl = (): string => {
     }
   }
 
-  const { hostname, protocol } = window.location;
+  const { hostname } = window.location;
 
   // 3. WebSocket 프로토콜 결정 (HTTPS → wss, HTTP → ws)
-  const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsProtocol = isHttpsPage ? 'wss:' : 'ws:';
 
   // 4. 개발 환경 여부 판단
   //    - localhost
