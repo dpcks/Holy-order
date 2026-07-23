@@ -57,19 +57,19 @@ export const Header = ({
               </button>
             ) : leftElement ? (
               leftElement
+            ) : (!title || title === 'Mission-Cafe') ? (
+              <img
+                src="/img/design/header_logo.svg"
+                alt="Mission-Cafe 로고"
+                className="h-[65px] w-auto object-contain cursor-pointer scale-[1.55] origin-left -ml-2"
+                onClick={() => navigate('/')}
+              />
             ) : null}
           </div>
 
           <div className="flex-1 flex justify-center items-center h-full">
-            {showBack || (title && title !== 'Mission-Cafe') ? (
+            {(showBack || (title && title !== 'Mission-Cafe')) && (
               <h1 className="text-xl font-bold text-white tracking-tight whitespace-nowrap">{title}</h1>
-            ) : (
-              <img
-                src="/img/design/header_logo.svg"
-                alt="Mission-Cafe 로고"
-                className="h-[65px] w-auto object-contain cursor-pointer scale-[1.55]"
-                onClick={() => navigate('/')}
-              />
             )}
           </div>
 
