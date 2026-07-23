@@ -379,7 +379,7 @@ export const Home = () => {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
           <button
             onClick={() => setShowInstallGuide(true)}
-            className="w-full bg-gradient-to-r from-[#1A0A0A] to-[#144730] text-white py-3.5 px-5 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all border border-white/5"
+            className="w-full bg-gradient-to-r from-[#1A0A0A] to-[#23734A] text-white py-3.5 px-5 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all border border-white/5"
             aria-label="앱 설치 가이드 열기"
           >
             <div className="flex items-center gap-3">

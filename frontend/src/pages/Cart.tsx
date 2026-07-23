@@ -76,7 +76,7 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-end justify-center" onClick={onClose}>
       <div
         className="bg-white w-full max-w-[480px] rounded-t-3xl p-6 pb-10 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -453,7 +453,7 @@ export const Cart = () => {
                   <button
                     onClick={() => setPaymentMethod('BANK_TRANSFER')}
                     className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
-                      ? 'bg-[#144730] text-white border-transparent shadow-md'
+                      ? 'bg-[#23734A] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
@@ -465,7 +465,7 @@ export const Cart = () => {
                   <button
                     onClick={() => setPaymentMethod('CASH')}
                     className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'CASH'
-                      ? 'bg-[#144730] text-white border-transparent shadow-md'
+                      ? 'bg-[#23734A] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
