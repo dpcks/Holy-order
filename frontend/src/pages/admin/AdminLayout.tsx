@@ -8,7 +8,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
   ClipboardList, UtensilsCrossed, BarChart2, LogOut, History,
-  Landmark, Calendar, ChevronsLeft, ChevronsRight, Church, Settings, Megaphone, Package
+  Landmark, Calendar, ChevronsLeft, ChevronsRight, Settings, Megaphone, Package
 } from 'lucide-react';
 import { getWsUrl } from '../../utils/url';
 import { useQuery } from '@tanstack/react-query';
@@ -286,16 +286,18 @@ export const AdminLayout = () => {
           <div className="flex items-center justify-between gap-2">
             <div className={`flex items-center transition-all ${isCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
               {isCollapsed ? (
-                <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary animate-in zoom-in duration-300 relative">
-                  <Church size={24} />
+                <div className="w-10 h-10 flex items-center justify-center animate-in zoom-in duration-300 relative">
+                  <img src="/img/design/cafe_logo.svg" alt="Mission Cafe" className="w-9 h-9 object-contain" />
                   {hasNewOrder && (
-                    <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0F0A0A] animate-pulse" />
+                    <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-[#0F0A0A] animate-pulse" />
                   )}
                 </div>
               ) : (
-                <h1 className="text-2xl font-black text-white tracking-tighter italic animate-in fade-in duration-500">
-                  Mission-Cafe
-                </h1>
+                <img
+                  src="/img/design/header_logo.svg"
+                  alt="Mission-Cafe"
+                  className="h-10 w-auto object-contain animate-in fade-in duration-500"
+                />
               )}
             </div>
 
@@ -320,12 +322,12 @@ export const AdminLayout = () => {
             </button>
           )}
 
-          {!isCollapsed && (
+          {/* {!isCollapsed && (
             <div className="flex items-center gap-1.5 mt-1 animate-in fade-in duration-700">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               <p className="text-[10px] text-white/30 font-bold tracking-widest uppercase">평택중앙교회카페 관리자 페이지</p>
             </div>
-          )}
+          )} */}
         </div>
 
         {/* 네비게이션 */}

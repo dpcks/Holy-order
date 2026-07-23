@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
@@ -13,6 +13,7 @@ import type { Menu, Category, StandardResponse, Announcement } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
     const saved = sessionStorage.getItem('lastActiveCategoryId');
     return saved ? Number(saved) : null;
@@ -143,6 +144,27 @@ export const Home = () => {
       }
     }
   };
+
+  // 선택된 카테고리가 화면 중앙에 오도록 스크롤 포커스 이동
+  useEffect(() => {
+    if (activeCategoryId !== null && categoryScrollRef.current) {
+      const container = categoryScrollRef.current;
+      const el = document.getElementById(`category-${activeCategoryId}`);
+      if (el) {
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        
+        // 현재 스크롤 위치에서 목표 엘리먼트가 중앙에 오기 위해 필요한 추가 이동량
+        const scrollDiff = (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
+        
+        container.scrollBy({
+          left: scrollDiff,
+          behavior: 'smooth'
+        });
+      }
+    }
+  }, [activeCategoryId]);
+
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
   // 선택된 카테고리 저장
@@ -287,10 +309,11 @@ export const Home = () => {
           )}
 
           {/* Category Tabs */}
-          <div className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
+          <div ref={categoryScrollRef} className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
             {categories.map((cat) => (
               <button
                 key={cat.id}
+                id={`category-${cat.id}`}
                 onClick={() => setActiveCategoryId(cat.id)}
                 className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
                   }`}
