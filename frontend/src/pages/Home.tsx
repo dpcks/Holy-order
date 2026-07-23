@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
@@ -13,6 +13,7 @@ import type { Menu, Category, StandardResponse, Announcement } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
+  const categoryScrollRef = useRef<HTMLDivElement>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
     const saved = sessionStorage.getItem('lastActiveCategoryId');
     return saved ? Number(saved) : null;
@@ -146,10 +147,20 @@ export const Home = () => {
 
   // 선택된 카테고리가 화면 중앙에 오도록 스크롤 포커스 이동
   useEffect(() => {
-    if (activeCategoryId !== null) {
+    if (activeCategoryId !== null && categoryScrollRef.current) {
+      const container = categoryScrollRef.current;
       const el = document.getElementById(`category-${activeCategoryId}`);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        const containerRect = container.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        
+        // 현재 스크롤 위치에서 목표 엘리먼트가 중앙에 오기 위해 필요한 추가 이동량
+        const scrollDiff = (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
+        
+        container.scrollBy({
+          left: scrollDiff,
+          behavior: 'smooth'
+        });
       }
     }
   }, [activeCategoryId]);
@@ -298,7 +309,7 @@ export const Home = () => {
           )}
 
           {/* Category Tabs */}
-          <div className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
+          <div ref={categoryScrollRef} className="px-4 border-b border-gray-100 flex gap-6 overflow-x-auto hide-scrollbar min-h-[44px]">
             {categories.map((cat) => (
               <button
                 key={cat.id}
