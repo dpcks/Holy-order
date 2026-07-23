@@ -329,7 +329,7 @@ export const Cart = () => {
         />
       )}
 
-      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-32 shadow-2xl relative">
+      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-48 shadow-2xl relative">
         <Header
           title={
             <div className="flex flex-col items-center">

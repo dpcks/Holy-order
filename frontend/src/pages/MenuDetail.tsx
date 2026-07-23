@@ -316,8 +316,8 @@ export const MenuDetail = () => {
           )}
         </div>
 
-        {/* 여백 확보용 스페이서 - 하단 고정 탭바 높이에 맞게 조절 */}
-        <div className="h-[150px] w-full" />
+        {/* 여백 확보용 스페이서 - 하단 고정 탭바 및 모바일 Safe Area 높이에 맞게 조절 */}
+        <div className="h-[210px] pb-[env(safe-area-inset-bottom)] w-full" />
       </main>
 
       {/* 하단 Sticky 주문 바 */}
