@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
+import { Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery } from '@tanstack/react-query';
 import { QK } from '../api/queryKeys';
@@ -154,11 +154,14 @@ export const Home = () => {
         const containerRect = container.getBoundingClientRect();
         const elRect = el.getBoundingClientRect();
         
-        // 현재 스크롤 위치에서 목표 엘리먼트가 중앙에 오기 위해 필요한 추가 이동량
-        const scrollDiff = (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
+        // 목표 스크롤 위치 계산 (현재 스크롤 + 엘리먼트 상대 위치 - 컨테이너 절반 + 엘리먼트 절반)
+        let targetScroll = container.scrollLeft + (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
         
-        container.scrollBy({
-          left: scrollDiff,
+        // 첫 번째 카테고리일 때 좌측에 공백이 생기지 않도록 음수 값을 0으로 강제 고정
+        targetScroll = Math.max(0, targetScroll);
+        
+        container.scrollTo({
+          left: targetScroll,
           behavior: 'smooth'
         });
       }
@@ -287,10 +290,10 @@ export const Home = () => {
         <>
 
           {/* 알림 권한 상태에 따른 상단 표시 */}
-          {pushPermission !== 'granted' && 'Notification' in window ? (
+          {pushPermission !== 'granted' && 'Notification' in window && (
             <button
               onClick={handleAllowPush}
-              className="w-full block active:opacity-80 transition-opacity shadow-sm border-b border-black/5 mb-1 relative z-10"
+              className="w-full block active:opacity-80 transition-opacity shadow-sm border-b border-black/5 relative z-10"
               aria-label="알림 켜기"
             >
               <img
@@ -299,13 +302,6 @@ export const Home = () => {
                 className="w-full h-auto object-cover"
               />
             </button>
-          ) : (
-            <div className="px-4 py-4 flex justify-end items-center">
-              <button className="flex items-center gap-1.5 bg-gray-50 px-3 py-2 rounded-lg shrink-0">
-                <MapPin size={16} className="text-primary" />
-                <span className="font-semibold text-gray-800 text-sm">평택중앙교회</span>
-              </button>
-            </div>
           )}
 
           {/* Category Tabs */}
