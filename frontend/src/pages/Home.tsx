@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
+import { Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery } from '@tanstack/react-query';
 import { QK } from '../api/queryKeys';
