@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    react(), 
+    react(),
     tailwindcss(),
     VitePWA({
       strategies: 'injectManifest',
@@ -16,7 +16,7 @@ export default defineConfig({
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: '평택중앙교회 카페',
-        short_name: '중앙교회 카페',
+        short_name: '미션 카페',
         description: '평택중앙교회 스마트 주문 시스템',
         theme_color: '#0D9488',
         background_color: '#F9FAFB',
