@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 
@@ -35,8 +37,16 @@ def get_public_settings(db: Session = Depends(get_db)):
     """인증 없이 접근 가능한 공개 설정 조회 (계좌 정보, 영업 여부 등 주문 화면에서 사용)"""
     setting = db.query(models.Setting).first()
     if not setting:
-        return schemas.StandardResponse(success=False, data=None, message="설정 정보가 없습니다.")
-    return schemas.StandardResponse(success=True, data=setting, message="설정을 불러왔습니다.")
+        response_data = schemas.StandardResponse(success=False, data=None, message="설정 정보가 없습니다.")
+    else:
+        # SQLAlchemy ORM 객체를 Pydantic 스키마로 변환해야 jsonable_encoder가 직렬화 가능
+        setting_schema = schemas.SettingResponse.model_validate(setting)
+        response_data = schemas.StandardResponse(success=True, data=setting_schema, message="설정을 불러왔습니다.")
+    # 브라우저·CDN 캐시 방지: 영업 상태는 항상 최신값이 중요함
+    return JSONResponse(
+        content=jsonable_encoder(response_data),
+        headers={"Cache-Control": "no-store, max-age=0", "Pragma": "no-cache"},
+    )
 
 
 @router.get("/announcements/active", response_model=schemas.StandardResponse)

@@ -135,8 +135,10 @@ export const QK = {
   // 시스템 설정 및 유저
   settings: {
     _domain: ['settings'] as const,
-    all: ['settings', 'main'] as const, // AdminSettings 하위 호환성 위해 추가
-    main: ['settings', 'main'] as const,
+    /** 사용자 주문 화면 (Home/MenuDetail/Cart/OrderStatus) - GET /settings */
+    public: ['settings', 'public'] as const,
+    /** 관리자 설정 화면 (AdminSettings/AdminOrderManagement) - GET /admin/settings */
+    admin: ['settings', 'admin'] as const,
   },
   admins: {
     _domain: ['admins'] as const,

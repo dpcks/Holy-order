@@ -7,8 +7,8 @@ import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { useCart } from '../context/CartContext';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
-import type { Menu, MenuOption, SettingResponse, StandardResponse } from '../types';
-import { apiClient } from '../api/client';
+import type { Menu, MenuOption } from '../types';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 import { useEffect } from 'react';
 
 // ICE/HOT 옵션인지 판별하는 상수 - 백엔드 name 값 기준
@@ -30,30 +30,21 @@ export const MenuDetail = () => {
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   
-  // 설정 상태
-  const [settings, setSettings] = useState<SettingResponse | null>(null);
+  // 공개 설정 조회 (PublicRealtimeLayout WS가 SETTINGS_UPDATED 시 자동 재조회)
+  const { data: settings, isLoading: loadingSettings } = usePublicSettings();
   const showPrice = settings?.show_price ?? true;
+  const isOpen = settings?.is_open;
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
   };
 
+  // 영업 종료 감지 시 홈으로 이동
   useEffect(() => {
-    const checkStoreStatus = async () => {
-      try {
-        const res = await apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings');
-        if (res.success && res.data) {
-          setSettings(res.data);
-          if (!res.data.is_open) {
-            navigate('/', { replace: true });
-          }
-        }
-      } catch (err) {
-        console.warn('설정 정보를 불러오지 못했습니다.', err);
-      }
-    };
-    checkStoreStatus();
-  }, [navigate]);
+    if (!loadingSettings && isOpen === false) {
+      navigate('/', { replace: true });
+    }
+  }, [isOpen, loadingSettings, navigate]);
 
   // ────────────────────────────────────────────────────────────────
   // [동적 매핑] 백엔드에서 받은 options 배열을 name 기준으로 그룹화
@@ -118,11 +109,17 @@ export const MenuDetail = () => {
   // 실제 결제 총액 (할인 후)
   const totalPrice = unitPrice * quantity;
 
-  const handleAddToCart = (shouldNavigate = true) => {
+  const handleAddToCart = (shouldNavigate = true): boolean => {
+    // 영업 상태 확인 (loading 중이거나 is_open !== true이면 차단)
+    if (loadingSettings || isOpen !== true) {
+      showToast('현재 주문이 불가합니다. 영업 상태를 확인해 주세요.', 'error');
+      return false;
+    }
+
     // 혹시 모를 품절 재확인 (state가 stale할 경우 대비)
     if (!menu.is_available) {
       showToast('현재 품절된 메뉴입니다.', 'error');
-      return;
+      return false;
     }
 
     // 선택된 옵션들을 '/' 구분자로 이어붙여 텍스트 요약 생성
@@ -151,6 +148,7 @@ export const MenuDetail = () => {
     } else {
       showToast('장바구니에 담겼습니다.', 'success');
     }
+    return true;
   };
 
   const handleOrderNow = () => {
@@ -158,9 +156,12 @@ export const MenuDetail = () => {
       showToast('현재 품절된 메뉴입니다.', 'error');
       return;
     }
-    handleAddToCart(false); // 바로 주문 시에는 뒤로 가지 않고
-    setTimeout(() => navigate('/cart'), 500); // 토스트를 보여주기 위해 약간의 지연
+    const added = handleAddToCart(false); // 바로 주문 시에는 뒤로 가지 않고
+    if (added) {
+      setTimeout(() => navigate('/cart'), 500); // 토스트를 보여주기 위해 약간의 지연
+    }
   };
+
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white relative">

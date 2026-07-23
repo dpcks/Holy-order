@@ -8,7 +8,10 @@ import { TossLogo } from '../components/ui/TossLogo';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
-import type { Duty, StandardResponse, PaymentMethod, Announcement, SettingResponse } from '../types';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QK } from '../api/queryKeys';
+import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
+import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
 
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
@@ -132,6 +135,7 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
             </div>
           </div>
 
+
           {/* 에러 메시지 */}
           {error && (
             <p className="text-[12px] text-primary font-medium bg-red-50 rounded-lg px-3 py-2">{error}</p>
@@ -154,6 +158,7 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
 
 export const Cart = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { items, removeItem, updateQuantity, totalPrice, totalTumblerDiscount, clearCart } = useCart();
 
   const [requests, setRequests] = useState('');
@@ -164,8 +169,11 @@ export const Cart = () => {
 
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
-  const [settings, setSettings] = useState<SettingResponse | null>(null);
+
+  // 공개 설정 조회 (PublicRealtimeLayout WS가 SETTINGS_UPDATED 시 자동 재조회)
+  const { data: settings, isLoading: loadingSettings } = usePublicSettings();
   const showPrice = settings?.show_price ?? true;
+  const isOpen = settings?.is_open;
 
   const showToast = (message: string, type: ToastType = 'info') => {
     setToast({ message, type });
@@ -175,45 +183,56 @@ export const Cart = () => {
   const discount = totalTumblerDiscount;
   const finalPrice = totalPrice - discount;
 
-  // 이벤트 모드 상태 조회
-  const [activeEvent, setActiveEvent] = useState<Announcement | null>(null);
+  // 이벤트(공지) 상태 - React Query로 통합
+  const { data: activeEvent } = useQuery({
+    queryKey: QK.announcements.active,
+    queryFn: async () => {
+      const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
+      return (res.success && res.data) ? res.data : null;
+    }
+  });
+
   const isEventMode = !!activeEvent?.is_event_mode;
   // 이벤트 모드일 때는 최종 결제 금액을 0원으로 처리
   const eventFinalPrice = isEventMode ? 0 : finalPrice;
 
+  // 영업 종료 감지 시: 모달 닫기 + 홈으로 이동
   useEffect(() => {
-    const fetchEvent = async () => {
-      try {
-        const [eventRes, settingsRes] = await Promise.all([
-          apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active'),
-          apiClient.get<SettingResponse, StandardResponse<SettingResponse>>('/settings')
-        ]);
+    if (!loadingSettings && isOpen === false) {
+      setShowUserModal(false);
+      navigate('/', { replace: true });
+    }
+  }, [isOpen, loadingSettings, navigate]);
 
-        if (eventRes.success && eventRes.data) setActiveEvent(eventRes.data);
-        if (settingsRes.success && settingsRes.data) {
-          setSettings(settingsRes.data);
-          if (!settingsRes.data.is_open) {
-            navigate('/', { replace: true });
-          }
-        }
-      } catch (err) {
-        console.warn('정보를 불러오지 못했습니다.', err);
-      }
-    };
-    fetchEvent();
-  }, [navigate]);
-
-  // 주문 버튼 클릭 → 사용자 정보 확인을 위해 항상 모달 오픈
+  // 주문 버튼 클릭 → 영업 상태 확인 후 모달 오픈
   const handleOrderClick = () => {
     if (items.length === 0) return;
+    if (loadingSettings || isOpen !== true) {
+      showToast('현재 주문이 불가합니다. 영업 상태를 확인해 주세요.', 'error');
+      return;
+    }
     setShowUserModal(true);
   };
+
+
 
   // 유저 확인 완료 → 실제 주문 API 호출
   const handleOrderWithUser = async (userId: number) => {
     setShowUserModal(false);
     setIsSubmitting(true);
     try {
+      // [경쟁 조건 방지] 모달 작성 중 영업 종료 가능성 → POST 직전 최신 설정 강제 재조회
+      const latestSettings = await queryClient.fetchQuery({
+        queryKey: QK.settings.public,
+        queryFn: fetchPublicSettings,
+        staleTime: 0,
+      });
+      if (!latestSettings || latestSettings.is_open !== true) {
+        showToast('영업이 종료되었습니다. 주문이 취소되었습니다.', 'error');
+        navigate('/', { replace: true });
+        return;
+      }
+
       // [중요] API 전송 시 sub_total은 반드시 할인 후 실제 결제 금액이어야 함.
       // 백엔드에서 sum(sub_total) == total_price 일치 여부를 검증하기 때문.
       // CartItem.sub_total은 원가(UI 표시용)이므로 여기서 텀블러 할인을 차감해 전송.
@@ -268,14 +287,19 @@ export const Cart = () => {
         showToast(response.message || '주문에 실패했습니다.', 'error');
       }
     } catch (error: any) {
+      const statusCode = error.response?.status;
       const detail = error.response?.data?.detail;
       const message = Array.isArray(detail)
         ? detail.map((d: any) => d.msg).join(', ')
         : detail || '주문 처리 중 오류가 발생했습니다.';
       console.error('Order submission failed:', error.response?.data ?? error);
+
+      // 403: 서버가 영업 종료 판정 → 설정 invalidate 후 홈으로
+      if (statusCode === 403) {
+        queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true } as any);
+        navigate('/', { replace: true });
+      }
       showToast(message, 'error');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

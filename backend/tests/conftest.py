@@ -39,7 +39,22 @@ def db_session():
         db.close()
 
 @pytest.fixture
-def client(db_session):
+def mock_admin(db_session):
+    import models
+    admin = models.Admin(
+        login_id="testadmin",
+        password_hash="test",
+        name="테스트어드민",
+        role="MASTER",
+        is_active=True
+    )
+    db_session.add(admin)
+    db_session.commit()
+    return admin
+
+@pytest.fixture
+def client(db_session, mock_admin):
+    from auth import get_current_admin, get_current_master
     # 의존성 오버라이드: 실제 DB 연결 대신 테스트 DB 사용
     def override_get_db():
         try:
@@ -48,5 +63,12 @@ def client(db_session):
             db_session.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_admin] = lambda: mock_admin
+    app.dependency_overrides[get_current_master] = lambda: mock_admin
     yield TestClient(app)
     del app.dependency_overrides[get_db]
+    if get_current_admin in app.dependency_overrides:
+        del app.dependency_overrides[get_current_admin]
+    if get_current_master in app.dependency_overrides:
+        del app.dependency_overrides[get_current_master]
+

@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { QK, QK_DOMAIN } from '../api/queryKeys';
+import { useQuery } from '@tanstack/react-query';
+import { QK } from '../api/queryKeys';
 import { apiClient } from '../api/client';
-import { getWsUrl } from '../utils/url';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 import { Toast } from '../components/ui/Toast';
 import { PwaInstallGuideModal } from '../components/ui/PwaInstallGuideModal';
 import type { ToastType } from '../components/ui/Toast';
@@ -13,7 +13,6 @@ import type { Menu, Category, StandardResponse, Announcement } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [activeCategoryId, setActiveCategoryId] = useState<number | null>(() => {
     const saved = sessionStorage.getItem('lastActiveCategoryId');
     return saved ? Number(saved) : null;
@@ -54,19 +53,8 @@ export const Home = () => {
     setToast({ message, type });
   };
 
-  // WebSocket 상태 관리
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const retryCountRef = useRef(0);
-
-  // [React Query] 데이터 조회
-  const { data: shopSettings } = useQuery({
-    queryKey: QK.settings.main,
-    queryFn: async () => {
-      const res = await apiClient.get<any, StandardResponse<any>>('/settings');
-      return res.success ? res.data : null;
-    }
-  });
+  // [React Query] 공개 설정 조회 (PublicRealtimeLayout의 WS가 SETTINGS_UPDATED 수신 시 재조회)
+  const { data: shopSettings, isLoading: loadingSettings, isError: settingsError } = usePublicSettings();
 
   const { data: categories = [], isLoading: loadingCategories } = useQuery({
     queryKey: QK.categories.all,
@@ -105,67 +93,14 @@ export const Home = () => {
     }
   }, [activeEvent]);
 
-  const loading = loadingCategories;
-
-  // WebSocket 연결 함수
-  const connectWebSocket = useCallback(() => {
-    if (wsRef.current) wsRef.current.close();
-
-    const wsUrl = getWsUrl();
-
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('✅ [WebSocket] 실시간 메뉴 업데이트 연결 성공');
-      retryCountRef.current = 0;
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        // 메뉴 또는 이벤트 관련 업데이트가 있으면 데이터를 무효화하여 리페치 유도
-        if (['MENU_UPDATED', 'MENU_CREATED', 'MENU_DELETED', 'CATEGORY_UPDATED'].includes(data.type)) {
-          console.log(`🔔 [WebSocket] ${data.type} 감지, 메뉴 무효화 중...`);
-          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.categories });
-        }
-        if (data.type === 'ANNOUNCEMENT_UPDATED') {
-          console.log(`🔔 [WebSocket] ${data.type} 감지, 공지사항 무효화 중...`);
-          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
-        }
-        if (data.type === 'SETTINGS_UPDATED') {
-          console.log(`🔔 [WebSocket] ${data.type} 감지, 설정 무효화 중...`);
-          queryClient.invalidateQueries({ queryKey: QK_DOMAIN.settings });
-        }
-      } catch (e) {
-        console.error('Failed to parse WS message', e);
-      }
-    };
-
-    ws.onclose = () => {
-      // 연결 끊기면 지수 백오프로 재연결 시도
-      const delay = Math.min(30000, 1000 * Math.pow(2, retryCountRef.current));
-      reconnectTimerRef.current = setTimeout(() => {
-        retryCountRef.current += 1;
-        connectWebSocket();
-      }, delay);
-    };
-
-    ws.onerror = () => ws.close();
-  }, [queryClient]);
+  const loading = loadingCategories || loadingSettings;
 
   useEffect(() => {
     // 진행 중인 주문들 확인
     const orders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
     setActiveOrders(orders);
+  }, []);
 
-    connectWebSocket();
-
-    return () => {
-      if (wsRef.current) wsRef.current.close();
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-    };
-  }, [connectWebSocket]);
 
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
@@ -175,6 +110,23 @@ export const Home = () => {
       sessionStorage.setItem('lastActiveCategoryId', String(activeCategoryId));
     }
   }, [activeCategoryId]);
+
+  // 영업 상태 오류 / 데이터 없음 → 영업 중으로 간주하지 않음
+  if (!loading && (settingsError || !shopSettings)) {
+    return (
+      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-gray-50 items-center justify-center px-6 text-center">
+        <Coffee size={48} className="text-gray-300 mb-4" />
+        <h2 className="text-xl font-black text-gray-700 mb-2">영업 상태를 확인할 수 없습니다</h2>
+        <p className="text-sm text-gray-400 mb-6">네트워크 상태를 확인하거나 잠시 후 다시 시도해 주세요.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-primary text-white px-6 py-3 rounded-2xl font-bold text-sm"
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  }
 
   // 영업 종료 화면 렌더링
   if (!loading && shopSettings && !shopSettings.is_open) {
