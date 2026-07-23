@@ -261,7 +261,7 @@ export const MenuDetail = () => {
                       key={opt.id}
                       onClick={() => setSelectedCup(opt)}
                       className={`relative flex-1 flex flex-col items-center justify-center py-3 rounded-lg transition-all ${isSelected
-                        ? 'bg-[#144730] text-white shadow-md'
+                        ? 'bg-[#23734A] text-white shadow-md'
                         : 'text-gray-600 hover:bg-gray-200'
                         }`}
                     >

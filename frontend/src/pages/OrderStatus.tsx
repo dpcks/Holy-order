@@ -403,7 +403,7 @@ export const OrderStatus = () => {
             </button>
           )}
         </div>
-        <h1 className="text-lg font-black tracking-[0.2em] text-[#144730]">STATUS</h1>
+        <h1 className="text-lg font-black tracking-[0.2em] text-[#23734A]">STATUS</h1>
         <div className="flex items-center gap-2">
           {activeOrders.length > 1 && currentIndex < activeOrders.length - 1 && (
             <button
@@ -445,7 +445,7 @@ export const OrderStatus = () => {
       <main className="flex-1 px-4 py-4 flex flex-col items-center gap-5">
         <div className="bg-white w-full rounded-3xl shadow-[0_10px_40px_rgba(0,0,0,0.06)] flex flex-col items-center justify-center py-8 border border-gray-50 transition-all duration-500">
           <p className="text-gray-500 font-medium tracking-[0.2em] mb-1 text-sm uppercase">Order Number</p>
-          <h2 className="text-[84px] font-black text-[#144730] leading-none tracking-tighter">
+          <h2 className="text-[84px] font-black text-[#23734A] leading-none tracking-tighter">
             {orderNumber}
           </h2>
         </div>
@@ -553,7 +553,7 @@ export const OrderStatus = () => {
         {/* 주문 진행 상태 카드화 */}
         <div className="w-full bg-white rounded-3xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-100 flex flex-col items-center gap-4 mt-2">
           <div className="text-center py-2">
-            <h3 className="text-[22px] font-black text-[#144730] mb-3 tracking-tight transition-all duration-500">
+            <h3 className="text-[22px] font-black text-[#23734A] mb-3 tracking-tight transition-all duration-500">
               {isCompleted ? '수령이 완료되었습니다! ☺️' :
                 isReady ? '메뉴가 준비되었습니다! 🎉' :
                   isPreparing ? '맛있게 만들고 있어요! ☕️' :

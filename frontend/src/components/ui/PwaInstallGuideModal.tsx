@@ -130,7 +130,7 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
           <button
             onClick={() => setActiveTab('android')}
             className={`flex-1 py-2.5 rounded-2xl font-black text-[13px] transition-all ${activeTab === 'android'
-              ? 'bg-[#1A0A0A] text-white shadow-md'
+              ? 'bg-[#23734A] text-white shadow-md'
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               }`}
           >
@@ -139,7 +139,7 @@ export const PwaInstallGuideModal = ({ onClose }: PwaInstallGuideModalProps) => 
           <button
             onClick={() => setActiveTab('ios')}
             className={`flex-1 py-2.5 rounded-2xl font-black text-[13px] transition-all ${activeTab === 'ios'
-              ? 'bg-[#1A0A0A] text-white shadow-md'
+              ? 'bg-[#23734A] text-white shadow-md'
               : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
               }`}
           >

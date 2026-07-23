@@ -451,19 +451,19 @@ export const AdminOrderHistory = () => {
           <div className="flex items-center gap-1 bg-gray-50 border border-gray-100 rounded-xl p-1">
             <button
               onClick={() => { setPaymentMethodFilter(''); setPage(1); }}
-              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === '' ? 'bg-[#23734A] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               전체
             </button>
             <button
               onClick={() => { setPaymentMethodFilter('BANK_TRANSFER'); setPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'BANK_TRANSFER' ? 'bg-[#23734A] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               <Building2 size={13} /> 계좌
             </button>
             <button
               onClick={() => { setPaymentMethodFilter('CASH'); setPage(1); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#144730] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all ${paymentMethodFilter === 'CASH' ? 'bg-[#23734A] text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
             >
               <Wallet size={13} /> 현금
             </button>
