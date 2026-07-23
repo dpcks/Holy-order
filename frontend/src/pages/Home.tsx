@@ -133,11 +133,11 @@ export const Home = () => {
     return (
       <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-black font-sans relative overflow-hidden">
         {/* 영업 종료 이미지 (배경) */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[#144730] flex items-center justify-center">
           <img
             src="/img/design/cafe_closed.svg"
             alt="Closed"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
 
