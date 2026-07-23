@@ -15,6 +15,13 @@ html, body {
   min-height: 100%;
   margin: 0;
   padding: 0;
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
 }
 
 body {

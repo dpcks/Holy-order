@@ -17,7 +17,7 @@ export default defineConfig({
       manifest: {
         name: '평택중앙교회 카페',
         short_name: '미션 카페',
-        description: '평택중앙교회 스마트 주문 시스템',
+        description: '평택중앙교회 카페 주문 시스템',
         theme_color: '#0D9488',
         background_color: '#F9FAFB',
         display: 'standalone',
