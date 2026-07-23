@@ -453,7 +453,7 @@ export const Cart = () => {
                   <button
                     onClick={() => setPaymentMethod('BANK_TRANSFER')}
                     className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'BANK_TRANSFER'
-                      ? 'bg-[#2D1616] text-white border-transparent shadow-md'
+                      ? 'bg-[#144730] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
@@ -465,7 +465,7 @@ export const Cart = () => {
                   <button
                     onClick={() => setPaymentMethod('CASH')}
                     className={`py-2 flex flex-col items-center justify-center gap-0.5 rounded-xl transition-all border ${paymentMethod === 'CASH'
-                      ? 'bg-[#2D1616] text-white border-transparent shadow-md'
+                      ? 'bg-[#144730] text-white border-transparent shadow-md'
                       : 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50'
                       }`}
                   >
