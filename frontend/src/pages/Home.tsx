@@ -143,6 +143,17 @@ export const Home = () => {
       }
     }
   };
+
+  // 선택된 카테고리가 화면 중앙에 오도록 스크롤 포커스 이동
+  useEffect(() => {
+    if (activeCategoryId !== null) {
+      const el = document.getElementById(`category-${activeCategoryId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    }
+  }, [activeCategoryId]);
+
   const activeCategory = categories.find((c) => c.id === activeCategoryId);
 
   // 선택된 카테고리 저장
@@ -291,6 +302,7 @@ export const Home = () => {
             {categories.map((cat) => (
               <button
                 key={cat.id}
+                id={`category-${cat.id}`}
                 onClick={() => setActiveCategoryId(cat.id)}
                 className={`pb-3 font-semibold text-base whitespace-nowrap transition-colors relative ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-400'
                   }`}
