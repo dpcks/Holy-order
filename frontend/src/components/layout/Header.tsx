@@ -67,7 +67,7 @@ export const Header = ({
               <img
                 src="/img/design/header_logo.svg"
                 alt="Mission-Cafe 로고"
-                className="h-[55px] w-auto object-contain cursor-pointer scale-[1.25]"
+                className="h-[65px] w-auto object-contain cursor-pointer scale-[1.55]"
                 onClick={() => navigate('/')}
               />
             )}
