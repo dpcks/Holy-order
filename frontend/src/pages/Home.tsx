@@ -188,7 +188,7 @@ export const Home = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-6 shadow-2xl relative">
+    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-32 shadow-2xl relative">
       <Header
         showSearch
         showCart
