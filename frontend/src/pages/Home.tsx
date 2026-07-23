@@ -135,7 +135,7 @@ export const Home = () => {
         {/* 영업 종료 이미지 (배경) */}
         <div className="absolute inset-0">
           <img
-            src="/img/closed.jpg"
+            src="/img/design/cafe_closed.svg"
             alt="Closed"
             className="w-full h-full object-cover"
           />
