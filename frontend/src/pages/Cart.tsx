@@ -329,7 +329,7 @@ export const Cart = () => {
         />
       )}
 
-      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-[#F9FAFB] pb-48 shadow-2xl relative">
+      <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white shadow-2xl relative">
         <Header
           title={
             <div className="flex flex-col items-center">
@@ -626,8 +626,11 @@ export const Cart = () => {
 
         </main>
 
-        {/* 하단 주문 버튼 */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 w-full max-w-[500px] mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        {/* 하단 주문 바 가림 방지 및 모바일 Safe Area 여백 확보용 스페이서 */}
+        <div className="h-[210px] pb-[env(safe-area-inset-bottom)] w-full shrink-0" />
+
+        {/* 하단 주문 버튼 (모바일 Safe Area 반영 및 어두운 그림자 제거) */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-[calc(16px+env(safe-area-inset-bottom))] w-full max-w-[500px] mx-auto z-50">
           <Button
             variant="primary"
             fullWidth
