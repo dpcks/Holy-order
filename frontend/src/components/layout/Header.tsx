@@ -87,7 +87,7 @@ export const Header = ({
               >
                 <ShoppingCart size={22} />
                 {totalCount > 0 && (
-                  <span className="absolute top-1 right-0 bg-primary text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
+                  <span className="absolute top-1 right-0 bg-orange-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
                     {totalCount}
                   </span>
                 )}
