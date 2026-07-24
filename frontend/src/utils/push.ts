@@ -65,9 +65,14 @@ export const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
 
 // ── VAPID 공개키 조회 ──
 
-/** 서버에서 VAPID 공개키를 조회한다 */
+/** 서버에서 VAPID 공개키를 조회한다 (캐싱 적용) */
 export const getVapidPublicKey = async (): Promise<string | null> => {
   try {
+    const cachedKey = localStorage.getItem('vapidPublicKey');
+    if (cachedKey) {
+      return cachedKey;
+    }
+
     const res = await apiClient.get<
       { publicKey: string },
       StandardResponse<{ publicKey: string }>
@@ -75,6 +80,7 @@ export const getVapidPublicKey = async (): Promise<string | null> => {
       headers: { 'X-Skip-Error-Toast': 'true' },
     });
     if (res.success && res.data?.publicKey) {
+      localStorage.setItem('vapidPublicKey', res.data.publicKey);
       return res.data.publicKey;
     }
     console.error('[Push] VAPID 키 조회 실패:', res.message);

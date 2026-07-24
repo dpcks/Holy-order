@@ -211,6 +211,16 @@ export const Cart = () => {
       showToast('현재 주문이 불가합니다. 영업 상태를 확인해 주세요.', 'error');
       return;
     }
+
+    // [중요] iOS Safari User Gesture 만료 방지
+    // 주문 모달을 띄우는 이 클릭 이벤트는 100% User Gesture입니다.
+    // 여기서 미리 구독을 활성화해두면, 나중에 주문 완료 시점에는 기존 구독을 반환하므로 에러가 나지 않습니다.
+    if ('Notification' in window && Notification.permission === 'granted') {
+      import('../utils/push').then(({ getOrCreatePushSubscription }) => {
+        getOrCreatePushSubscription().catch(() => {});
+      });
+    }
+
     setShowUserModal(true);
   };
 
