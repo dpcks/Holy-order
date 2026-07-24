@@ -33,16 +33,24 @@ export const Home = () => {
 
   // 푸시 알림 구독 상태 관리 (배너 노출 여부 결정)
   const [hasActualSubscription, setHasActualSubscription] = useState<boolean>(true); // 기본값 true로 두어 깜빡임 방지
+  const [swRegistration, setSwRegistration] = useState<ServiceWorkerRegistration | null>(null);
 
-  // 권한은 granted인데 실제 구독 객체가 없는지(예: 버그로 끊긴 상태) 검사
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'granted') {
+    import('../utils/push').then(({ getVapidPublicKey }) => {
+      getVapidPublicKey().catch(() => {});
+    });
+
+    if ('Notification' in window) {
       navigator.serviceWorker.ready.then((reg) => {
-        reg.pushManager.getSubscription().then((sub) => {
-          setHasActualSubscription(!!sub);
-        });
+        setSwRegistration(reg); // 터치 시 바로 사용할 수 있도록 미리 저장
+        if (Notification.permission === 'granted') {
+          reg.pushManager.getSubscription().then((sub) => {
+            setHasActualSubscription(!!sub);
+          });
+        }
       });
-    } else {
+    }
+    if ('Notification' in window && Notification.permission !== 'granted') {
       setHasActualSubscription(false);
     }
   }, []);
@@ -65,7 +73,8 @@ export const Home = () => {
         return;
       }
 
-      const result = await getOrCreatePushSubscription();
+      // SW 객체를 미리 받아두었으면 전달하여 User Gesture 소진 방지
+      const result = await getOrCreatePushSubscription(swRegistration || undefined);
 
       switch (result.status) {
         case 'subscribed':

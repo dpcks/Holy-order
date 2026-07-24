@@ -78,7 +78,9 @@ export const getVapidPublicKey = async (): Promise<string | null> => {
  * 왜 VAPID 키 비교: 서버의 VAPID 키가 변경된 경우 기존 구독이 무효화되므로
  * applicationServerKey를 비교하여 불일치 시 재구독한다.
  */
-export const getOrCreatePushSubscription = async (): Promise<PushSetupResult> => {
+export const getOrCreatePushSubscription = async (
+  preLoadedRegistration?: ServiceWorkerRegistration
+): Promise<PushSetupResult> => {
   // 1. 지원 여부 확인
   if (!isPushSupported()) {
     return { status: 'unsupported' };
@@ -105,8 +107,8 @@ export const getOrCreatePushSubscription = async (): Promise<PushSetupResult> =>
       return { status: 'failed', error: new Error('VAPID 키 조회 실패') };
     }
 
-    // 5. Service Worker ready 대기
-    const registration = await navigator.serviceWorker.ready;
+    // 5. Service Worker registration 획득 (파라미터 우선)
+    const registration = preLoadedRegistration || await navigator.serviceWorker.ready;
 
     // 6. 기존 구독 확인
     let subscription = await registration.pushManager.getSubscription();
