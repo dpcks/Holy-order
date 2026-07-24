@@ -21,54 +21,6 @@ export const OrderStatus = () => {
   // PWA 알림 권한 획득 유도 모달 상태 추가
 
 
-  // Base64 VAPID 키 변환 헬퍼
-  const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding)
-      .replace(/-/g, '+')
-      .replace(/_/g, '/');
-
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  };
-
-  // 서비스 워커 구독 및 백엔드 전송
-  const registerPushSubscription = async (orderId: number) => {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    try {
-      const res = await apiClient.get<{ publicKey: string }, StandardResponse<{ publicKey: string }>>('/orders/vapid-key');
-      if (!res.success || !res.data?.publicKey) {
-        console.error('VAPID 키 조회 실패');
-        return;
-      }
-
-      const vapidPublicKey = res.data.publicKey;
-      const registration = await navigator.serviceWorker.ready;
-
-      let subscription = await registration.pushManager.getSubscription();
-
-      if (!subscription) {
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-        });
-      }
-
-      await apiClient.post(`/orders/${orderId}/push-subscribe`, {
-        subscription: subscription
-      });
-      console.log('✅ [Push] 푸시 알림 등록 완료');
-    } catch (e) {
-      console.error('❌ [Push] 푸시 구독 등록 실패:', e);
-    }
-  };
-
-
 
   // iOS 알림 관련 상태
   const [isReadyFlash, setIsReadyFlash] = useState(false);
@@ -266,22 +218,31 @@ export const OrderStatus = () => {
     };
   }, [connectWebSocket, queryClient]);
 
-  // 주문 정보를 기반으로 권한 상태에 따른 자동 푸시 알림 흐름 제어
+  // 주문 정보를 기반으로 권한 상태에 따른 자동 푸시 알림 흐름 제어 (fallback 등록)
+  // 왜 유지: Cart에서 등록이 실패했거나 토스 딥링크로 이동한 경우에도
+  // OrderStatus에 복귀하면 구독을 재시도할 수 있다.
+  const pushRegisteredRef = useRef(false);
   useEffect(() => {
     if (!id || !order) return;
+    if (pushRegisteredRef.current) return;
     // 준비 완료/수령 완료/취소된 주문은 등록하지 않음
     if (order.status === 'READY' || order.status === 'COMPLETED' || order.status === 'CANCELLED') return;
 
-    const isPushSupported = 'serviceWorker' in navigator && 'PushManager' in window;
-    if (!isPushSupported) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-    if (Notification.permission === 'granted') {
-      // 이미 권한이 있으면 완전 자동으로 백그라운드 등록
-      registerPushSubscription(Number(id));
-    }
+    // 이미 권한이 있으면 자동으로 백그라운드 등록 (공용 유틸리티 사용)
+    pushRegisteredRef.current = true;
+    import('../utils/push').then(({ registerOrderPushSubscription }) => {
+      registerOrderPushSubscription(Number(id)).catch(() => {
+        // 실패해도 주문 추적에는 영향 없음
+        pushRegisteredRef.current = false;
+      });
+    });
   }, [id, order]);
 
-  // 주문 상태 변경 감지 및 알림 발송 (진동/시각적 피드백/푸시 알림)
+  // 주문 상태 변경 감지 및 인앱 피드백 (진동/시각적 효과)
+  // 왜 new Notification() 제거: 서버 Web Push + Service Worker가 시스템 알림의 단일 책임을 가진다.
+  // 포그라운드에서 new Notification()을 호출하면 Service Worker 알림과 중복된다.
   useEffect(() => {
     if (!order) return;
 
@@ -293,27 +254,12 @@ export const OrderStatus = () => {
       setIsReadyFlash(true);
       setTimeout(() => setIsReadyFlash(false), 3000);
 
-      // 1. 진동 (지원 브라우저 및 iOS 제외)
+      // 진동 (지원 브라우저 및 iOS 제외)
       if ('vibrate' in navigator && !isIos()) {
         try {
           navigator.vibrate([200, 100, 200, 100, 500]);
         } catch (e) {
           console.warn('진동 재생 불가', e);
-        }
-      }
-
-      // 2. 브라우저 알림 (권한이 있는 경우만 안전하게 호출)
-      if ('Notification' in window) {
-        try {
-          if (Notification.permission === 'granted') {
-            new Notification('평택중앙교회 카페', {
-              body: `#${order.order_number}번 주문하신 메뉴가 준비되었습니다! 픽업대로 오세요.`,
-              icon: '/logo192.png',
-              tag: `order-${order.id}`
-            });
-          }
-        } catch (err) {
-          console.error('Notification error:', err);
         }
       }
     }

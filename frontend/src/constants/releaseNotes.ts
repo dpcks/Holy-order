@@ -17,6 +17,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.8',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 백그라운드 푸시 알림 정상화 및 안정성 강화',
+    updates: [
+      { text: '앱이 백그라운드에 있거나 화면이 잠긴 상태에서도 주문 준비 완료 알림이 안정적으로 도착하도록 개선', isNew: true },
+      { text: '알림 전송 실패 시 제한된 재시도 및 지능형 구독 관리 로직(만료 구독 자동 삭제) 추가', isNew: true },
+      { text: '주문 생성 직후 푸시 알림 구독을 자동으로 연결하여 알림 누락 최소화', isNew: true },
+      { text: '기기 네트워크가 잠시 끊겨도 최대 1시간 내 복구 시 알림을 받을 수 있도록 오프라인 대응 강화(TTL 적용)', isNew: true },
+      { text: '불필요한 인앱 중복 알림 제거 및 푸시 관련 백그라운드 네트워크 에러 시 전역 토스트 알림 표시 방지' }
+    ]
+  },
+  {
     version: 'v1.4.7',
     date: new Date().toISOString().split('T')[0],
     title: '사용자 경험(UX) 개선 및 네이티브 앱 환경 최적화',

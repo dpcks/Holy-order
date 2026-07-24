@@ -38,15 +38,47 @@ export const Home = () => {
   const handleAllowPush = async () => {
     if (!('Notification' in window)) return;
     try {
+      // 1. 권한 요청
       const permission = await Notification.requestPermission();
       setPushPermission(permission);
-      if (permission === 'granted') {
-        showToast('메뉴 완료 푸시 알림이 활성화되었습니다! 🔔', 'success');
-      } else {
+
+      if (permission !== 'granted') {
         showToast('알림이 차단되어 있습니다. 기기 설정에서 알림을 켜주세요!', 'error');
+        return;
+      }
+
+      // 2. 실제 PushSubscription 생성까지 수행
+      const { getOrCreatePushSubscription, isIosDevice, isStandalonePwa } = await import('../utils/push');
+
+      // iOS Safari 탭에서는 홈 화면 설치 안내
+      if (isIosDevice() && !isStandalonePwa()) {
+        setShowInstallGuide(true);
+        showToast('앱을 홈 화면에 설치하면 푸시 알림을 받을 수 있어요!', 'info');
+        return;
+      }
+
+      const result = await getOrCreatePushSubscription();
+
+      switch (result.status) {
+        case 'subscribed':
+          showToast('메뉴 완료 푸시 알림이 활성화되었습니다! 🔔', 'success');
+          break;
+        case 'unsupported':
+          showToast('이 브라우저에서는 푸시 알림을 지원하지 않습니다.', 'error');
+          break;
+        case 'not-installed-ios-pwa':
+          setShowInstallGuide(true);
+          showToast('앱을 홈 화면에 설치하면 푸시 알림을 받을 수 있어요!', 'info');
+          break;
+        case 'failed':
+          showToast('알림 설정 중 오류가 발생했습니다. 다시 시도해 주세요.', 'error');
+          break;
+        default:
+          showToast('알림 설정에 실패했습니다.', 'error');
       }
     } catch (e) {
       console.error('Notification 요청 에러:', e);
+      showToast('알림 설정 중 오류가 발생했습니다.', 'error');
     }
   };
 

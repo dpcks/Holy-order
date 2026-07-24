@@ -124,7 +124,13 @@ def get_orders_history(
 from websocket import manager
 
 @router.patch("/orders/{order_id}/status")
-async def update_order_status(order_id: int, status_update: schemas.OrderStatusUpdate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
+async def update_order_status(
+    order_id: int,
+    status_update: schemas.OrderStatusUpdate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    admin: models.Admin = Depends(auth.get_current_admin),
+):
     """주문 상태 변경 (입금승인, 준비완료, 수령완료, 취소)"""
     order = db.query(models.Order).filter(models.Order.id == order_id).first()
     if not order:
@@ -166,49 +172,16 @@ async def update_order_status(order_id: int, status_update: schemas.OrderStatusU
     order.status = next_status.value
     db.commit()
     
-    # 제조완료(READY) 상태로 전이될 때 해당 주문에 등록된 브라우저로 웹 푸시 알림 발송
+    # 제조완료(READY) 상태로 전이될 때 Background Task로 웹 푸시 알림 발송
+    # 왜 BackgroundTask: 푸시 실패가 주문 상태 DB commit을 롤백하면 안 되며,
+    # 동기 네트워크 호출인 webpush()가 이벤트 루프를 차단하지 않게 하기 위함
     if next_status == schemas.OrderStatusEnum.READY:
-        from pywebpush import webpush, WebPushException
-        import json
-        from config import settings
-        
-        subscriptions = db.query(models.PushSubscription).filter(
-            models.PushSubscription.order_id == order_id
-        ).all()
-        
-        if subscriptions:
-            for sub in subscriptions:
-                try:
-                    webpush(
-                        subscription_info={
-                            "endpoint": sub.endpoint,
-                            "keys": {
-                                "p256dh": sub.p256dh,
-                                "auth": sub.auth
-                            }
-                        },
-                        data=json.dumps({
-                            "title": "평택중앙교회 카페",
-                            "body": "제조가 완료 되었습니다. 메뉴를 픽업해주세요",
-                            "icon": "/pwa-192.png",
-                            "badge": "/pwa-192.png",
-                            "url": f"/order/status/{order.id}"
-                        }),
-                        vapid_private_key=settings.VAPID_PRIVATE_KEY,
-                        vapid_claims={"sub": f"mailto:{settings.VAPID_CLAIM_EMAIL}"}
-                    )
-                except WebPushException as e:
-                    # 410 Gone 등 구독 만료 또는 유효하지 않은 구독 삭제
-                    if e.response is not None and e.response.status_code in [404, 410]:
-                        db.delete(sub)
-                except Exception as e:
-                    print(f"❌ [WebPush Error] {e}")
-            
-            # 발송 완료 후 해당 주문의 일회성 구독 정보 삭제 (DB 최적화)
-            db.query(models.PushSubscription).filter(
-                models.PushSubscription.order_id == order_id
-            ).delete()
-            db.commit()
+        from services.push_service import send_order_ready_pushes
+        background_tasks.add_task(
+            send_order_ready_pushes,
+            order.id,
+            order.order_number,
+        )
     
     # 실시간 알림 전송 (JSON 구조화)
     await manager.broadcast({
