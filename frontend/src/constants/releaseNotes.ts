@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.10',
+    date: new Date().toISOString().split('T')[0],
+    title: '알림 배너 노출 조건 최적화 및 안드로이드 알림 뱃지 아이콘 개선',
+    updates: [
+      { text: '일반 웹(QR 접속) 환경에서는 상단 "알림 켜기" 배너를 숨기고, PWA 앱 실행 시에만 노출되도록 조건 최적화', isNew: true },
+      { text: '안드로이드 푸시 알림 상단바 뱃지(Badge) 아이콘을 단색 실루엣 이미지로 교체하여 하얗게 채워지던 현상 완벽 수정', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.9',
     date: new Date().toISOString().split('T')[0],
     title: '앱 설치 안내(PWA) 스크롤 가이드 및 통이미지 개선',
