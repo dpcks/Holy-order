@@ -13,9 +13,21 @@
 """
 
 import argparse
+import inspect
 import json
 import sys
 from urllib.parse import urlparse
+
+from cryptography.hazmat.primitives.asymmetric import ec
+
+# cryptography 버전에 따른 pywebpush EllipticCurve 타입 호환성 패치
+_orig_generate_private_key = ec.generate_private_key
+def _patched_generate_private_key(curve, backend=None):
+    if inspect.isclass(curve):
+        curve = curve()
+    return _orig_generate_private_key(curve, backend)
+
+ec.generate_private_key = _patched_generate_private_key
 
 from config import settings
 from database import SessionLocal

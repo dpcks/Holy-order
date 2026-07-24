@@ -11,11 +11,25 @@ backend/services/push_service.py
 └─ pywebpush → Apple/Google Push Service
 """
 
+import inspect
 import json
 import logging
 import time
 from typing import Optional, Tuple
 from urllib.parse import urlparse
+
+from cryptography.hazmat.primitives.asymmetric import ec
+
+# cryptography 버전에 따른 pywebpush EllipticCurve 타입 호환성 패치
+# 왜: cryptography >= 41.0.0에서는 generate_private_key에 ec.SECP256R1() 인스턴스를 넘겨야 하나,
+# pywebpush 내부에서 ec.SECP256R1 클래스 자체를 넘겨 TypeError가 발생하는 라이브러리 결함을 원천 방지한다.
+_orig_generate_private_key = ec.generate_private_key
+def _patched_generate_private_key(curve, backend=None):
+    if inspect.isclass(curve):
+        curve = curve()
+    return _orig_generate_private_key(curve, backend)
+
+ec.generate_private_key = _patched_generate_private_key
 
 from pywebpush import webpush, WebPushException
 
