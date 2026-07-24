@@ -183,9 +183,9 @@ export const MenuDetail = () => {
           </div>
         )}
 
-        {/* 상단 메뉴 이미지 */}
-        <div className="px-4 py-4">
-          <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-lg bg-[#0F0A0A]">
+        {/* 상단 메뉴 이미지 및 타이틀 */}
+        <div className="px-4 pt-4 pb-2 flex flex-col gap-3">
+          <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-sm bg-gray-50 border border-gray-100">
             {menu.image_url ? (
               <img
                 src={menu.image_url}
@@ -194,27 +194,25 @@ export const MenuDetail = () => {
                 onError={(e) => {
                   e.currentTarget.onerror = null;
                   e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80";
-                  e.currentTarget.classList.add('opacity-70');
                 }}
               />
             ) : (
               <img
                 src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80"
                 alt="coffee"
-                className="w-full h-full object-cover opacity-70"
+                className="w-full h-full object-cover"
               />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-            <div className="absolute bottom-6 left-6 pr-6">
-              <h2 className="text-white text-3xl font-bold mb-1">
-                {menu.name}
-              </h2>
-              {menu.description && (
-                <p className="text-white/70 text-[13px] font-medium leading-relaxed mt-2 line-clamp-2">
-                  {menu.description}
-                </p>
-              )}
-            </div>
+          </div>
+          <div className="px-1 pt-1">
+            <h2 className="text-gray-900 text-2xl font-black tracking-tight">
+              {menu.name}
+            </h2>
+            {menu.description && (
+              <p className="text-gray-500 text-[13px] font-medium leading-relaxed mt-1">
+                {menu.description}
+              </p>
+            )}
           </div>
         </div>
 
