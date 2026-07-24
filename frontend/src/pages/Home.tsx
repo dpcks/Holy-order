@@ -321,8 +321,8 @@ export const Home = () => {
       {!searchQuery ? (
         <>
 
-          {/* 알림 권한 상태에 따른 상단 표시 */}
-          {pushPermission !== 'granted' && 'Notification' in window && (
+          {/* 알림 권한 상태에 따른 상단 표시 (PWA 앱 환경에서만 노출) */}
+          {isStandalone && pushPermission !== 'granted' && 'Notification' in window && (
             <button
               onClick={handleAllowPush}
               className="w-full block active:opacity-80 transition-opacity shadow-sm border-b border-black/5 relative z-10"
