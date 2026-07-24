@@ -27,10 +27,15 @@ self.addEventListener('push', (event) => {
   try {
     const payload = event.data.json();
     const title = payload.title || '평택중앙교회 카페';
+    
+    // iOS Safari 호환성: 상대 경로 대신 self.location.origin 기반 절대 URL 생성
+    const iconUrl = payload.icon ? new URL(payload.icon, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
+    const badgeUrl = payload.badge ? new URL(payload.badge, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
+
     const options: NotificationOptions = {
       body: payload.body || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
-      icon: payload.icon || '/pwa-192.png',
-      badge: payload.badge || '/pwa-192.png',
+      icon: iconUrl,
+      badge: badgeUrl,
       tag: payload.tag,
       data: {
         url: payload.url || '/',
@@ -43,12 +48,13 @@ self.addEventListener('push', (event) => {
     );
   } catch {
     // 문자열 데이터 폴백 처리
-    const text = event.data.text();
+    const text = event.data ? event.data.text() : '';
+    const fallbackIcon = new URL('/pwa-192.png', self.location.origin).href;
     event.waitUntil(
       self.registration.showNotification('평택중앙교회 카페', {
         body: text || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
-        icon: '/pwa-192.png',
-        badge: '/pwa-192.png',
+        icon: fallbackIcon,
+        badge: fallbackIcon,
       })
     );
   }

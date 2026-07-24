@@ -514,6 +514,18 @@ export const OrderStatus = () => {
                       ((order?.payment_method === 'FREE' || totalAmount === 0) ? '곧 맛있게 만들어 드릴게요' : order?.payment_method === 'CASH' ? '결제 후 제조가 시작됩니다' : order?.payment_method === 'TOSS' ? '송금 확인 후 제조 시작' : '입금 확인 시 제조 시작')}
               </span>
             </div>
+
+            {isCompleted && (
+              <div className="mt-4 flex justify-center w-full">
+                <button
+                  onClick={handleGoHome}
+                  className="flex items-center justify-center gap-2 w-full max-w-[280px] bg-[#1A0A0A] text-white font-black text-[15px] py-3.5 rounded-2xl shadow-lg hover:bg-gray-800 active:scale-95 transition-all"
+                >
+                  <Home size={18} />
+                  메뉴판으로 돌아가기
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="w-full max-w-[340px] flex justify-between items-center relative px-2 py-6">
