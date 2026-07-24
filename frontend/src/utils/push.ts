@@ -126,20 +126,9 @@ export const getOrCreatePushSubscription = async (): Promise<PushSetupResult> =>
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      // 기존 구독의 applicationServerKey와 현재 VAPID 키 비교
-      const existingKey = subscription.options?.applicationServerKey;
-      if (existingKey) {
-        const existingKeyArray = new Uint8Array(existingKey);
-        const currentKeyArray = urlBase64ToUint8Array(vapidPublicKey);
-
-        // 키 불일치 시 기존 구독 해제 후 재구독
-        if (existingKeyArray.length !== currentKeyArray.length ||
-          !existingKeyArray.every((val, i) => val === currentKeyArray[i])) {
-          console.warn('[Push] VAPID 키 불일치 감지. 재구독합니다.');
-          await subscription.unsubscribe();
-          subscription = null;
-        }
-      }
+      // iOS Safari에서는 기존 구독의 키 비교 후 unsubscribe() 후 subscribe()를 호출하면
+      // 사용자 제스처(User Gesture)가 만료되어 NotAllowedError가 발생할 수 있습니다.
+      // 프로젝트 정책상 VAPID 키 교체가 금지되어 있으므로, 키 비교 및 재구독 로직을 제거하고 기존 구독을 안전하게 재사용합니다.
     }
 
     // 7. 구독이 없으면 새로 생성
