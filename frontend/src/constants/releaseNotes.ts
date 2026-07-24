@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.12',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 모바일 앱 화면 임의 확대(Pinch-to-zoom) 차단 및 네이티브 앱 UX 강화',
+    updates: [
+      { text: '두 손가락 핀치 줌(Pinch-to-zoom) 및 더블 탭을 통한 임의 화면 확대 방지 (네이티브 모바일 앱 경험 구현)', isNew: true },
+      { text: 'iOS Safari 및 안드로이드 전 기기 터치 제스처 고정으로 흔들림 없는 단단한 사용자 인터페이스 제공', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.11',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 앱 아이콘 알림 뱃지(숫자) 및 과거 알림 자동 리셋 구현',

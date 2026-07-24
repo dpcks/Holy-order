@@ -9,6 +9,17 @@ import { registerSW } from 'virtual:pwa-register'
 // Service Worker 수동 등록 (PWA 훅업)
 registerSW({ immediate: true })
 
+// iOS Safari 두 손가락 핀치 줌 제스처 차단 (네이티브 앱 UX 구현)
+document.addEventListener('gesturestart', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('gesturechange', (e) => {
+  e.preventDefault();
+});
+document.addEventListener('gestureend', (e) => {
+  e.preventDefault();
+});
+
 // 5분 staleTime을 기본값으로 설정. 각 페이지에서 필요에 따라 개별 오버라이드 가능
 const queryClient = new QueryClient({
   defaultOptions: {
