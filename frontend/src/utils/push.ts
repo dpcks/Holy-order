@@ -122,33 +122,26 @@ export const getOrCreatePushSubscription = async (): Promise<PushSetupResult> =>
     // 5. Service Worker ready 대기
     const registration = await navigator.serviceWorker.ready;
 
-    // 6. 기존 구독 확인
+    // 6. 기존 구독 무효화 및 신규 발급 (토큰 꼬임 원천 방지)
+    // 왜 기존 구독 해제: 앱 재설치나 OS 알림 권한 재설정 시 브라우저에 남은 옛날 만료 토큰이
+    // 그대로 재사용되는 현상을 방지하기 위해, 항상 기존 구독을 해제하고 완전히 새로운 토큰을 발급받는다.
     let subscription = await registration.pushManager.getSubscription();
 
     if (subscription) {
-      // 기존 구독의 applicationServerKey와 현재 VAPID 키 비교
-      const existingKey = subscription.options?.applicationServerKey;
-      if (existingKey) {
-        const existingKeyArray = new Uint8Array(existingKey);
-        const currentKeyArray = urlBase64ToUint8Array(vapidPublicKey);
-
-        // 키 불일치 시 기존 구독 해제 후 재구독
-        if (existingKeyArray.length !== currentKeyArray.length ||
-          !existingKeyArray.every((val, i) => val === currentKeyArray[i])) {
-          console.warn('[Push] VAPID 키 불일치 감지. 재구독합니다.');
-          await subscription.unsubscribe();
-          subscription = null;
-        }
+      try {
+        console.log('[Push] 기존 푸시 구독 해제 및 신규 토큰 발급 시도');
+        await subscription.unsubscribe();
+      } catch (err) {
+        console.warn('[Push] 기존 구독 해제 중 예외 발생 (무시 후 신규 구독 진행):', err);
       }
+      subscription = null;
     }
 
-    // 7. 구독이 없으면 새로 생성
-    if (!subscription) {
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
-      });
-    }
+    // 7. 항상 깨끗한 신규 PushSubscription 생성
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(vapidPublicKey).buffer as ArrayBuffer,
+    });
 
     return { status: 'subscribed', subscription };
   } catch (e) {
