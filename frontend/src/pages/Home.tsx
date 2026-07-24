@@ -31,17 +31,27 @@ export const Home = () => {
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
-  // 푸시 알림 권한 상태 관리
-  const [pushPermission, setPushPermission] = useState<NotificationPermission>(
-    'Notification' in window ? Notification.permission : 'default'
-  );
+  // 푸시 알림 구독 상태 관리 (배너 노출 여부 결정)
+  const [hasActualSubscription, setHasActualSubscription] = useState<boolean>(true); // 기본값 true로 두어 깜빡임 방지
+
+  // 권한은 granted인데 실제 구독 객체가 없는지(예: 버그로 끊긴 상태) 검사
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.pushManager.getSubscription().then((sub) => {
+          setHasActualSubscription(!!sub);
+        });
+      });
+    } else {
+      setHasActualSubscription(false);
+    }
+  }, []);
 
   const handleAllowPush = async () => {
     if (!('Notification' in window)) return;
     try {
       // 1. 권한 요청
       const permission = await Notification.requestPermission();
-      setPushPermission(permission);
 
       if (permission !== 'granted') {
         showToast('알림이 차단되어 있습니다. 기기 설정에서 알림을 켜주세요!', 'error');
@@ -320,7 +330,7 @@ export const Home = () => {
         <>
 
           {/* 알림 권한 상태에 따른 상단 표시 */}
-          {pushPermission !== 'granted' && 'Notification' in window && (
+          {(!hasActualSubscription) && 'Notification' in window && (
             <button
               onClick={handleAllowPush}
               className="w-full block active:opacity-80 transition-opacity shadow-sm border-b border-black/5 relative z-10"

@@ -128,8 +128,6 @@ export const getOrCreatePushSubscription = async (): Promise<PushSetupResult> =>
     return { status: 'subscribed', subscription };
   } catch (e) {
     console.error('[Push] 구독 생성 실패:', e);
-    // [디버깅용 임시 코드] 에러 발생 시 사용자 기기 화면에 에러 내용을 띄움
-    alert(`푸시 에러: ${String(e)}`);
     return { status: 'failed', error: e };
   }
 };
@@ -164,8 +162,6 @@ export const registerOrderPushSubscription = async (
     return true;
   } catch (e) {
     console.error(`❌ [Push] 주문 #${orderId} 푸시 구독 등록 실패:`, e);
-    // [디버깅용 임시 코드]
-    alert(`서버 등록 에러: ${String(e)}`);
     return false;
   }
 };

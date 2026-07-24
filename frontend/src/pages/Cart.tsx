@@ -12,7 +12,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { QK } from '../api/queryKeys';
 import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
 import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
-import { getOrCreatePushSubscription, registerOrderPushSubscription } from '../utils/push';
+import { registerOrderPushSubscription } from '../utils/push';
 
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
@@ -211,13 +211,6 @@ export const Cart = () => {
     if (loadingSettings || isOpen !== true) {
       showToast('현재 주문이 불가합니다. 영업 상태를 확인해 주세요.', 'error');
       return;
-    }
-
-    // [중요] iOS Safari User Gesture 만료 방지
-    // 주문 모달을 띄우는 이 클릭 이벤트는 100% User Gesture입니다.
-    // 여기서 미리 구독을 활성화해두면, 나중에 주문 완료 시점에는 기존 구독을 반환하므로 에러가 나지 않습니다.
-    if ('Notification' in window && Notification.permission === 'granted') {
-      getOrCreatePushSubscription().catch(() => {});
     }
 
     setShowUserModal(true);
