@@ -12,7 +12,6 @@
  */
 
 import { apiClient } from '../api/client';
-import type { StandardResponse } from '../types';
 
 // ── 결과 타입 정의 ──
 

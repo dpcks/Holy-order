@@ -8,6 +8,7 @@ import { getWsUrl } from '../utils/url';
 import toast from 'react-hot-toast';
 import { TossLogo } from '../components/ui/TossLogo';
 import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
+import { registerOrderPushSubscription } from '../utils/push';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
@@ -232,11 +233,9 @@ export const OrderStatus = () => {
 
     // 이미 권한이 있으면 자동으로 백그라운드 등록 (공용 유틸리티 사용)
     pushRegisteredRef.current = true;
-    import('../utils/push').then(({ registerOrderPushSubscription }) => {
-      registerOrderPushSubscription(Number(id)).catch(() => {
-        // 실패해도 주문 추적에는 영향 없음
-        pushRegisteredRef.current = false;
-      });
+    registerOrderPushSubscription(Number(id)).catch(() => {
+      // 실패해도 주문 추적에는 영향 없음
+      pushRegisteredRef.current = false;
     });
   }, [id, order]);
 
