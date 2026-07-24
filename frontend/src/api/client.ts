@@ -88,7 +88,9 @@ apiClient.interceptors.response.use(
     }
 
     // 사용자 피드백 (Toast 시스템 적용, 중복 방지를 위해 id 부여)
-    if (typeof window !== 'undefined') {
+    // x-skip-error-toast 헤더가 있으면 전역 에러 토스트를 띄우지 않음 (백그라운드 푸시 등 조용한 실패 처리용)
+    const skipToast = error.config?.headers?.['x-skip-error-toast'] === 'true' || error.config?.headers?.['X-Skip-Error-Toast'] === 'true';
+    if (typeof window !== 'undefined' && !skipToast) {
       toast.error(message, { id: message });
     }
 

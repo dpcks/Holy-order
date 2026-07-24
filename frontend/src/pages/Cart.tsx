@@ -273,6 +273,23 @@ export const Cart = () => {
         const updatedOrders = [...existingOrders.filter((o: any) => String(o.id) !== String(newOrder.id)), newOrder];
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
 
+        // 주문 생성 직후 푸시 구독 등록 (이미 권한이 granted인 경우에만)
+        // 왜 토스 딥링크보다 먼저: 토스 앱 이동 후 복귀하면 OrderStatus effect에
+        // 의존해야 하는데, 복귀 전에 구독이 없으면 READY 알림을 놓칠 수 있다.
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try {
+            const { registerOrderPushSubscription } = await import('../utils/push');
+            // 타임아웃 적용: 3초 내에 완료되지 않으면 포기하고 페이지 이동 진행
+            await Promise.race([
+              registerOrderPushSubscription(response.data.id),
+              new Promise(resolve => setTimeout(resolve, 3000)),
+            ]);
+          } catch (e) {
+            // 푸시 등록 실패가 주문 완료 흐름을 방해하지 않음
+            console.warn('[Push] 주문 직후 구독 등록 실패 (주문은 정상):', e);
+          }
+        }
+
         // 토스 송금 선택 시 주문 생성 후 supertoss:// 딥링크 실행
         if (paymentMethod === 'TOSS' && settings?.bank_name && settings?.account_number) {
           const accountNo = settings.account_number.replace(/-/g, '');
