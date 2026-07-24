@@ -74,6 +74,11 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close(); // 알림 배너 닫기
 
+  // PWA 앱 아이콘 빨간 뱃지 숫자 리셋
+  if ('clearAppBadge' in self.navigator) {
+    (self.navigator as any).clearAppBadge().catch(() => {});
+  }
+
   let targetUrl = event.notification.data?.url || '/';
 
   // 외부 Origin URL 차단: 절대 URL이면서 같은 Origin이 아닌 경우 '/'로 fallback

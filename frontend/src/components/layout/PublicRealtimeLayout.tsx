@@ -8,6 +8,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 
+import { clearPwaBadgesAndNotifications } from '../../utils/push';
+
 const HEARTBEAT_INTERVAL_MS = 22000;
 const INITIAL_RETRY_DELAY_MS = 1000;
 const MAX_RETRY_DELAY_MS = 30000;
@@ -126,9 +128,11 @@ export const PublicRealtimeLayout = () => {
   useEffect(() => {
     isDestroyedRef.current = false;
     connect();
+    clearPwaBadgesAndNotifications();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        clearPwaBadgesAndNotifications();
         invalidatePublicSettings();
         const curr = wsRef.current;
         if (!curr || curr.readyState === WebSocket.CLOSED || curr.readyState === WebSocket.CLOSING) {
