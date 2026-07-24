@@ -10,6 +10,7 @@ import { Toast } from '../components/ui/Toast';
 import { PwaInstallGuideModal } from '../components/ui/PwaInstallGuideModal';
 import type { ToastType } from '../components/ui/Toast';
 import type { Menu, Category, StandardResponse, Announcement } from '../types';
+import { getOrCreatePushSubscription, isIosDevice, isStandalonePwa } from '../utils/push';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -46,9 +47,6 @@ export const Home = () => {
         showToast('알림이 차단되어 있습니다. 기기 설정에서 알림을 켜주세요!', 'error');
         return;
       }
-
-      // 2. 실제 PushSubscription 생성까지 수행
-      const { getOrCreatePushSubscription, isIosDevice, isStandalonePwa } = await import('../utils/push');
 
       // iOS Safari 탭에서는 홈 화면 설치 안내
       if (isIosDevice() && !isStandalonePwa()) {

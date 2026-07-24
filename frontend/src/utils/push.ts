@@ -65,30 +65,11 @@ export const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
 
 // ── VAPID 공개키 조회 ──
 
-/** 서버에서 VAPID 공개키를 조회한다 (캐싱 적용) */
+/** 서버에서 VAPID 공개키를 조회한다 (캐싱 및 하드코딩 적용) */
 export const getVapidPublicKey = async (): Promise<string | null> => {
-  try {
-    const cachedKey = localStorage.getItem('vapidPublicKey');
-    if (cachedKey) {
-      return cachedKey;
-    }
-
-    const res = await apiClient.get<
-      { publicKey: string },
-      StandardResponse<{ publicKey: string }>
-    >('/orders/vapid-key', {
-      headers: { 'X-Skip-Error-Toast': 'true' },
-    });
-    if (res.success && res.data?.publicKey) {
-      localStorage.setItem('vapidPublicKey', res.data.publicKey);
-      return res.data.publicKey;
-    }
-    console.error('[Push] VAPID 키 조회 실패:', res.message);
-    return null;
-  } catch (e) {
-    console.error('[Push] VAPID 키 조회 오류:', e);
-    return null;
-  }
+  // 프로젝트 정책상 VAPID 키는 자동 교체되지 않으므로 고정값을 사용합니다.
+  // 네트워크 요청으로 인한 iOS Safari User Gesture 만료를 원천 차단합니다.
+  return 'BAazjRtXAr7TtIMAwlLReivhL4tsfOma-ideBGfR87CrLroR4H01YaLiZ4pwmuqcF0Qy1V_0cF08MDATEEh-9t4';
 };
 
 // ── PushSubscription 생성/재사용 ──
