@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Coffee, PartyPopper, Gift, Megaphone, Bell, Smartphone } from 'lucide-react';
+import { Coffee, PartyPopper, Gift, Megaphone } from 'lucide-react';
 import { Header } from '../components/layout/Header';
 import { useQuery } from '@tanstack/react-query';
 import { QK } from '../api/queryKeys';
@@ -155,10 +155,10 @@ export const Home = () => {
 
   const onTouchEndEvent = () => {
     if (!touchStartX || !touchEndX || !touchStartY || !touchEndY) return;
-    
+
     const distanceX = touchStartX - touchEndX;
     const distanceY = touchStartY - touchEndY;
-    
+
     // Y축 이동이 X축 이동보다 크면 위아래 스크롤로 간주하여 무시
     if (Math.abs(distanceY) > Math.abs(distanceX)) return;
 
@@ -185,13 +185,13 @@ export const Home = () => {
       if (el) {
         const containerRect = container.getBoundingClientRect();
         const elRect = el.getBoundingClientRect();
-        
+
         // 목표 스크롤 위치 계산 (현재 스크롤 + 엘리먼트 상대 위치 - 컨테이너 절반 + 엘리먼트 절반)
         let targetScroll = container.scrollLeft + (elRect.left - containerRect.left) - (containerRect.width / 2) + (elRect.width / 2);
-        
+
         // 첫 번째 카테고리일 때 좌측에 공백이 생기지 않도록 음수 값을 0으로 강제 고정
         targetScroll = Math.max(0, targetScroll);
-        
+
         container.scrollTo({
           left: targetScroll,
           behavior: 'smooth'
@@ -355,7 +355,7 @@ export const Home = () => {
           </div>
 
           {/* Normal Menu Grid */}
-          <div 
+          <div
             className="flex-1 px-4 py-6 bg-white"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
@@ -411,24 +411,14 @@ export const Home = () => {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[460px] px-4 animate-in slide-in-from-bottom-8 duration-500">
           <button
             onClick={() => setShowInstallGuide(true)}
-            className="w-full bg-gradient-to-r from-[#1A0A0A] to-[#23734A] text-white py-3.5 px-5 rounded-2xl shadow-2xl flex items-center justify-between group active:scale-95 transition-all border border-white/5"
+            className="w-full block active:scale-95 transition-all drop-shadow-2xl overflow-hidden"
             aria-label="앱 설치 가이드 열기"
           >
-            <div className="flex items-center gap-3">
-              <div className="bg-primary/20 border border-primary/30 p-2 rounded-xl">
-                <Bell size={18} className="text-primary animate-pulse" />
-              </div>
-              <div className="text-left">
-                <p className="text-[13px] font-black tracking-tight leading-none mb-0.5">
-                  카페 주문 어플 설치하기 🔔
-                </p>
-                <p className="text-[11px] text-white/40 font-bold">앱을 설치하면 바로 알림이 와요!</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 bg-primary text-white text-[11px] font-black px-3 py-1.5 rounded-xl shrink-0">
-              <Smartphone size={12} />
-              설치
-            </div>
+            <img
+              src="/img/design/APP_install_btn.svg"
+              alt="카페 주문 어플 설치하기 배너"
+              className="w-full h-auto object-contain"
+            />
           </button>
         </div>
       )}

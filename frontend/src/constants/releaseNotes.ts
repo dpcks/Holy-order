@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.9',
+    date: new Date().toISOString().split('T')[0],
+    title: '앱 설치 안내(PWA) 스크롤 가이드 및 통이미지 개선',
+    updates: [
+      { text: '앱 설치 가이드(안드로이드/아이폰)를 전체 화면 통이미지로 교체하여 스크롤하며 직관적으로 볼 수 있도록 개선', isNew: true },
+      { text: '홈 화면의 "카페 주문 어플 설치하기" 배너를 고해상도 이미지로 교체하고 심장박동(Pulse) 애니메이션 효과를 주어 가시성 강화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.8',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 백그라운드 푸시 알림 정상화 및 안정성 강화',
