@@ -37,6 +37,8 @@ self.addEventListener('push', (event) => {
       icon: iconUrl,
       badge: badgeUrl,
       tag: payload.tag,
+      vibrate: [200, 100, 200, 100, 300], // 안드로이드 기기 진동 패턴
+      renotify: true, // 동일 태그 재알림 허용 (안드로이드 상단바 진동/알림 강제)
       data: {
         url: payload.url || '/',
         type: payload.type,
