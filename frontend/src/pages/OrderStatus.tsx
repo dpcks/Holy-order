@@ -7,6 +7,7 @@ import { apiClient } from '../api/client';
 import { getWsUrl } from '../utils/url';
 import toast from 'react-hot-toast';
 import { TossLogo } from '../components/ui/TossLogo';
+import { clearPwaBadgesAndNotifications } from '../utils/push';
 import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
 
 export const OrderStatus = () => {
@@ -195,9 +196,11 @@ export const OrderStatus = () => {
     setActiveOrders(orders);
 
     connectWebSocket();
+    clearPwaBadgesAndNotifications();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
+        clearPwaBadgesAndNotifications();
         console.log('📱 [Visibility] 화면 활성화 - 상태 갱신');
         queryClient.invalidateQueries({ queryKey: QK_DOMAIN.orders });
         queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true });

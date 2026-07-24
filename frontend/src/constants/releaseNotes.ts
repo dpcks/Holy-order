@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.11',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 앱 아이콘 알림 뱃지(숫자) 및 과거 알림 자동 리셋 구현',
+    updates: [
+      { text: '앱 접속 및 화면 활성화 시 상단 알림창의 과거 푸시 알림 배너 자동 닫기(Clean-up) 로직 도입', isNew: true },
+      { text: '앱 아이콘에 과거 알림으로 인해 계속 누적되어 남아있던 알림 뱃지 숫자(App Badge) 자동 0으로 리셋 기능 추가', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.10',
     date: new Date().toISOString().split('T')[0],
     title: '알림 배너 노출 조건 최적화 및 안드로이드 알림 뱃지 아이콘 개선',
