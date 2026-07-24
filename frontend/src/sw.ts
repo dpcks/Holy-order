@@ -32,7 +32,13 @@ self.addEventListener('push', (event) => {
     const iconUrl = payload.icon ? new URL(payload.icon, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
     const badgeUrl = payload.badge ? new URL(payload.badge, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
 
-    const options: NotificationOptions = {
+    // TypeScript 사양 확장: 안드로이드 PWA 전용 vibrate/renotify 옵션 지원
+    interface ExtendedNotificationOptions extends NotificationOptions {
+      vibrate?: number[];
+      renotify?: boolean;
+    }
+
+    const options: ExtendedNotificationOptions = {
       body: payload.body || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
       icon: iconUrl,
       badge: badgeUrl,
@@ -46,7 +52,7 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-      self.registration.showNotification(title, options)
+      self.registration.showNotification(title, options as NotificationOptions)
     );
   } catch {
     // 문자열 데이터 폴백 처리
