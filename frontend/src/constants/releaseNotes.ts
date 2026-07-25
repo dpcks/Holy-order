@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.14',
+    date: new Date().toISOString().split('T')[0],
+    title: 'iOS Safari / Android PWA 홈 화면 추가 전용 PNG 브랜드 아이콘 변환 및 호환성 완료',
+    updates: [
+      { text: 'iOS 사파리(Safari) 홈 화면 추가 모달 및 PWA 앱 아이콘용 PNG 포맷(apple-touch-icon.png, pwa-192.png, pwa-512.png) 변환 동기화', isNew: true },
+      { text: '아이폰 및 안드로이드 기기에서 "홈 화면에 추가" 시 신규 대표 브랜드 아이콘이 100% 정상 표시되도록 최적화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.13',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 앱 아이콘 및 파비콘 고해상도 브랜드 아이콘(app_icon.svg) 적용',
