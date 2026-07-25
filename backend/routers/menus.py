@@ -18,13 +18,12 @@ def get_categories_with_menus(db: Session = Depends(get_db)):
         joinedload(models.Category.menus).joinedload(models.Menu.options)
     ).order_by(models.Category.display_order).all()
 
-    # 각 카테고리의 비활성 메뉴 제외
+    # 각 카테고리의 비활성 메뉴 제외 및 품절(is_available=False) 메뉴 하단 정렬
     for category in categories:
-        category.menus = [
-            menu for menu in category.menus
-            if menu.is_active  # is_active만 필터링
-            # is_available은 품절 표시를 위해 유지
-        ]
+        category.menus = sorted(
+            [menu for menu in category.menus if menu.is_active],
+            key=lambda m: (not m.is_available, m.display_order)
+        )
 
     return schemas.StandardResponse(
         success=True,
