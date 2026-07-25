@@ -280,10 +280,26 @@ export const Home = () => {
     );
   }
 
-  // 검색 결과 필터링 (전체 카테고리 대상)
-  const filteredMenus = categories.flatMap(cat => cat.menus).filter(menu =>
-    menu.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // 카테고리별 메뉴 정렬 (판매중 메뉴 상단, 품절(is_available=false) 메뉴 하단 정렬)
+  const currentMenus = activeCategory?.menus
+    ? [...activeCategory.menus].sort((a, b) => {
+      if (a.is_available !== b.is_available) {
+        return a.is_available ? -1 : 1;
+      }
+      return a.display_order - b.display_order;
+    })
+    : [];
+
+  // 검색 결과 필터링 (전체 카테고리 대상 & 품절 메뉴 하단 정렬)
+  const filteredMenus = categories
+    .flatMap(cat => cat.menus)
+    .filter(menu => menu.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      if (a.is_available !== b.is_available) {
+        return a.is_available ? -1 : 1;
+      }
+      return a.display_order - b.display_order;
+    });
 
   return (
     <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white pb-32 shadow-2xl relative">
@@ -365,11 +381,11 @@ export const Home = () => {
               <div className="flex justify-center items-center h-40">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : activeCategory?.menus.length === 0 ? (
+            ) : currentMenus.length === 0 ? (
               <div className="text-center text-gray-500 mt-10">메뉴가 없습니다.</div>
             ) : (
               <div className="grid grid-cols-2 gap-4 gap-y-8">
-                {activeCategory?.menus.map((menu) => (
+                {currentMenus.map((menu) => (
                   <MenuCard
                     key={menu.id}
                     menu={menu}

@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.15',
+    date: new Date().toISOString().split('T')[0],
+    title: '품절(Sold Out) 메뉴 카테고리 최하단 자동 정렬 기능 추가',
+    updates: [
+      { text: '품절 처리된 메뉴가 각 카테고리 목록에서 가장 맨 아래로 자동 이동하여 주문 시 가시성과 사용자 편의성 대폭 개선', isNew: true },
+      { text: '검색 결과 목록에서도 품절 상품이 하단에 정렬되도록 로직 연동', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.14',
     date: new Date().toISOString().split('T')[0],
     title: 'iOS Safari / Android PWA 홈 화면 추가 전용 PNG 브랜드 아이콘 변환 및 호환성 완료',
