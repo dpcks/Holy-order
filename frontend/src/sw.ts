@@ -29,7 +29,7 @@ self.addEventListener('push', (event) => {
     const title = payload.title || '평택중앙교회 카페';
     
     // iOS Safari 호환성: 상대 경로 대신 self.location.origin 기반 절대 URL 생성
-    const iconUrl = payload.icon ? new URL(payload.icon, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
+    const iconUrl = payload.icon ? new URL(payload.icon, self.location.origin).href : new URL('/img/design/app_icon.svg', self.location.origin).href;
     const badgeUrl = payload.badge ? new URL(payload.badge, self.location.origin).href : new URL('/img/design/android_silhouette.svg', self.location.origin).href;
 
     // TypeScript 사양 확장: 안드로이드 PWA 전용 vibrate/renotify 옵션 지원
@@ -57,7 +57,7 @@ self.addEventListener('push', (event) => {
   } catch {
     // 문자열 데이터 폴백 처리
     const text = event.data ? event.data.text() : '';
-    const fallbackIcon = new URL('/pwa-192.png', self.location.origin).href;
+    const fallbackIcon = new URL('/img/design/app_icon.svg', self.location.origin).href;
     const fallbackBadge = new URL('/img/design/android_silhouette.svg', self.location.origin).href;
     event.waitUntil(
       self.registration.showNotification('평택중앙교회 카페', {

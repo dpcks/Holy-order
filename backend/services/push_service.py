@@ -90,7 +90,7 @@ def _build_payload(order_id: int, order_number: int) -> str:
     payload = {
         "title": "평택중앙교회 카페",
         "body": f"#{order_number}번 주문하신 메뉴가 준비되었습니다. 픽업대로 와 주세요.",
-        "icon": "/pwa-192.png",
+        "icon": "/img/design/app_icon.svg",
         "badge": "/img/design/android_silhouette.svg",
         "tag": f"order-ready-{order_id}",
         "url": f"/order/status/{order_id}",

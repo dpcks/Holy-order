@@ -13,22 +13,28 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['img/design/app_icon.svg', 'favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: '평택중앙교회 카페',
         short_name: '미션 카페',
         description: '평택중앙교회 카페 주문 시스템',
-        theme_color: '#0D9488',
-        background_color: '#F9FAFB',
+        theme_color: '#144730',
+        background_color: '#FFFFFF',
         display: 'standalone',
         start_url: '/',
         orientation: 'portrait',
         icons: [
           {
-            src: 'favicon.svg',
+            src: '/img/design/app_icon.svg',
             sizes: '192x192 512x512',
             type: 'image/svg+xml',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: '/img/design/app_icon.svg',
+            sizes: '192x192 512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           },
           {
             src: 'pwa-192.png',
@@ -39,12 +45,6 @@ export default defineConfig({
             src: 'pwa-512.png',
             sizes: '512x512',
             type: 'image/png'
-          },
-          {
-            src: 'pwa-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any'
           }
         ]
       },

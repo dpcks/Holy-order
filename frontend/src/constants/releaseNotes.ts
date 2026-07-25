@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.13',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 앱 아이콘 및 파비콘 고해상도 브랜드 아이콘(app_icon.svg) 적용',
+    updates: [
+      { text: '홈 화면 추가 및 PWA 매니페스트 앱 아이콘을 고해상도 미션카페 대표 브랜드 이미지(app_icon.svg)로 전면 교체', isNew: true },
+      { text: '푸시 알림 수신 시 노출되는 대표 브랜드 아이콘 및 파비콘 동기화 업데이트', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.12',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 모바일 앱 화면 임의 확대(Pinch-to-zoom) 차단 및 네이티브 앱 UX 강화',
