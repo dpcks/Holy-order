@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
     
     // iOS Safari 호환성: 상대 경로 대신 self.location.origin 기반 절대 URL 생성
     const iconUrl = payload.icon ? new URL(payload.icon, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
-    const badgeUrl = payload.badge ? new URL(payload.badge, self.location.origin).href : new URL('/pwa-192.png', self.location.origin).href;
+    const badgeUrl = payload.badge ? new URL(payload.badge, self.location.origin).href : new URL('/img/design/android_silhouette.svg', self.location.origin).href;
 
     // TypeScript 사양 확장: 안드로이드 PWA 전용 vibrate/renotify 옵션 지원
     interface ExtendedNotificationOptions extends NotificationOptions {
@@ -58,11 +58,12 @@ self.addEventListener('push', (event) => {
     // 문자열 데이터 폴백 처리
     const text = event.data ? event.data.text() : '';
     const fallbackIcon = new URL('/pwa-192.png', self.location.origin).href;
+    const fallbackBadge = new URL('/img/design/android_silhouette.svg', self.location.origin).href;
     event.waitUntil(
       self.registration.showNotification('평택중앙교회 카페', {
         body: text || '제조가 완료 되었습니다. 메뉴를 픽업해주세요',
         icon: fallbackIcon,
-        badge: fallbackIcon,
+        badge: fallbackBadge,
       })
     );
   }
@@ -72,6 +73,11 @@ self.addEventListener('push', (event) => {
 // 왜 Origin 검증: 외부 URL을 열어 보안 문제가 발생하는 것을 방지한다.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close(); // 알림 배너 닫기
+
+  // PWA 앱 아이콘 빨간 뱃지 숫자 리셋
+  if ('clearAppBadge' in self.navigator) {
+    (self.navigator as any).clearAppBadge().catch(() => {});
+  }
 
   let targetUrl = event.notification.data?.url || '/';
 

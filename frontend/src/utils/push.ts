@@ -197,3 +197,24 @@ export const registerOrderPushSubscription = async (
     return false;
   }
 };
+
+/**
+ * PWA 앱 아이콘 뱃지 및 상단 알림창에 남아있는 과거 알림을 즉시 청소한다.
+ * 왜: 사용자가 앱을 직접 실행하거나 화면에 돌아왔을 때 이전 알림 숫자(뱃지)가 계속 남아있는 현상을 방지.
+ */
+export const clearPwaBadgesAndNotifications = () => {
+  try {
+    if ('clearAppBadge' in navigator) {
+      (navigator as any).clearAppBadge().catch(() => {});
+    }
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.getNotifications().then((notifications) => {
+          notifications.forEach((n) => n.close());
+        });
+      }).catch(() => {});
+    }
+  } catch (e) {
+    console.warn('[Push] 알림 뱃지 초기화 중 오류:', e);
+  }
+};

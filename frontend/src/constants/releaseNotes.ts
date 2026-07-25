@@ -17,6 +17,42 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.4.12',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 모바일 앱 화면 임의 확대(Pinch-to-zoom) 차단 및 네이티브 앱 UX 강화',
+    updates: [
+      { text: '두 손가락 핀치 줌(Pinch-to-zoom) 및 더블 탭을 통한 임의 화면 확대 방지 (네이티브 모바일 앱 경험 구현)', isNew: true },
+      { text: 'iOS Safari 및 안드로이드 전 기기 터치 제스처 고정으로 흔들림 없는 단단한 사용자 인터페이스 제공', isNew: true }
+    ]
+  },
+  {
+    version: 'v1.4.11',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 앱 아이콘 알림 뱃지(숫자) 및 과거 알림 자동 리셋 구현',
+    updates: [
+      { text: '앱 접속 및 화면 활성화 시 상단 알림창의 과거 푸시 알림 배너 자동 닫기(Clean-up) 로직 도입', isNew: true },
+      { text: '앱 아이콘에 과거 알림으로 인해 계속 누적되어 남아있던 알림 뱃지 숫자(App Badge) 자동 0으로 리셋 기능 추가', isNew: true }
+    ]
+  },
+  {
+    version: 'v1.4.10',
+    date: new Date().toISOString().split('T')[0],
+    title: '알림 배너 노출 조건 최적화 및 안드로이드 알림 뱃지 아이콘 개선',
+    updates: [
+      { text: '일반 웹(QR 접속) 환경에서는 상단 "알림 켜기" 배너를 숨기고, PWA 앱 실행 시에만 노출되도록 조건 최적화', isNew: true },
+      { text: '안드로이드 푸시 알림 상단바 뱃지(Badge) 아이콘을 단색 실루엣 이미지로 교체하여 하얗게 채워지던 현상 완벽 수정', isNew: true }
+    ]
+  },
+  {
+    version: 'v1.4.9',
+    date: new Date().toISOString().split('T')[0],
+    title: '앱 설치 안내(PWA) 스크롤 가이드 및 통이미지 개선',
+    updates: [
+      { text: '앱 설치 가이드(안드로이드/아이폰)를 전체 화면 통이미지로 교체하여 스크롤하며 직관적으로 볼 수 있도록 개선', isNew: true },
+      { text: '홈 화면의 "카페 주문 어플 설치하기" 배너를 고해상도 이미지로 교체하고 심장박동(Pulse) 애니메이션 효과를 주어 가시성 강화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.8',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 백그라운드 푸시 알림 정상화 및 안정성 강화',
