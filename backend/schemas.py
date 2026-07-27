@@ -110,6 +110,7 @@ class OrderCreate(BaseModel):
     request: Optional[str] = None
     items: List[OrderItemCreate]
     is_pwa: Optional[bool] = False
+    pwa_installation_key: Optional[str] = None
 
 class AdminOrderCreate(BaseModel):
     user_name_snapshot: Optional[str] = "현장 주문"
@@ -464,4 +465,91 @@ class PushSubscriptionKeys(BaseModel):
 
 class PushSubscriptionCreate(BaseModel):
     subscription: PushSubscriptionKeys
+
+
+# ===============================
+# PWA Installation Tracking (PWA 설치 감지 & 통계)
+# ===============================
+
+class PwaAppTypeEnum(str, Enum):
+    USER = "USER"
+    ADMIN = "ADMIN"
+
+class PwaPlatformEnum(str, Enum):
+    IOS = "IOS"
+    ANDROID = "ANDROID"
+    DESKTOP = "DESKTOP"
+    UNKNOWN = "UNKNOWN"
+
+class PwaBrowserFamilyEnum(str, Enum):
+    SAFARI = "SAFARI"
+    CHROME = "CHROME"
+    EDGE = "EDGE"
+    FIREFOX = "FIREFOX"
+    OTHER = "OTHER"
+    UNKNOWN = "UNKNOWN"
+
+class PwaDetectionMethodEnum(str, Enum):
+    STANDALONE_LAUNCH = "STANDALONE_LAUNCH"
+    APPINSTALLED_EVENT = "APPINSTALLED_EVENT"
+    RELATED_APPS = "RELATED_APPS"
+    UNKNOWN = "UNKNOWN"
+
+class PushPermissionStateEnum(str, Enum):
+    GRANTED = "GRANTED"
+    DENIED = "DENIED"
+    DEFAULT = "DEFAULT"
+    UNSUPPORTED = "UNSUPPORTED"
+    UNKNOWN = "UNKNOWN"
+
+class PwaHeartbeatRequest(BaseModel):
+    installation_id: str = Field(..., description="UUID 형태의 익명 기기 식별자")
+    platform: PwaPlatformEnum = PwaPlatformEnum.UNKNOWN
+    browser_family: PwaBrowserFamilyEnum = PwaBrowserFamilyEnum.UNKNOWN
+    is_running_standalone: bool = False
+    detection_method: PwaDetectionMethodEnum = PwaDetectionMethodEnum.UNKNOWN
+    push_permission: PushPermissionStateEnum = PushPermissionStateEnum.UNKNOWN
+    related_app_installed: Optional[bool] = None
+
+    @field_validator("installation_id")
+    def validate_installation_id(cls, v):
+        if not v or len(v) > 64:
+            raise ValueError("유효하지 않은 installation_id 형식입니다.")
+        if not re.match(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", v):
+            raise ValueError("installation_id는 UUID 형태여야 합니다.")
+        return v
+
+class PwaStatsResponse(BaseModel):
+    detected_total: int
+    active_7d: int
+    active_30d: int
+    stale_90d: int
+    by_app_type: dict
+    by_platform: dict
+    standalone_active_30d: int
+    push_permission_granted: int
+    pwa_orders_30d: int
+    unique_ordering_installations_30d: int
+
+class PwaInstallationItem(BaseModel):
+    masked_installation_id: str
+    app_type: str
+    platform: str
+    browser_family: str
+    first_seen_at: Optional[str] = None
+    last_seen_at: Optional[str] = None
+    last_standalone_at: Optional[str] = None
+    last_detection_method: str
+    push_permission: str
+    admin_name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class PwaInstallationListResponse(BaseModel):
+    items: List[PwaInstallationItem]
+    total_count: int
+    page: int
+    limit: int
+    total_pages: int
+
 

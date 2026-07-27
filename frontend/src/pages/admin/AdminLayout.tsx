@@ -15,6 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { QK } from '../../api/queryKeys';
 import { apiClient } from '../../api/client';
 import type { AdminInfo, StandardResponse } from '../../types';
+import { reportPwaHeartbeat } from '../../utils/pwaInstallation';
 
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
@@ -256,6 +257,22 @@ export const AdminLayout = () => {
     return () => {
       html.style.overflow = '';
       body.style.overflow = '';
+    };
+  }, []);
+
+  // 관리자 PWA 설치 추적 heartbeat (인증된 관리자 전용)
+  useEffect(() => {
+    reportPwaHeartbeat('ADMIN');
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        reportPwaHeartbeat('ADMIN');
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine
 from config import settings
-from routers import menus, users, orders, admin
+from routers import menus, users, orders, admin, pwa
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -25,6 +25,7 @@ app.include_router(menus.router)
 app.include_router(users.router)
 app.include_router(orders.router)
 app.include_router(admin.router)
+app.include_router(pwa.router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -109,6 +110,31 @@ def migrate_database():
         db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS toss_enabled BOOLEAN DEFAULT FALSE;"))
         db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS show_price BOOLEAN DEFAULT TRUE;"))
         
+        # 4. PWA 설치 및 기기 추적 테이블 / 주문 연결 컬럼
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS pwa_installations (
+                id SERIAL PRIMARY KEY,
+                installation_id VARCHAR(64) NOT NULL,
+                app_type VARCHAR(20) NOT NULL,
+                platform VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
+                browser_family VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
+                first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                first_standalone_at TIMESTAMP WITH TIME ZONE,
+                last_standalone_at TIMESTAMP WITH TIME ZONE,
+                last_detection_method VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN',
+                push_permission VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
+                related_app_installed BOOLEAN,
+                admin_id INTEGER REFERENCES users(id),
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uq_pwa_installation_id_app_type UNIQUE (installation_id, app_type)
+            );
+        """))
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_installation_id ON pwa_installations (installation_id);"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_last_seen_at ON pwa_installations (last_seen_at);"))
+        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS pwa_installation_id INTEGER REFERENCES pwa_installations(id);"))
+
         db.commit()
         return {"success": True, "message": "데이터베이스 마이그레이션이 모든 테이블에 대해 성공적으로 완료되었습니다."}
     except Exception as e:

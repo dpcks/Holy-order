@@ -92,6 +92,7 @@ class Order(Base):
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
     is_pwa = Column(Boolean, default=False) # PWA 앱 주문 여부
+    pwa_installation_id = Column(Integer, ForeignKey("pwa_installations.id"), nullable=True, index=True) # PWA 설치 기기 추적 연결
     is_active = Column(Boolean, default=True, index=True) # 소프트 삭제 여부
     deleted_at = Column(DateTime(timezone=True), nullable=True) # 삭제 일시
     
@@ -106,6 +107,7 @@ class Order(Base):
     items = relationship("OrderItem", back_populates="order")
     payment_log = relationship("PaymentLog", back_populates="order", uselist=False)
     announcement = relationship("Announcement", back_populates="orders")
+    pwa_installation = relationship("PwaInstallation", foreign_keys=[pwa_installation_id])
 
 class OrderItem(Base):
     __tablename__ = "order_items"
@@ -257,4 +259,36 @@ class PushSubscription(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     order = relationship("Order", backref="push_subscriptions") # 주문에서 구독 정보 역참조 지원
+
+
+# ==========================================
+# 7. PWA 설치 및 기기 추적 (PWA Installation Tracking)
+# ==========================================
+
+class PwaInstallation(Base):
+    """PWA 익명 설치 및 기기 활성화 추적 모델"""
+    __tablename__ = "pwa_installations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    installation_id = Column(String(64), index=True, nullable=False)
+    app_type = Column(String(20), nullable=False)  # "USER" | "ADMIN"
+    platform = Column(String(20), nullable=False, default="UNKNOWN")  # "IOS" | "ANDROID" | "DESKTOP" | "UNKNOWN"
+    browser_family = Column(String(20), nullable=False, default="UNKNOWN")  # "SAFARI" | "CHROME" | "EDGE" | "FIREFOX" | "OTHER" | "UNKNOWN"
+    first_seen_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    last_seen_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), index=True, nullable=False)
+    first_standalone_at = Column(DateTime(timezone=True), nullable=True)
+    last_standalone_at = Column(DateTime(timezone=True), nullable=True)
+    last_detection_method = Column(String(30), nullable=False, default="UNKNOWN")  # "STANDALONE_LAUNCH" | "APPINSTALLED_EVENT" | "RELATED_APPS" | "UNKNOWN"
+    push_permission = Column(String(20), nullable=False, default="UNKNOWN")  # "GRANTED" | "DENIED" | "DEFAULT" | "UNSUPPORTED" | "UNKNOWN"
+    related_app_installed = Column(Boolean, nullable=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (
+        UniqueConstraint("installation_id", "app_type", name="uq_pwa_installation_id_app_type"),
+    )
+
+    admin = relationship("User", foreign_keys=[admin_id])
+
 

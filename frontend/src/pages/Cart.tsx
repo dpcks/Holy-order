@@ -13,6 +13,8 @@ import { QK } from '../api/queryKeys';
 import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
 import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
 
+import { isStandalonePwa, getPwaInstallationIdForOrder } from '../utils/pwaInstallation';
+
 // 백엔드 DutyEnum과 동일하게 유지
 const DUTY_OPTIONS: Duty[] = ['학생', '청년', '성도', '집사', '안수집사', '권사', '장로', '사모', '전도사', '강도사', '부목사', '목사'];
 
@@ -237,13 +239,14 @@ export const Cart = () => {
       // 백엔드에서 sum(sub_total) == total_price 일치 여부를 검증하기 때문.
       // CartItem.sub_total은 원가(UI 표시용)이므로 여기서 텀블러 할인을 차감해 전송.
       // tumbler_discount는 백엔드 허용 최소 금액 계산을 위해 함께 전송.
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+      const isStandalone = isStandalonePwa();
       const orderData = {
         user_id: userId,
         payment_method: paymentMethod,
         total_price: eventFinalPrice,
         request: requests.trim() || null,
         is_pwa: isStandalone,
+        pwa_installation_key: getPwaInstallationIdForOrder(),
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,
