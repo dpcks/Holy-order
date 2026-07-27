@@ -17,6 +17,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.5.3',
+    date: new Date().toISOString().split('T')[0],
+    title: '사이드바 수평 구분선과 하단바 경계선 높이(90px) 1:1 완벽 정렬',
+    updates: [
+      { text: '관리자 좌측 사이드바 하단 구분선과 우측 메인 푸터 경계선을 1px 오차 없는 수평 일직선(90px)으로 정밀 맞춤', isNew: true }
+    ]
+  },
+  {
     version: 'v1.5.2',
     date: new Date().toISOString().split('T')[0],
     title: '관리자 화면 하단 푸터 높이 확충 및 목록 N개씩 보기 여백 최적화',

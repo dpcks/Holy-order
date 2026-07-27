@@ -591,7 +591,7 @@ export const AdminOrderHistory = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="px-8 py-5 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
+      <footer className="h-[90px] px-8 border-t border-gray-100 flex flex-col justify-center items-center gap-2 shrink-0 bg-white shadow-sm">
         <div className="flex items-center gap-2">
           <button
             disabled={page === 1}
