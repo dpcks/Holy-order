@@ -78,7 +78,7 @@ class TestBuildPayload:
         assert payload["tag"] == "order-ready-100"
         assert payload["url"] == "/order/status/100"
         assert payload["type"] == "ORDER_READY"
-        assert payload["badge"] == "/pwa-192.png"
+        assert payload["badge"] == "/img/design/android_silhouette.svg"
 
     def test_payload_korean_not_escaped(self):
         """한글이 유니코드 이스케이프 없이 직접 포함되는지 확인"""

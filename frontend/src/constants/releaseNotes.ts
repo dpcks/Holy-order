@@ -17,6 +17,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.0',
+    date: new Date().toISOString().split('T')[0],
+    title: 'PWA 익명 설치 감지 및 활성 기기 분석 통계 구축',
+    updates: [
+      { text: '익명 installation_id 기반 PwaInstallation 모델 및 Throttled Heartbeat 추적 시스템 도입', isNew: true },
+      { text: '사용자 PWA 및 관리자 PWA 설치 기기 분리 집계 및 최근 7일/30일 활성 기기 추적', isNew: true },
+      { text: '관리자 매출 통계 화면에 PWA 설치 및 활성 기기 현황 (Analytics) 대시보드 카드 추가', isNew: true }
+    ]
+  },
+  {
     version: 'v1.5.3',
     date: new Date().toISOString().split('T')[0],
     title: '사이드바 수평 구분선과 하단바 경계선 높이(90px) 1:1 완벽 정렬',

@@ -108,6 +108,14 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         .first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
+    # 3.5. PWA Installation Key 선택적 연결 (USER 설치 기기만 연결, 실패 시에도 주문은 영향을 받지 않음)
+    pwa_inst_id = None
+    if order.pwa_installation_key:
+        from services import pwa_installation_service
+        inst_record = pwa_installation_service.get_user_installation_by_key(db, order.pwa_installation_key)
+        if inst_record:
+            pwa_inst_id = inst_record.id
+
     # 4. 주문 및 상세 내역 저장
     new_order = models.Order(
         user_id=order.user_id,
@@ -122,7 +130,8 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         status=schemas.OrderStatusEnum.PENDING.value,
         order_number=next_order_number,
         order_date=today,
-        is_pwa=order.is_pwa
+        is_pwa=order.is_pwa,
+        pwa_installation_id=pwa_inst_id
     )
     
     try:

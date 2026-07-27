@@ -327,3 +327,24 @@ export interface AdminInfo {
   role: 'MASTER' | 'ADMIN';
   created_at: string;
 }
+
+export interface PwaStatsResponse {
+  detected_total: number;
+  active_7d: number;
+  active_30d: number;
+  stale_90d: number;
+  by_app_type: {
+    USER: number;
+    ADMIN: number;
+  };
+  by_platform: {
+    IOS: number;
+    ANDROID: number;
+    DESKTOP: number;
+    UNKNOWN: number;
+  };
+  standalone_active_30d: number;
+  push_permission_granted: number;
+  pwa_orders_30d: number;
+  unique_ordering_installations_30d: number;
+}

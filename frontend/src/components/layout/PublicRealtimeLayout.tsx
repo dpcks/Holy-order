@@ -9,6 +9,7 @@ import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 
 import { clearPwaBadgesAndNotifications } from '../../utils/push';
+import { reportPwaHeartbeat } from '../../utils/pwaInstallation';
 
 const HEARTBEAT_INTERVAL_MS = 22000;
 const INITIAL_RETRY_DELAY_MS = 1000;
@@ -129,11 +130,13 @@ export const PublicRealtimeLayout = () => {
     isDestroyedRef.current = false;
     connect();
     clearPwaBadgesAndNotifications();
+    reportPwaHeartbeat('USER');
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         clearPwaBadgesAndNotifications();
         invalidatePublicSettings();
+        reportPwaHeartbeat('USER');
         const curr = wsRef.current;
         if (!curr || curr.readyState === WebSocket.CLOSED || curr.readyState === WebSocket.CLOSING) {
           connect();
@@ -143,6 +146,7 @@ export const PublicRealtimeLayout = () => {
 
     const handleOnline = () => {
       invalidatePublicSettings();
+      reportPwaHeartbeat('USER');
       const curr = wsRef.current;
       if (!curr || curr.readyState === WebSocket.CLOSED || curr.readyState === WebSocket.CLOSING) {
         retryCountRef.current = 0;
@@ -150,8 +154,13 @@ export const PublicRealtimeLayout = () => {
       }
     };
 
+    const handleAppInstalled = () => {
+      reportPwaHeartbeat('USER', { force: true, detectionMethodOverride: 'APPINSTALLED_EVENT' });
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('online', handleOnline);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       isDestroyedRef.current = true;
@@ -159,6 +168,7 @@ export const PublicRealtimeLayout = () => {
       clearHeartbeat();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('online', handleOnline);
+      window.removeEventListener('appinstalled', handleAppInstalled);
 
       if (wsRef.current) {
         wsRef.current.onclose = null;
