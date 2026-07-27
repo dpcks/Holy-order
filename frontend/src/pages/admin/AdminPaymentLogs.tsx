@@ -421,7 +421,27 @@ export const AdminPaymentLogs = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="min-h-[110px] py-4 px-8 border-t border-gray-100 flex flex-col justify-center items-center gap-2.5 shrink-0 bg-white shadow-sm pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+      <footer className="h-[90px] px-8 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white shadow-sm">
+        {/* N개씩 보기 및 승인 내역 건수 */}
+        <div className="flex items-center gap-4">
+          <select
+            value={limit}
+            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
+            className="text-[13px] font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-xs"
+          >
+            <option value={20}>20개씩 보기</option>
+            <option value={50}>50개씩 보기</option>
+            <option value={100}>100개씩 보기</option>
+          </select>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
+            <p className="text-[12px] text-gray-400 font-bold tracking-tight">
+              전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * limit + 1 : 0}-{Math.min(totalCount, page * limit)}번째 입금 승인 내역
+            </p>
+          </div>
+        </div>
+
+        {/* 페이지 이동 버튼 */}
         <div className="flex items-center gap-2">
           <button
             disabled={page === 1 || loading}
@@ -453,23 +473,6 @@ export const AdminPaymentLogs = () => {
           >
             <ChevronRight size={18} />
           </button>
-        </div>
-        <div className="flex items-center gap-4 mt-1">
-          <select
-            value={limit}
-            onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-            className="text-[13px] font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-xs"
-          >
-            <option value={20}>20개씩 보기</option>
-            <option value={50}>50개씩 보기</option>
-            <option value={100}>100개씩 보기</option>
-          </select>
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
-            <p className="text-[12px] text-gray-400 font-bold tracking-tight">
-              전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * limit + 1 : 0}-{Math.min(totalCount, page * limit)}번째 입금 승인 내역
-            </p>
-          </div>
         </div>
       </footer>
     </div>
