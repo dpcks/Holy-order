@@ -303,7 +303,7 @@ class ClosingReportResponse(BaseModel):
 
 class VolunteerData(BaseModel):
     """봉사자 명단 데이터 구조 (JSON)"""
-    names: List[str] = []
+    names: List[str] = Field(default_factory=list)
 
 class VolunteerScheduleResponse(BaseModel):
     id: int
@@ -317,6 +317,13 @@ class VolunteerScheduleUpdate(BaseModel):
     sunday_date: date
     volunteers: Optional[VolunteerData] = None
     memo: Optional[str] = None
+
+    @field_validator("sunday_date")
+    @classmethod
+    def validate_sunday_date(cls, v: date) -> date:
+        if v.weekday() != 6:
+            raise ValueError("sunday_date는 일요일이어야 합니다.")
+        return v
 
 class VolunteerCreate(BaseModel):
     name: str
