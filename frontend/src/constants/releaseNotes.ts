@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.5',
+    date: new Date().toISOString().split('T')[0],
+    title: '사이드바 - 푸터 경계선 높이 정밀 일치 및 단일 행 레이아웃 개선',
+    updates: [
+      { text: '푸터 높이(90px)를 사이드바 분리선과 100% 정밀 일치', isNew: true },
+      { text: '주문/입금 내역 푸터를 단일 수평 행 레이아웃으로 변경하여 N개씩 보기 상하 여백 확보', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.4',
     date: new Date().toISOString().split('T')[0],
     title: '주문 내역 및 입금 내역 페이지 PWA 하단 여백 최적화',
