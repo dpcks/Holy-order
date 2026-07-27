@@ -17,6 +17,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.1',
+    date: new Date().toISOString().split('T')[0],
+    title: '로컬 LAN IP(192.168.x.x) 네트워크 CORS 허용 옵션 강화',
+    updates: [
+      { text: '백엔드 CORSMiddleware 정규식을 강화하여 로컬 IP 주소 접속 시 CORS 정책 차단 문제 해결', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.0',
     date: new Date().toISOString().split('T')[0],
     title: 'PWA 익명 설치 감지 및 활성 기기 분석 통계 구축',
