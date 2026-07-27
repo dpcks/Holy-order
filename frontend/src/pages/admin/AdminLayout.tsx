@@ -275,7 +275,7 @@ export const AdminLayout = () => {
   }), [isSoundEnabled, handleToggleSound]);
 
   return (
-    <div className="flex h-[100dvh] bg-gray-100 overflow-hidden font-sans text-gray-900">
+    <div className="flex h-full min-h-screen w-full bg-gray-100 overflow-hidden font-sans text-gray-900 pt-safe pb-safe pl-safe pr-safe">
       {/* 사이드바 */}
       <aside
         className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-[80px]' : 'w-[260px]'

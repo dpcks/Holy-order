@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.5.1',
+    date: new Date().toISOString().split('T')[0],
+    title: '관리자 PWA 태블릿/iOS Safe-Area 상단 잘림 및 하단 공백 제거',
+    updates: [
+      { text: '태블릿 및 iOS PWA 앱 실행 시 상단 헤더 글씨가 상태바에 잘리던 현상 보정 (Safe Area Inset 적용)', isNew: true },
+      { text: '동적 뷰포트 높이(100dvh) 오작동으로 인한 하단 하얀 여백 띠 제거 및 레이아웃 밀림 해결', isNew: true }
+    ]
+  },
+  {
     version: 'v1.5.0',
     date: new Date().toISOString().split('T')[0],
     title: '관리자 전용 독립 PWA 앱 구축 및 전용 로고(admin_logo) 적용',
