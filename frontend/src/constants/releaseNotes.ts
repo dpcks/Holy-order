@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.2',
+    date: new Date().toISOString().split('T')[0],
+    title: '배포 시 서버 스타트업 자동 스키마 마이그레이션(Auto-Migration) 지원',
+    updates: [
+      { text: '백엔드 재배포 시 DB 컬럼(pwa_installation_id 등) 자동 생성을 위한 startup 마이그레이션 로직 탑재', isNew: true },
+      { text: 'PWA mobile-web-app-capable 메타 태그 추가로 크롬 권장 표준 준수', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.1',
     date: new Date().toISOString().split('T')[0],
     title: '로컬 LAN IP(192.168.x.x) 네트워크 CORS 허용 옵션 강화',

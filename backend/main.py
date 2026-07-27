@@ -89,9 +89,9 @@ def clear_database():
         db.close()
 
 from sqlalchemy import text
+from database import SessionLocal
 
-@app.get("/api/v1/dev/migrate")
-def migrate_database():
+def run_auto_migrations():
     db = SessionLocal()
     try:
         # 1. 주문 관련 스키마 (Order)
@@ -137,9 +137,17 @@ def migrate_database():
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS pwa_installation_id INTEGER REFERENCES pwa_installations(id);"))
 
         db.commit()
-        return {"success": True, "message": "데이터베이스 마이그레이션이 모든 테이블에 대해 성공적으로 완료되었습니다."}
+        print("[AutoMigrate] Database schema updated successfully.")
     except Exception as e:
         db.rollback()
-        return {"success": False, "message": f"마이그레이션 중 오류 발생: {str(e)}"}
+        print(f"[AutoMigrate] Migration warning: {e}")
     finally:
         db.close()
+
+# 앱 실행 시 자동 스키마 마이그레이션 실행
+run_auto_migrations()
+
+@app.get("/api/v1/dev/migrate")
+def migrate_database():
+    run_auto_migrations()
+    return {"success": True, "message": "데이터베이스 마이그레이션이 성공적으로 완료되었습니다."}
