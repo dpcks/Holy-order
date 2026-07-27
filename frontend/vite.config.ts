@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -13,8 +14,20 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'pwa-192.png', 'pwa-512.png', 'img/design/app_icon.svg'],
+      includeAssets: [
+        'favicon.svg',
+        'apple-touch-icon.png',
+        'pwa-192.png',
+        'pwa-512.png',
+        'admin-apple-touch-icon.png',
+        'admin-pwa-192.png',
+        'admin-pwa-512.png',
+        'manifest-admin.webmanifest',
+        'img/design/app_icon.svg',
+        'img/design/admin_logo.png'
+      ],
       manifest: {
+        id: '/',
         name: '평택중앙교회 카페',
         short_name: '미션 카페',
         description: '평택중앙교회 카페 주문 시스템',
@@ -22,6 +35,7 @@ export default defineConfig({
         background_color: '#FFFFFF',
         display: 'standalone',
         start_url: '/',
+        scope: '/',
         orientation: 'portrait',
         icons: [
           {
@@ -60,6 +74,10 @@ export default defineConfig({
     // 벤더 청크 분리 외에 개별적인 청크 사이즈 경고 수치 조정
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        admin: resolve(__dirname, 'admin.html'),
+      },
       output: {
         // 상세한 수동 청크 분리가 필요한 경우 여기서 정의할 수 있습니다.
         manualChunks(id) {
