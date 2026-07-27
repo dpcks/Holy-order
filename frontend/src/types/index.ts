@@ -348,3 +348,26 @@ export interface PwaStatsResponse {
   pwa_orders_30d: number;
   unique_ordering_installations_30d: number;
 }
+
+export interface PwaInstallationItem {
+  id: number;
+  installation_id_masked: string;
+  app_type: 'USER' | 'ADMIN';
+  platform: 'IOS' | 'ANDROID' | 'DESKTOP' | 'UNKNOWN';
+  browser_family: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  first_standalone_at?: string | null;
+  last_standalone_at?: string | null;
+  last_detection_method: string;
+  push_permission: string;
+  is_active_7d: boolean;
+  is_active_30d: boolean;
+  is_stale_90d: boolean;
+  admin_name?: string | null;
+}
+
+export interface PwaInstallationListResponse {
+  total: number;
+  items: PwaInstallationItem[];
+}

@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.3',
+    date: new Date().toISOString().split('T')[0],
+    title: '정산 및 매출 통계 화면 PWA 분석 전용 탭 분리 구현',
+    updates: [
+      { text: '매출 및 정산 리포트 탭과 PWA 설치/활성 기기 분석 탭으로 UI 전환 분리', isNew: true },
+      { text: '등록된 PWA 익명 설치 기기 목록 테이블 조회 기능 추가', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.2',
     date: new Date().toISOString().split('T')[0],
     title: '배포 시 서버 스타트업 자동 스키마 마이그레이션(Auto-Migration) 지원',

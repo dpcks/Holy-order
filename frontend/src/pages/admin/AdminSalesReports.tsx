@@ -11,7 +11,7 @@ import { apiClient } from '../../api/client';
 import { QK, QK_DOMAIN } from '../../api/queryKeys';
 import { getWsUrl } from '../../utils/url';
 import { Skeleton } from '../../components/ui/Skeleton';
-import type { ReportStats, StandardResponse, PwaStatsResponse } from '../../types';
+import type { ReportStats, StandardResponse, PwaStatsResponse, PwaInstallationListResponse } from '../../types';
 
 // CSS 진행 바 컴포넌트
 const ProgressBar = ({ value, max, color = 'bg-[#1A0A0A]' }: { value: number; max: number; color?: string }) => (
@@ -222,6 +222,8 @@ export const AdminSalesReports = () => {
     staleTime: 1000 * 60, // 매출 통계는 1분 캐시 (3시간대보다 자주 바뀌므로 짧게 설정)
   });
 
+  const [activeTab, setActiveTab] = useState<'SALES' | 'PWA'>('SALES');
+
   const { data: pwaStats } = useQuery({
     queryKey: ['pwa_installations_stats'],
     queryFn: async () => {
@@ -230,6 +232,18 @@ export const AdminSalesReports = () => {
       );
       return res.success ? res.data : null;
     },
+    staleTime: 1000 * 30,
+  });
+
+  const { data: pwaInstallationsData } = useQuery({
+    queryKey: ['pwa_installations_list'],
+    queryFn: async () => {
+      const res = await apiClient.get<StandardResponse<PwaInstallationListResponse>, StandardResponse<PwaInstallationListResponse>>(
+        '/admin/pwa/installations'
+      );
+      return res.success ? res.data : null;
+    },
+    enabled: activeTab === 'PWA',
     staleTime: 1000 * 30,
   });
 
@@ -248,59 +262,288 @@ export const AdminSalesReports = () => {
           <p className="text-[11px] font-semibold text-primary tracking-widest uppercase mb-1">Reporting Center</p>
           <h1 className="text-2xl font-bold text-gray-900">정산 및 매출 통계</h1>
         </div>
-        <div className="flex flex-col gap-2.5 items-end">
-          <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
-            {(['주일', '주차별', '월별'] as const).map(p => (
-              <button key={p} onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
-                {p}
-              </button>
-            ))}
-          </div>
 
-          <div className="flex items-center gap-2">
-            {/* 상단 버튼 그룹 */}
-            <div className="flex gap-1.5 mr-1">
-              {period !== '주일' && (
-                <button
-                  onClick={() => setIsTopCustomersModalOpen(true)}
-                  className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-                >
-                  🏆 단골 성도
+        {activeTab === 'SALES' ? (
+          <div className="flex flex-col gap-2.5 items-end">
+            <div className="flex gap-1.5 bg-gray-100 p-1 rounded-xl">
+              {(['주일', '주차별', '월별'] as const).map(p => (
+                <button key={p} onClick={() => setPeriod(p)}
+                  className={`px-3 py-1.5 text-[13px] font-semibold rounded-lg transition-all ${period === p ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                  {p}
                 </button>
-              )}
-              <button
-                onClick={() => setIsReportModalOpen(true)}
-                className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#23734A] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
-              >
-                <BarChart2 size={14} />마감 리포트
-              </button>
+              ))}
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
-              <CalendarIcon size={14} className="text-gray-500" />
-              {period === '주일' ? (
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
-                />
-              ) : (
-                <input
-                  type="month"
-                  value={selectedDate.substring(0, 7)}
-                  onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
-                  className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
-                />
-              )}
+            <div className="flex items-center gap-2">
+              {/* 상단 버튼 그룹 */}
+              <div className="flex gap-1.5 mr-1">
+                {period !== '주일' && (
+                  <button
+                    onClick={() => setIsTopCustomersModalOpen(true)}
+                    className="flex items-center gap-1.5 text-[12px] font-bold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                  >
+                    🏆 단골 성도
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="flex items-center gap-1.5 text-[12px] font-bold text-white bg-[#1A0A0A] hover:bg-[#23734A] px-3 py-1.5 rounded-lg transition-colors shadow-sm"
+                >
+                  <BarChart2 size={14} />마감 리포트
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200">
+                <CalendarIcon size={14} className="text-gray-500" />
+                {period === '주일' ? (
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={selectedDate.substring(0, 7)}
+                    onChange={(e) => setSelectedDate(`${e.target.value}-01`)}
+                    className="bg-transparent border-none text-[13px] font-semibold text-gray-700 outline-none p-0 cursor-pointer"
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[12px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3.5 py-1.5 rounded-full flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              실시간 익명 기기 감지 중
+            </span>
+          </div>
+        )}
       </header>
 
+      {/* 탭 네비게이션 바 */}
+      <div className="bg-white border-b border-gray-200 px-6 flex gap-6 shrink-0">
+        <button
+          onClick={() => setActiveTab('SALES')}
+          className={`py-3 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === 'SALES'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <BarChart2 size={16} />
+          매출 및 정산 리포트
+        </button>
+
+        <button
+          onClick={() => setActiveTab('PWA')}
+          className={`py-3 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 ${
+            activeTab === 'PWA'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <Smartphone size={16} />
+          PWA 설치 및 활성 기기 현황
+          {pwaStats && (
+            <span className={`px-2 py-0.5 text-[11px] font-extrabold rounded-full transition-colors ${
+              activeTab === 'PWA' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-600'
+            }`}>
+              {pwaStats.detected_total}대
+            </span>
+          )}
+        </button>
+      </div>
+
       <div className="flex-1 p-6 grid grid-cols-3 gap-5 auto-rows-min relative min-h-[500px]">
-        {loading ? (
+        {activeTab === 'PWA' ? (
+          <div className="col-span-3 space-y-6">
+            {/* PWA 설치 감지 및 활성 기기 현황 (Analytics) */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <Smartphone size={20} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-gray-900 text-[15px] tracking-tight">PWA 설치 감지 및 활성 기기 현황</h2>
+                    <p className="text-[11px] text-gray-400 font-medium">PWA Device Installation & Activity Analytics</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  실시간 기기 감지 중
+                </span>
+              </div>
+
+              {/* 통계 요약 카드 4개 */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">누적 설치 감지 기기</p>
+                  <p className="text-2xl font-black text-gray-900">{pwaStats ? pwaStats.detected_total.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">standalone 모드 최초 실행 기록 기준</p>
+                </div>
+                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 7일 활성 기기</p>
+                  <p className="text-2xl font-black text-emerald-600">{pwaStats ? pwaStats.active_7d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">7일 이내 PWA 실행 및 반응 기기</p>
+                </div>
+                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 30일 활성 기기</p>
+                  <p className="text-2xl font-black text-blue-600">{pwaStats ? pwaStats.active_30d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">30일 이내 PWA 실행 기록 기기</p>
+                </div>
+                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">미사용 기기 (90일 이상)</p>
+                  <p className="text-2xl font-black text-gray-400">{pwaStats ? pwaStats.stale_90d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">앱 삭제 추정 또는 오랜 미접속</p>
+                </div>
+              </div>
+
+              {/* 상세 정보 2열 */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                {/* 왼쪽: 앱 유형 & 플랫폼 분포 */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">앱 유형별 감지 기기</h3>
+                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-[13px] font-bold text-gray-700">📱 사용자 주문 PWA</span>
+                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.USER ?? 0}대</span>
+                      </div>
+                      <div className="w-[1px] h-6 bg-gray-200" />
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-[13px] font-bold text-gray-700">🛠️ 관리자 전용 PWA</span>
+                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.ADMIN ?? 0}대</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">플랫폼별 감지 분포</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
+                        <p className="text-[11px] font-semibold text-gray-500">iOS (iPhone)</p>
+                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.IOS ?? 0}대</p>
+                      </div>
+                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
+                        <p className="text-[11px] font-semibold text-gray-500">Android</p>
+                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.ANDROID ?? 0}대</p>
+                      </div>
+                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
+                        <p className="text-[11px] font-semibold text-gray-500">Desktop / 기타</p>
+                        <p className="text-[15px] font-black text-gray-900">{(pwaStats?.by_platform?.DESKTOP ?? 0) + (pwaStats?.by_platform?.UNKNOWN ?? 0)}대</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 오른쪽: 주문 연결 & 안내 문구 */}
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">최근 30일 PWA 주문 연동</h3>
+                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-[13px] font-bold text-gray-700">PWA 실시간 주문 수</span>
+                        <span className="text-[14px] font-black text-primary">{pwaStats?.pwa_orders_30d ?? 0}건</span>
+                      </div>
+                      <div className="w-[1px] h-6 bg-gray-200" />
+                      <div className="flex-1 flex justify-between items-center">
+                        <span className="text-[13px] font-bold text-gray-700">주문 생성 고유 기기</span>
+                        <span className="text-[14px] font-black text-primary">{pwaStats?.unique_ordering_installations_30d ?? 0}대</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 수집 정책 및 한계 안내 박스 */}
+                  <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3.5 flex gap-2.5">
+                    <HelpCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
+                    <div className="text-[11px] text-blue-900/80 leading-relaxed font-medium space-y-1">
+                      <p className="font-bold text-blue-900">💡 PWA 설치 및 기기 추적 안내</p>
+                      <ul className="list-disc pl-3.5 space-y-0.5">
+                        <li><strong>설치 감지 기기</strong>: 앱을 홈 화면에서 standalone 모드로 실행한 기록을 기준으로 집계됩니다.</li>
+                        <li><strong>iOS(iPhone)</strong>: Safari 정책상 홈 화면에 추가 후 앱을 최초 1회 실행한 시점에 등록됩니다. (일반 웹 접속 시 미설치로 단정하지 않음)</li>
+                        <li><strong>앱 삭제</strong>: 브라우저 특성상 삭제 시점이 즉시 감지되지 않으며, `last_seen_at` 기준으로 활성/미사용 상태가 계산됩니다.</li>
+                        <li><strong>기기 기준</strong>: 사용자 수가 아닌 익명 설치 기기 단위 기준입니다.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 등록된 감지 기기 목록 테이블 */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-gray-900">등록된 PWA 설치 기기 목록</h3>
+                <span className="text-[12px] font-semibold text-gray-500">
+                  총 {pwaInstallationsData?.total ?? 0}대 등록됨
+                </span>
+              </div>
+
+              {!pwaInstallationsData || pwaInstallationsData.items.length === 0 ? (
+                <p className="text-gray-400 text-sm text-center py-8">아직 등록된 PWA 설치 기기가 없습니다.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-[12px] font-bold text-gray-400 uppercase tracking-wider">
+                        <th className="pb-3 pl-2">익명 기기 ID</th>
+                        <th className="pb-3">앱 유형</th>
+                        <th className="pb-3">플랫폼</th>
+                        <th className="pb-3">푸시 권한</th>
+                        <th className="pb-3">최초 감지시각</th>
+                        <th className="pb-3">최근 활성시각</th>
+                        <th className="pb-3 pr-2 text-right">상태</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50 text-[13px]">
+                      {pwaInstallationsData.items.map((item) => (
+                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-3 pl-2 font-mono font-bold text-gray-800">
+                            {item.installation_id_masked}
+                          </td>
+                          <td className="py-3 font-semibold">
+                            {item.app_type === 'USER' ? (
+                              <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[11px] font-bold">사용자</span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[11px] font-bold">
+                                관리자 {item.admin_name ? `(${item.admin_name})` : ''}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 font-medium text-gray-700">{item.platform}</td>
+                          <td className="py-3">
+                            <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                              item.push_permission === 'GRANTED'
+                                ? 'bg-blue-50 text-blue-700'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {item.push_permission}
+                            </span>
+                          </td>
+                          <td className="py-3 text-gray-500 text-[12px]">{new Date(item.first_seen_at).toLocaleString()}</td>
+                          <td className="py-3 text-gray-500 text-[12px]">{new Date(item.last_seen_at).toLocaleString()}</td>
+                          <td className="py-3 pr-2 text-right">
+                            {item.is_active_7d ? (
+                              <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">7일내 활성</span>
+                            ) : item.is_active_30d ? (
+                              <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[11px]">30일내 활성</span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium text-[11px]">미사용</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : loading ? (
           <>
             <div className="col-span-3 grid grid-cols-4 gap-4">
               {Array.from({ length: 4 }).map((_, i) => <KpiCardSkeleton key={i} />)}
@@ -511,120 +754,6 @@ export const AdminSalesReports = () => {
                 </div>
               </div>
             )}
-
-            {/* PWA 설치 감지 및 활성 기기 현황 (Analytics) */}
-            <div className="col-span-3 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-2">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-                    <Smartphone size={20} />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 text-[15px] tracking-tight">PWA 설치 감지 및 활성 기기 현황</h2>
-                    <p className="text-[11px] text-gray-400 font-medium">PWA Device Installation & Activity Analytics</p>
-                  </div>
-                </div>
-                <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  실시간 기기 감지 중
-                </span>
-              </div>
-
-              {/* 통계 요약 카드 4개 */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">누적 설치 감지 기기</p>
-                  <p className="text-2xl font-black text-gray-900">{pwaStats ? pwaStats.detected_total.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">standalone 모드 최초 실행 기록 기준</p>
-                </div>
-                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 7일 활성 기기</p>
-                  <p className="text-2xl font-black text-emerald-600">{pwaStats ? pwaStats.active_7d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">7일 이내 PWA 실행 및 반응 기기</p>
-                </div>
-                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 30일 활성 기기</p>
-                  <p className="text-2xl font-black text-blue-600">{pwaStats ? pwaStats.active_30d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">30일 이내 PWA 실행 기록 기기</p>
-                </div>
-                <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">미사용 기기 (90일 이상)</p>
-                  <p className="text-2xl font-black text-gray-400">{pwaStats ? pwaStats.stale_90d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">앱 삭제 추정 또는 오랜 미접속</p>
-                </div>
-              </div>
-
-              {/* 상세 정보 2열 */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-                {/* 왼쪽: 앱 유형 & 플랫폼 분포 */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">앱 유형별 감지 기기</h3>
-                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">📱 사용자 주문 PWA</span>
-                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.USER ?? 0}대</span>
-                      </div>
-                      <div className="w-[1px] h-6 bg-gray-200" />
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">🛠️ 관리자 전용 PWA</span>
-                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.ADMIN ?? 0}대</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">플랫폼별 감지 분포</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
-                        <p className="text-[11px] font-semibold text-gray-500">iOS (iPhone)</p>
-                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.IOS ?? 0}대</p>
-                      </div>
-                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
-                        <p className="text-[11px] font-semibold text-gray-500">Android</p>
-                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.ANDROID ?? 0}대</p>
-                      </div>
-                      <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
-                        <p className="text-[11px] font-semibold text-gray-500">Desktop / 기타</p>
-                        <p className="text-[15px] font-black text-gray-900">{(pwaStats?.by_platform?.DESKTOP ?? 0) + (pwaStats?.by_platform?.UNKNOWN ?? 0)}대</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 오른쪽: 주문 연결 & 안내 문구 */}
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">최근 30일 PWA 주문 연동</h3>
-                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">PWA 실시간 주문 수</span>
-                        <span className="text-[14px] font-black text-primary">{pwaStats?.pwa_orders_30d ?? 0}건</span>
-                      </div>
-                      <div className="w-[1px] h-6 bg-gray-200" />
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">주문 생성 고유 기기</span>
-                        <span className="text-[14px] font-black text-primary">{pwaStats?.unique_ordering_installations_30d ?? 0}대</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 수집 정책 및 한계 안내 박스 */}
-                  <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-3.5 flex gap-2.5">
-                    <HelpCircle size={16} className="text-blue-500 shrink-0 mt-0.5" />
-                    <div className="text-[11px] text-blue-900/80 leading-relaxed font-medium space-y-1">
-                      <p className="font-bold text-blue-900">💡 PWA 설치 및 기기 추적 안내</p>
-                      <ul className="list-disc pl-3.5 space-y-0.5">
-                        <li><strong>설치 감지 기기</strong>: 앱을 홈 화면에서 standalone 모드로 실행한 기록을 기준으로 집계됩니다.</li>
-                        <li><strong>iOS(iPhone)</strong>: Safari 정책상 홈 화면에 추가 후 앱을 최초 1회 실행한 시점에 등록됩니다. (일반 웹 접속 시 미설치로 단정하지 않음)</li>
-                        <li><strong>앱 삭제</strong>: 브라우저 특성상 삭제 시점이 즉시 감지되지 않으며, `last_seen_at` 기준으로 활성/미사용 상태가 계산됩니다.</li>
-                        <li><strong>기기 기준</strong>: 사용자 수가 아닌 익명 설치 기기 단위 기준입니다.</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
 
             {/* 마감 리포트 생성 모달 */}
             {isReportModalOpen && (
