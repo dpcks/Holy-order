@@ -421,7 +421,7 @@ export const AdminPaymentLogs = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="h-[90px] px-8 border-t border-gray-100 flex flex-col justify-center items-center gap-2 shrink-0 bg-white shadow-sm">
+      <footer className="min-h-[110px] py-4 px-8 border-t border-gray-100 flex flex-col justify-center items-center gap-2.5 shrink-0 bg-white shadow-sm pb-[max(1.25rem,env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-2">
           <button
             disabled={page === 1 || loading}
