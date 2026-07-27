@@ -275,48 +275,50 @@ export const AdminSchedule = () => {
         `/admin/schedules?start_date=${prevStartDate}&end_date=${prevEndDate}`
       );
 
-      const prevSchedules = (res.success && res.data) ? res.data : [];
+      const prevSchedulesData = (Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : [])) as VolunteerSchedule[];
 
       let copiedCount = 0;
+      const newSchedules = [...schedules];
 
-      setSchedules(prev => {
-        const newSchedules = [...prev];
+      sundaysOfMonth.forEach((curSunday, idx) => {
+        // 지난달에 해당 주차(idx) 주일이 존재하는 경우에만 복사 (5주차 제외 대응)
+        if (idx < prevSundays.length) {
+          const prevSundayStr = format(prevSundays[idx], 'yyyy-MM-dd');
+          const prevSched = prevSchedulesData.find(s => {
+            const sDate = typeof s.sunday_date === 'string' ? s.sunday_date.split('T')[0] : format(new Date(s.sunday_date), 'yyyy-MM-dd');
+            return sDate === prevSundayStr;
+          });
 
-        sundaysOfMonth.forEach((curSunday, idx) => {
-          // 지난달에 해당 주차(idx) 주일이 존재하는 경우에만 복사 (5주차 제외 대응)
-          if (idx < prevSundays.length) {
-            const prevSundayStr = format(prevSundays[idx], 'yyyy-MM-dd');
-            const prevSched = prevSchedules.find(s => s.sunday_date === prevSundayStr);
-            const prevNames = Array.isArray(prevSched?.volunteers?.names) ? prevSched.volunteers.names : [];
+          const prevNames = Array.isArray(prevSched?.volunteers?.names)
+            ? prevSched.volunteers.names
+            : (Array.isArray(prevSched?.volunteers) ? prevSched.volunteers : []);
 
-            if (prevNames.length > 0) {
-              copiedCount++;
-              const curSundayStr = format(curSunday, 'yyyy-MM-dd');
-              const existsIndex = newSchedules.findIndex(s => s.sunday_date === curSundayStr);
+          if (prevNames.length > 0) {
+            copiedCount++;
+            const curSundayStr = format(curSunday, 'yyyy-MM-dd');
+            const existsIndex = newSchedules.findIndex(s => s.sunday_date === curSundayStr);
 
-              if (existsIndex >= 0) {
-                newSchedules[existsIndex] = {
-                  ...newSchedules[existsIndex],
-                  volunteers: { ...newSchedules[existsIndex].volunteers, names: [...prevNames] }
-                };
-              } else {
-                newSchedules.push({
-                  id: 0,
-                  sunday_date: curSundayStr,
-                  volunteers: { names: [...prevNames] },
-                  memo: ''
-                });
-              }
+            if (existsIndex >= 0) {
+              newSchedules[existsIndex] = {
+                ...newSchedules[existsIndex],
+                volunteers: { names: [...prevNames] }
+              };
+            } else {
+              newSchedules.push({
+                id: 0,
+                sunday_date: curSundayStr,
+                volunteers: { names: [...prevNames] },
+                memo: ''
+              });
             }
           }
-        });
-
-        return newSchedules;
+        }
       });
 
       if (copiedCount === 0) {
         showToast('지난달에 등록된 봉사자 명단이 없습니다.', 'info');
       } else {
+        setSchedules(newSchedules);
         const matchLimit = Math.min(sundaysOfMonth.length, prevSundays.length);
         const is5thWeekExcluded = sundaysOfMonth.length > prevSundays.length;
         const msg = is5thWeekExcluded
