@@ -17,13 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
-    version: 'v1.7.0',
+    version: 'v1.7.1',
     date: new Date().toISOString().split('T')[0],
-    title: '관리자 봉사 스케줄 — 주일 전용 주차 카드 보드 리디자인',
+    title: '관리자 봉사 스케줄 — 주일 카드 보드 & 탭 전환 & 지난달 명단 복사',
     updates: [
-      { text: '불필요한 평일 달력 칸 제거 및 해당 월의 주일(일요일 4~5개) 카드 보드로 리디자인', isNew: true },
+      { text: '해당 월의 주일(일요일 4~5개)만 깔끔하게 표시하는 주차별 카드 보드로 리디자인', isNew: true },
+      { text: '상단 탭(주일 주차별 보드 vs 월간 캘린더)으로 이전 달력 화면도 선택 조회 가능', isNew: true },
+      { text: '지난달 주차별 봉사자 명단 일괄 복사 기능 및 5주차 달 세심한 예외 처리 적용', isNew: true },
       { text: '월별 주일 수, 배정 완료 수, 미배정 수 요약 헤더 및 오늘/다음 주일 강조 뱃지 탑재', isNew: true },
-      { text: '이전 주일 봉사자 명단 불러오기 편의 기능 추가 및 백엔드 일요일 날짜 엄격 검증(422) 지원', isNew: true }
+      { text: '백엔드 일요일 날짜 엄격 검증(HTTP 422) 및 단위 테스트 구현', isNew: true }
     ]
   },
   {
