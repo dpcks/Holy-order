@@ -1,7 +1,7 @@
 /*
 [File Role]
 이 파일은 관리자 전용 주일 봉사 스케줄 관리 페이지를 담당합니다.
-월간 달력 대신 해당 월의 일요일(주일) 4~5개만 표시하는 주차별 카드로 리디자인되었습니다.
+주일 주차별 보드 뷰와 월간 캘린더 뷰를 탭으로 자유롭게 전환하여 관리할 수 있습니다.
 봉사자 선택, 명단 관리, 메모, 저장 사이드바 기능을 완벽하게 제공합니다.
 */
 
@@ -9,7 +9,7 @@ import { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, Save,
   FileText, CheckCircle2, AlertCircle, Users, X, Trash2,
-  Quote, Sparkles, Copy, Clock
+  Quote, Sparkles, Copy, Clock, LayoutGrid
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '../../api/client';
@@ -20,7 +20,8 @@ import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
-  isSameDay, isBefore, startOfDay, addMonths, subMonths, subDays
+  startOfWeek, endOfWeek, isSameMonth, isSameDay,
+  isBefore, startOfDay, addMonths, subMonths, subDays
 } from 'date-fns';
 import { getDailyVerse } from '../../utils/bibleVerses';
 
@@ -51,6 +52,7 @@ const VolunteerSkeleton = () => (
 export const AdminSchedule = () => {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [viewMode, setViewMode] = useState<'BOARD' | 'CALENDAR'>('BOARD');
   const [schedules, setSchedules] = useState<VolunteerSchedule[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [savingDate, setSavingDate] = useState<string | null>(null);
@@ -67,7 +69,14 @@ export const AdminSchedule = () => {
 
   // 해당 월의 시작일과 종료일
   const monthStart = useMemo(() => startOfMonth(currentDate), [currentDate]);
-  const monthEnd = useMemo(() => endOfMonth(currentDate), [currentDate]);
+  const monthEnd = useMemo(() => endOfMonth(monthStart), [currentDate]);
+
+  // 달력 뷰용 전체 일 수 계산 (앞뒤 달 범위 포함)
+  const calendarDays = useMemo(() => {
+    const startDate = startOfWeek(monthStart);
+    const endDate = endOfWeek(monthEnd);
+    return eachDayOfInterval({ start: startDate, end: endDate });
+  }, [monthStart, monthEnd]);
 
   // 해당 월의 모든 일요일 (주일)
   const sundaysOfMonth = useMemo(() => {
@@ -81,8 +90,8 @@ export const AdminSchedule = () => {
     return sundaysOfMonth.find(d => !isBefore(startOfDay(d), today)) || null;
   }, [sundaysOfMonth]);
 
-  const startDate = format(monthStart, 'yyyy-MM-dd');
-  const endDate = format(monthEnd, 'yyyy-MM-dd');
+  const startDate = format(calendarDays[0], 'yyyy-MM-dd');
+  const endDate = format(calendarDays[calendarDays.length - 1], 'yyyy-MM-dd');
 
   // [React Query] 스케줄 조회
   const { data: fetchedSchedules = [], isLoading: loadingSchedules } = useQuery({
@@ -246,6 +255,85 @@ export const AdminSchedule = () => {
     showToast(`이전 주일 봉사자(${prevNames.length}명) 명단을 불러왔습니다.`, 'success');
   };
 
+  const [isCopyingPrevMonth, setIsCopyingPrevMonth] = useState(false);
+
+  // 지난달 전체 명단 복사 기능
+  const handleCopyLastMonthSchedules = async () => {
+    try {
+      setIsCopyingPrevMonth(true);
+      const prevMonth = subMonths(currentDate, 1);
+      const prevMonthStart = startOfMonth(prevMonth);
+      const prevMonthEnd = endOfMonth(prevMonthStart);
+      const prevDays = eachDayOfInterval({ start: prevMonthStart, end: prevMonthEnd });
+      const prevSundays = prevDays.filter(d => d.getDay() === 0);
+
+      const prevStartDate = format(prevMonthStart, 'yyyy-MM-dd');
+      const prevEndDate = format(prevMonthEnd, 'yyyy-MM-dd');
+
+      // 지난달 스케줄 API 조회
+      const res = await apiClient.get<VolunteerSchedule[], StandardResponse<VolunteerSchedule[]>>(
+        `/admin/schedules?start_date=${prevStartDate}&end_date=${prevEndDate}`
+      );
+
+      const prevSchedulesData = (Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : [])) as VolunteerSchedule[];
+
+      let copiedCount = 0;
+      const newSchedules = [...schedules];
+
+      sundaysOfMonth.forEach((curSunday, idx) => {
+        // 지난달에 해당 주차(idx) 주일이 존재하는 경우에만 복사 (5주차 제외 대응)
+        if (idx < prevSundays.length) {
+          const prevSundayStr = format(prevSundays[idx], 'yyyy-MM-dd');
+          const prevSched = prevSchedulesData.find(s => {
+            const sDate = typeof s.sunday_date === 'string' ? s.sunday_date.split('T')[0] : format(new Date(s.sunday_date), 'yyyy-MM-dd');
+            return sDate === prevSundayStr;
+          });
+
+          const prevNames = Array.isArray(prevSched?.volunteers?.names)
+            ? prevSched.volunteers.names
+            : (Array.isArray(prevSched?.volunteers) ? prevSched.volunteers : []);
+
+          if (prevNames.length > 0) {
+            copiedCount++;
+            const curSundayStr = format(curSunday, 'yyyy-MM-dd');
+            const existsIndex = newSchedules.findIndex(s => s.sunday_date === curSundayStr);
+
+            if (existsIndex >= 0) {
+              newSchedules[existsIndex] = {
+                ...newSchedules[existsIndex],
+                volunteers: { names: [...prevNames] }
+              };
+            } else {
+              newSchedules.push({
+                id: 0,
+                sunday_date: curSundayStr,
+                volunteers: { names: [...prevNames] },
+                memo: ''
+              });
+            }
+          }
+        }
+      });
+
+      if (copiedCount === 0) {
+        showToast('지난달에 등록된 봉사자 명단이 없습니다.', 'info');
+      } else {
+        setSchedules(newSchedules);
+        const matchLimit = Math.min(sundaysOfMonth.length, prevSundays.length);
+        const is5thWeekExcluded = sundaysOfMonth.length > prevSundays.length;
+        const msg = is5thWeekExcluded
+          ? `지난달 1~${matchLimit}주차 명단을 복사했습니다. (5주차 제외)`
+          : `지난달 주차별 봉사자 명단을 일괄 복사했습니다.`;
+        showToast(msg, 'success');
+      }
+    } catch (err) {
+      console.error('지난달 명단 복사 실패:', err);
+      showToast('지난달 명단을 불러오는 중 오류가 발생했습니다.', 'error');
+    } finally {
+      setIsCopyingPrevMonth(false);
+    }
+  };
+
   const handleSave = async (date: string) => {
     const schedule = schedules.find(s => s.sunday_date === date);
     if (!schedule) return;
@@ -298,7 +386,7 @@ export const AdminSchedule = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between md:justify-end gap-3">
+        <div className="flex items-center justify-between md:justify-end gap-3 flex-wrap">
           {/* 요약 뱃지 */}
           <div className="flex items-center gap-1.5 bg-gray-100/80 px-3 py-1.5 rounded-xl text-[12px] font-bold">
             <span className="text-gray-600">주일 {statsSummary.total}회</span>
@@ -332,6 +420,33 @@ export const AdminSchedule = () => {
         </div>
       </header>
 
+      {/* 탭 네비게이션 바 */}
+      <div className="bg-white border-b border-gray-200 px-6 xl:px-8 flex gap-6 shrink-0 z-10">
+        <button
+          onClick={() => setViewMode('BOARD')}
+          className={`py-3 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 ${
+            viewMode === 'BOARD'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <LayoutGrid size={16} />
+          주일 주차별 보드
+        </button>
+
+        <button
+          onClick={() => setViewMode('CALENDAR')}
+          className={`py-3 text-[14px] font-bold border-b-2 transition-all flex items-center gap-2 ${
+            viewMode === 'CALENDAR'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          <CalendarIcon size={16} />
+          월간 캘린더
+        </button>
+      </div>
+
       {/* 성경 구절 카드 */}
       <div className="px-6 xl:px-8 pt-3 shrink-0">
         <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-rose-50 via-orange-50 to-amber-50 border border-orange-100/50 shadow-sm p-3 xl:p-4 group">
@@ -358,141 +473,240 @@ export const AdminSchedule = () => {
         </div>
       </div>
 
-      {/* 주일 카드 보드 영역 */}
-      <main className="flex-1 p-6 xl:p-8 overflow-y-auto custom-scrollbar">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-5">
-          {loadingSchedules ? (
-            Array.from({ length: sundaysOfMonth.length || 4 }).map((_, i) => (
-              <ScheduleCardSkeleton key={i} />
-            ))
+      {/* 말씀칸과 날짜 보드 사이: 지난달 명단 복사 액션 영역 */}
+      <div className="px-6 xl:px-8 pt-3 flex justify-between items-center shrink-0">
+        <div className="text-[13px] font-black text-gray-500 flex items-center gap-2">
+          <span>{format(currentDate, 'yyyy년 M월')} 주일 봉사 스케줄</span>
+        </div>
+
+        <button
+          onClick={handleCopyLastMonthSchedules}
+          disabled={isCopyingPrevMonth}
+          className="flex items-center gap-2 px-4 py-2 bg-[#1A0A0A] hover:bg-black text-white rounded-2xl text-[13px] font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+          title="지난달 동일 주차 봉사자 명단을 복사합니다"
+        >
+          {isCopyingPrevMonth ? (
+            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
           ) : (
-            sundaysOfMonth.map((day, idx) => {
-              const dateStr = format(day, 'yyyy-MM-dd');
-              const weekNumber = idx + 1;
-              const schedule = getScheduleForDate(day);
-              const names = Array.isArray(schedule?.volunteers?.names) ? schedule.volunteers.names : [];
-              const isAssigned = names.length > 0;
-              const hasMemo = Boolean(schedule?.memo && schedule.memo.trim() !== '');
+            <Copy size={14} />
+          )}
+          지난달 명단 복사
+        </button>
+      </div>
 
-              const today = startOfDay(new Date());
-              const isCurrentDay = isSameDay(startOfDay(day), today);
-              const isNext = nextSunday ? isSameDay(day, nextSunday) : false;
-              const isPast = isBefore(startOfDay(day), today);
-              const isSelected = selectedDate === dateStr;
+      {/* 메인 영역 (보드 뷰 vs 캘린더 뷰 선택) */}
+      <main className="flex-1 p-6 xl:p-8 pt-4 overflow-y-auto custom-scrollbar flex flex-col">
+        {viewMode === 'BOARD' ? (
+          /* 주일 주차별 보드 뷰 */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-5">
+            {loadingSchedules ? (
+              Array.from({ length: sundaysOfMonth.length || 4 }).map((_, i) => (
+                <ScheduleCardSkeleton key={i} />
+              ))
+            ) : (
+              sundaysOfMonth.map((day, idx) => {
+                const dateStr = format(day, 'yyyy-MM-dd');
+                const weekNumber = idx + 1;
+                const schedule = getScheduleForDate(day);
+                const names = Array.isArray(schedule?.volunteers?.names) ? schedule.volunteers.names : [];
+                const isAssigned = names.length > 0;
+                const hasMemo = Boolean(schedule?.memo && schedule.memo.trim() !== '');
 
-              return (
-                <div
-                  key={dateStr}
-                  onClick={() => setSelectedDate(dateStr)}
-                  className={`bg-white rounded-3xl p-6 border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ${
-                    isPast
-                      ? 'opacity-75 border-gray-200 hover:border-gray-300 bg-gray-50/50'
-                      : isCurrentDay
-                        ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/10 bg-emerald-50/20'
-                        : isNext
-                          ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10 bg-primary/[0.02]'
-                          : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  } ${isSelected ? 'ring-4 ring-black/10 border-black' : ''}`}
-                >
-                  {/* 카드 상단: 주차 & 날짜 & 상단 뱃지 */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[12px] font-black text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
-                          {weekNumber}주차
-                        </span>
+                const today = startOfDay(new Date());
+                const isCurrentDay = isSameDay(startOfDay(day), today);
+                const isNext = nextSunday ? isSameDay(day, nextSunday) : false;
+                const isPast = isBefore(startOfDay(day), today);
+                const isSelected = selectedDate === dateStr;
 
-                        {isCurrentDay ? (
-                          <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            오늘 주일
+                return (
+                  <div
+                    key={dateStr}
+                    onClick={() => setSelectedDate(dateStr)}
+                    className={`bg-white rounded-3xl p-6 border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ${
+                      isPast
+                        ? 'opacity-75 border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                        : isCurrentDay
+                          ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/10 bg-emerald-50/20'
+                          : isNext
+                            ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10 bg-primary/[0.02]'
+                            : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    } ${isSelected ? 'ring-4 ring-black/10 border-black' : ''}`}
+                  >
+                    {/* 카드 상단 */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[12px] font-black text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                            {weekNumber}주차
                           </span>
-                        ) : isNext ? (
-                          <span className="text-[11px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <Clock size={12} />
-                            다음 주일
+
+                          {isCurrentDay ? (
+                            <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              오늘 주일
+                            </span>
+                          ) : isNext ? (
+                            <span className="text-[11px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <Clock size={12} />
+                              다음 주일
+                            </span>
+                          ) : null}
+                        </div>
+
+                        {/* 배정 상태 뱃지 */}
+                        {isAssigned ? (
+                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                            <CheckCircle2 size={12} />
+                            배정 완료
                           </span>
-                        ) : null}
+                        ) : (
+                          <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                            미배정
+                          </span>
+                        )}
                       </div>
 
-                      {/* 배정 상태 뱃지 */}
-                      {isAssigned ? (
-                        <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full flex items-center gap-1">
-                          <CheckCircle2 size={12} />
-                          배정 완료
-                        </span>
-                      ) : (
-                        <span className="text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                          미배정
-                        </span>
-                      )}
+                      {/* 날짜 표시 */}
+                      <h3 className="text-xl font-black text-gray-900 tracking-tight mb-4">
+                        {format(day, 'M월 d일 주일')}
+                      </h3>
+
+                      {/* 봉사자 이름 칩 영역 */}
+                      <div className="space-y-2 mb-4">
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">담당 봉사자</p>
+                        {isAssigned ? (
+                          <div className="flex flex-wrap gap-1.5">
+                            {names.slice(0, 4).map((name, i) => (
+                              <span
+                                key={i}
+                                className="text-[12px] font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-xl transition-colors"
+                              >
+                                {name}
+                              </span>
+                            ))}
+                            {names.length > 4 && (
+                              <span className="text-[11px] font-black text-primary bg-primary/5 px-2 py-1 rounded-xl border border-primary/10">
+                                +{names.length - 4}명
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-[13px] font-bold text-gray-400 italic py-1">
+                            등록된 봉사자가 없습니다
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* 날짜 표시 */}
-                    <h3 className="text-xl font-black text-gray-900 tracking-tight mb-4">
-                      {format(day, 'M월 d일 주일')}
-                    </h3>
+                    {/* 카드 하단 정보 & 버튼 */}
+                    <div className="pt-4 border-t border-gray-100/80 flex items-center justify-between mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-black text-gray-900">
+                          {isAssigned ? `${names.length}명 배정` : '0명'}
+                        </span>
+                        {hasMemo && (
+                          <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <FileText size={10} />
+                            특이사항
+                          </span>
+                        )}
+                      </div>
 
-                    {/* 봉사자 이름 칩 영역 */}
-                    <div className="space-y-2 mb-4">
-                      <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">담당 봉사자</p>
-                      {isAssigned ? (
-                        <div className="flex flex-wrap gap-1.5">
-                          {names.slice(0, 4).map((name, i) => (
-                            <span
-                              key={i}
-                              className="text-[12px] font-bold text-gray-800 bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-xl transition-colors"
-                            >
-                              {name}
-                            </span>
-                          ))}
-                          {names.length > 4 && (
-                            <span className="text-[11px] font-black text-primary bg-primary/5 px-2 py-1 rounded-xl border border-primary/10">
-                              +{names.length - 4}명
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <p className="text-[13px] font-bold text-gray-400 italic py-1">
-                          등록된 봉사자가 없습니다
-                        </p>
-                      )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedDate(dateStr);
+                        }}
+                        className={`px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all shadow-xs ${
+                          isAssigned
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            : 'bg-primary text-white hover:bg-primary/90'
+                        }`}
+                      >
+                        {isAssigned ? '편집' : '배정하기'}
+                      </button>
                     </div>
                   </div>
+                );
+              })
+            )}
+          </div>
+        ) : (
+          /* 월간 캘린더 뷰 (7열 전통 달력) */
+          <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-sm border border-gray-200/80 overflow-hidden animate-in fade-in duration-300">
+            {/* 요일 헤더 */}
+            <div className="grid grid-cols-7 border-b border-gray-100 bg-gray-50/50 shrink-0">
+              {['일', '월', '화', '수', '목', '금', '토'].map((dayName, idx) => (
+                <div key={dayName} className={`py-3 text-center text-[12px] xl:text-[13px] font-black tracking-widest ${idx === 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                  {dayName}
+                </div>
+              ))}
+            </div>
 
-                  {/* 카드 하단 정보 & 버튼 */}
-                  <div className="pt-4 border-t border-gray-100/80 flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-black text-gray-900">
-                        {isAssigned ? `${names.length}명 배정` : '0명'}
-                      </span>
-                      {hasMemo && (
-                        <span className="text-[10px] font-black text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <FileText size={10} />
-                          특이사항
-                        </span>
-                      )}
-                    </div>
+            {/* 날짜 그리드 */}
+            <div className={`flex-1 grid grid-cols-7 ${calendarDays.length > 35 ? 'grid-rows-6' : 'grid-rows-5'}`}>
+              {loadingSchedules ? (
+                Array.from({ length: 35 }).map((_, i) => (
+                  <div key={i} className="p-3 border-r border-b border-gray-100/70 flex flex-col space-y-2">
+                    <Skeleton className="h-4 w-6" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))
+              ) : (
+                calendarDays.map((day) => {
+                  const dateStr = format(day, 'yyyy-MM-dd');
+                  const isSun = day.getDay() === 0;
+                  const isCurrentMonth = isSameMonth(day, currentDate);
+                  const isToday = isSameDay(day, new Date());
+                  const schedule = getScheduleForDate(day);
+                  const isSelected = selectedDate === dateStr;
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedDate(dateStr);
-                      }}
-                      className={`px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all shadow-xs ${
-                        isAssigned
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          : 'bg-primary text-white hover:bg-primary/90'
+                  return (
+                    <div
+                      key={dateStr}
+                      onClick={() => isSun && setSelectedDate(dateStr)}
+                      className={`p-3 lg:p-4 border-r border-b border-gray-100/70 transition-all group relative flex flex-col h-full min-h-[100px] ${
+                        !isCurrentMonth ? 'opacity-25 bg-gray-50/30' : ''
+                      } ${isSun ? 'cursor-pointer hover:bg-primary/[0.02]' : 'cursor-default'} ${
+                        isSelected ? 'bg-primary/[0.04] ring-2 ring-inset ring-primary/30' :
+                        isToday ? 'bg-emerald-50/50 ring-2 ring-inset ring-emerald-500' : ''
                       }`}
                     >
-                      {isAssigned ? '편집' : '배정하기'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
+                      <span className={`text-[14px] xl:text-[15px] font-black ${isSun ? 'text-red-500' : 'text-gray-900'}`}>
+                        {format(day, 'd')}
+                      </span>
+
+                      {isSun && (
+                        <div className="mt-1.5 flex flex-col gap-1 overflow-y-auto custom-scrollbar no-scrollbar">
+                          {schedule ? (
+                            <>
+                              <div className="flex flex-wrap gap-1">
+                                {(Array.isArray(schedule.volunteers?.names) ? schedule.volunteers.names : []).map((name: string, idx: number) => (
+                                  <span key={idx} className="text-[11px] font-bold text-gray-800 bg-gray-100 px-1.5 py-0.5 rounded-md border border-gray-200/50">
+                                    {name}
+                                  </span>
+                                ))}
+                              </div>
+                              {schedule.memo && (
+                                <div className="mt-0.5">
+                                  <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
+                                    특이사항
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-[11px] font-bold text-gray-300 italic">미배정</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* 배경 오버레이 (사이드바 오픈 시) */}
