@@ -17,6 +17,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.5.0',
+    date: new Date().toISOString().split('T')[0],
+    title: '관리자 전용 독립 PWA 앱 구축 및 전용 로고(admin_logo) 적용',
+    updates: [
+      { text: '사용자 주문 앱과 분리된 관리자 전용 독립 PWA 매니페스트(manifest-admin.webmanifest, scope: /admin/) 구축', isNew: true },
+      { text: '관리자 전용 로고(admin_logo.png) 기반 앱 아이콘(admin-pwa-192, admin-pwa-512, admin-apple-touch-icon) 및 admin.html 적용', isNew: true },
+      { text: 'Vercel /admin/* URL rewrite 설정으로 관리자 독립 홈 화면 추가 기능 지원', isNew: true }
+    ]
+  },
+  {
     version: 'v1.4.15',
     date: new Date().toISOString().split('T')[0],
     title: '품절(Sold Out) 메뉴 카테고리 최하단 자동 정렬 기능 추가',
