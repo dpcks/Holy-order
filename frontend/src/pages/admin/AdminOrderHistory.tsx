@@ -591,7 +591,7 @@ export const AdminOrderHistory = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="px-8 py-3 border-t border-gray-100 flex flex-col items-center gap-3 shrink-0 bg-white">
+      <footer className="px-8 py-5 border-t border-gray-100 flex flex-col items-center gap-4 shrink-0 bg-white">
         <div className="flex items-center gap-2">
           <button
             disabled={page === 1}
@@ -624,17 +624,17 @@ export const AdminOrderHistory = () => {
             <ChevronRight size={18} />
           </button>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 mt-1">
           <select
             value={limit}
             onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
-            className="text-[12px] font-bold text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-primary/20 cursor-pointer"
+            className="text-[13px] font-bold text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl px-3.5 py-2 outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer shadow-xs"
           >
             <option value={20}>20개씩 보기</option>
             <option value={50}>50개씩 보기</option>
             <option value={100}>100개씩 보기</option>
           </select>
-          <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
+          <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest">
             전체 {totalCount}개 중 {orders.length}개의 주문내역
           </p>
         </div>

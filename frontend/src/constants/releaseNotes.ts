@@ -17,6 +17,15 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.5.2',
+    date: new Date().toISOString().split('T')[0],
+    title: '관리자 화면 하단 푸터 높이 확충 및 목록 N개씩 보기 여백 최적화',
+    updates: [
+      { text: '실시간 주문 현황 하단 푸터(주문수/총액/통계) 상하 수직 여백 확장으로 가시성 대폭 개선', isNew: true },
+      { text: "주문 내역 및 입금 승인 내역의 'N개씩 보기' 선택 드롭다운 버튼 여백과 터치 영역 디자인 개선", isNew: true }
+    ]
+  },
+  {
     version: 'v1.5.1',
     date: new Date().toISOString().split('T')[0],
     title: '관리자 PWA 태블릿/iOS Safe-Area 상단 잘림 및 하단 공백 제거',

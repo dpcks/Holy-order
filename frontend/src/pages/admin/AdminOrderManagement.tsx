@@ -554,26 +554,26 @@ export const AdminOrderManagement = () => {
 
 
 
-      <footer className="bg-[#1A0A0A] px-5 xl:px-8 py-2 xl:py-3 flex items-center justify-between shrink-0 text-white shadow-2xl">
-        <div className="flex items-center gap-4 xl:gap-8">
+      <footer className="bg-[#1A0A0A] px-6 xl:px-10 py-5 xl:py-6 flex items-center justify-between shrink-0 text-white shadow-2xl">
+        <div className="flex items-center gap-6 xl:gap-12">
           <div>
-            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Today Orders</p>
-            <p className="text-lg xl:text-xl font-black">{orders.length}<span className="text-[10px] font-bold text-white/40 ml-1">Orders</span></p>
+            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>
+            <p className="text-xl xl:text-2xl font-black">{orders.length}<span className="text-[11px] font-bold text-white/40 ml-1.5">Orders</span></p>
           </div>
-          <div className="w-[1px] h-6 xl:h-8 bg-white/10" />
+          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
           <div>
-            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Total Revenue</p>
-            <p className="text-lg xl:text-xl font-black">₩{stats.total_sales.toLocaleString()}</p>
+            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Revenue</p>
+            <p className="text-xl xl:text-2xl font-black">₩{stats.total_sales.toLocaleString()}</p>
           </div>
-          <div className="w-[1px] h-6 xl:h-8 bg-white/10" />
+          <div className="w-[1px] h-8 xl:h-10 bg-white/10" />
           <div>
-            <p className="text-[9px] text-white/40 font-black uppercase tracking-[0.2em]">Total Orders</p>
-            <p className="text-lg xl:text-xl font-black">{stats.total_orders}<span className="text-[10px] font-bold text-white/40 ml-1">Total</span></p>
+            <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Total Orders</p>
+            <p className="text-xl xl:text-2xl font-black">{stats.total_orders}<span className="text-[11px] font-bold text-white/40 ml-1.5">Total</span></p>
           </div>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
+        <div className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl transition-all ${wsStatus === 'CONNECTED' ? 'bg-white/5' : 'bg-red-500/10'
           }`}>
-          <div className={`w-2 h-2 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
+          <div className={`w-2.5 h-2.5 rounded-full ${wsStatus === 'CONNECTED' ? 'bg-green-500 animate-pulse' :
             wsStatus === 'RECONNECTING' ? 'bg-orange-400 animate-pulse' :
               'bg-red-500'
             }`} />
