@@ -12,6 +12,7 @@ app = FastAPI(title="Holy-Order API", description="교회 카페 주문 시스�
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
+    allow_origin_regex=r"https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
