@@ -20,7 +20,7 @@ import { Toast } from '../../components/ui/Toast';
 import type { ToastType } from '../../components/ui/Toast';
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
-  startOfWeek, endOfWeek, isSameMonth, isSameDay,
+  startOfWeek, endOfWeek, isSameMonth, isSameDay, isSameWeek,
   isBefore, startOfDay, addMonths, subMonths, subDays
 } from 'date-fns';
 import { getDailyVerse } from '../../utils/bibleVerses';
@@ -514,36 +514,43 @@ export const AdminSchedule = () => {
 
                 const today = startOfDay(new Date());
                 const isCurrentDay = isSameDay(startOfDay(day), today);
+                const isCurrentWeek = isSameWeek(startOfDay(day), today, { weekStartsOn: 1 });
                 const isNext = nextSunday ? isSameDay(day, nextSunday) : false;
-                const isPast = isBefore(startOfDay(day), today);
+                const isCurrentWeekSunday = isCurrentDay || isCurrentWeek || (isNext && !isBefore(startOfDay(day), today));
+                const isPast = isBefore(startOfDay(day), today) && !isCurrentWeekSunday;
                 const isSelected = selectedDate === dateStr;
 
                 return (
                   <div
                     key={dateStr}
                     onClick={() => setSelectedDate(dateStr)}
-                    className={`bg-white rounded-3xl p-6 border transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ${
-                      isPast
-                        ? 'opacity-75 border-gray-200 hover:border-gray-300 bg-gray-50/50'
-                        : isCurrentDay
-                          ? 'border-emerald-500 ring-2 ring-emerald-500/20 shadow-lg shadow-emerald-500/10 bg-emerald-50/20'
-                          : isNext
-                            ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10 bg-primary/[0.02]'
-                            : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                    className={`bg-white rounded-3xl p-6 border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between relative group ${
+                      isCurrentWeekSunday
+                        ? 'border-primary ring-4 ring-primary/20 shadow-xl shadow-primary/10 bg-primary/[0.03] scale-[1.01]'
+                        : isPast
+                          ? 'opacity-75 border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                          : 'border-gray-200 hover:border-primary/50 hover:shadow-md'
                     } ${isSelected ? 'ring-4 ring-black/10 border-black' : ''}`}
                   >
                     {/* 카드 상단 */}
                     <div>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-[12px] font-black text-gray-500 bg-gray-100 px-2.5 py-1 rounded-lg">
+                          <span className={`text-[12px] font-black px-2.5 py-1 rounded-lg ${
+                            isCurrentWeekSunday ? 'bg-primary text-white' : 'text-gray-500 bg-gray-100'
+                          }`}>
                             {weekNumber}주차
                           </span>
 
                           {isCurrentDay ? (
-                            <span className="text-[11px] font-extrabold text-emerald-700 bg-emerald-100 border border-emerald-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[11px] font-extrabold text-primary bg-primary/10 border border-primary/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                               오늘 주일
+                            </span>
+                          ) : isCurrentWeek ? (
+                            <span className="text-[11px] font-extrabold text-primary bg-primary/10 border border-primary/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                              <Clock size={12} />
+                              이번 주 주일
                             </span>
                           ) : isNext ? (
                             <span className="text-[11px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded-full flex items-center gap-1">
