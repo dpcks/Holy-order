@@ -17,6 +17,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.7.0',
+    date: new Date().toISOString().split('T')[0],
+    title: '관리자 봉사 스케줄 — 주일 전용 주차 카드 보드 리디자인',
+    updates: [
+      { text: '불필요한 평일 달력 칸 제거 및 해당 월의 주일(일요일 4~5개) 카드 보드로 리디자인', isNew: true },
+      { text: '월별 주일 수, 배정 완료 수, 미배정 수 요약 헤더 및 오늘/다음 주일 강조 뱃지 탑재', isNew: true },
+      { text: '이전 주일 봉사자 명단 불러오기 편의 기능 추가 및 백엔드 일요일 날짜 엄격 검증(422) 지원', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.6',
     date: new Date().toISOString().split('T')[0],
     title: '주문/입금 내역 페이지네이션 버튼 중앙 정렬 최적화',

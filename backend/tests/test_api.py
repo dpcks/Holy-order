@@ -195,3 +195,31 @@ def test_create_order_fails_when_closed(client, db_session):
     response = client.post("/api/v1/orders", json=order_payload)
     assert response.status_code == 403
     assert "현재 영업 시간이 아닙니다." in response.json()["detail"]
+
+def test_volunteer_schedule_sunday_validation(client, db_session):
+    """
+    POST /api/v1/admin/schedules 요청 시 sunday_date 검증 테스트:
+    - 평일(월요일 등) 날짜로 요청하면 422 Unprocessable Entity 에러 반환 검증
+    - 일요일 날짜로 요청하면 200 OK 성공 응답 검증
+    """
+    # 1. 평일(2026-07-27 월요일) 요청 -> 422
+    weekday_payload = {
+        "sunday_date": "2026-07-27",
+        "volunteers": {"names": ["김성도"]},
+        "memo": "평일 스케줄 시도"
+    }
+    res_weekday = client.post("/api/v1/admin/schedules", json=weekday_payload)
+    assert res_weekday.status_code == 422
+
+    # 2. 일요일(2026-07-26 일요일) 요청 -> 200
+    sunday_payload = {
+        "sunday_date": "2026-07-26",
+        "volunteers": {"names": ["김성도", "이집사"]},
+        "memo": "주일 정상 스케줄"
+    }
+    res_sunday = client.post("/api/v1/admin/schedules", json=sunday_payload)
+    assert res_sunday.status_code == 200
+    res_json = res_sunday.json()
+    assert res_json["success"] is True
+    assert res_json["data"]["sunday_date"] == "2026-07-26"
+    assert res_json["data"]["volunteers"]["names"] == ["김성도", "이집사"]
