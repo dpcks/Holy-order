@@ -17,6 +17,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.4',
+    date: new Date().toISOString().split('T')[0],
+    title: '주문 내역 및 입금 내역 페이지 PWA 하단 여백 최적화',
+    updates: [
+      { text: '주문 내역 및 입금 내역 페이지 푸터 하단 여백(safe-area)을 확충하여 20개씩 보기 버튼 가시성 높임', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.3',
     date: new Date().toISOString().split('T')[0],
     title: '정산 및 매출 통계 화면 PWA 분석 전용 탭 분리 구현',
