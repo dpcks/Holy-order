@@ -22,6 +22,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     title: '관리자 봉사 스케줄 — 주일 카드 보드 & 탭 전환 & 지난달 명단 복사',
     updates: [
       { text: '해당 월의 주일(일요일 4~5개)만 깔끔하게 표시하는 주차별 카드 보드로 리디자인', isNew: true },
+      { text: '해당 주차 주일 카드 메인 초록색(#23734A) 테두리 및 글로우 하이라이트 적용', isNew: true },
       { text: '상단 탭(주일 주차별 보드 vs 월간 캘린더)으로 이전 달력 화면도 선택 조회 가능', isNew: true },
       { text: '지난달 주차별 봉사자 명단 일괄 복사 기능 및 5주차 달 세심한 예외 처리 적용', isNew: true },
       { text: '월별 주일 수, 배정 완료 수, 미배정 수 요약 헤더 및 오늘/다음 주일 강조 뱃지 탑재', isNew: true },
