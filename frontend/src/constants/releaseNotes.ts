@@ -23,6 +23,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
     updates: [
       { text: '사용자 주문 앱과 분리된 관리자 전용 독립 PWA 매니페스트(manifest-admin.webmanifest, scope: /admin/) 구축', isNew: true },
       { text: '관리자 전용 로고(admin_logo.png) 기반 앱 아이콘(admin-pwa-192, admin-pwa-512, admin-apple-touch-icon) 및 admin.html 적용', isNew: true },
+      { text: '관리자 앱 아이콘 테두리 하얀 여백 제거 및 로고 크기 꽉 차게 최적화 (단축명: 미션카페 관리자)', isNew: true },
       { text: 'Vercel /admin/* URL rewrite 설정으로 관리자 독립 홈 화면 추가 기능 지원', isNew: true }
     ]
   },
