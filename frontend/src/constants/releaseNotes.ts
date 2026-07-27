@@ -17,6 +17,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.6.6',
+    date: new Date().toISOString().split('T')[0],
+    title: '주문/입금 내역 페이지네이션 버튼 중앙 정렬 최적화',
+    updates: [
+      { text: '푸터 3열 Grid 적용으로 페이지 이동 버튼(< 1 2 3 >) 정중앙 정렬', isNew: true }
+    ]
+  },
+  {
     version: 'v1.6.5',
     date: new Date().toISOString().split('T')[0],
     title: '사이드바 - 푸터 경계선 높이 정밀 일치 및 단일 행 레이아웃 개선',

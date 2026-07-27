@@ -421,9 +421,9 @@ export const AdminPaymentLogs = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="h-[90px] px-8 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white shadow-sm">
+      <footer className="h-[90px] px-8 border-t border-gray-100 grid grid-cols-3 items-center shrink-0 bg-white shadow-sm">
         {/* N개씩 보기 및 승인 내역 건수 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 justify-start">
           <select
             value={limit}
             onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
@@ -433,7 +433,7 @@ export const AdminPaymentLogs = () => {
             <option value={50}>50개씩 보기</option>
             <option value={100}>100개씩 보기</option>
           </select>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-primary/30" />
             <p className="text-[12px] text-gray-400 font-bold tracking-tight">
               전체 {totalCount} 개 중 {totalCount > 0 ? (page - 1) * limit + 1 : 0}-{Math.min(totalCount, page * limit)}번째 입금 승인 내역
@@ -441,8 +441,8 @@ export const AdminPaymentLogs = () => {
           </div>
         </div>
 
-        {/* 페이지 이동 버튼 */}
-        <div className="flex items-center gap-2">
+        {/* 중앙: 페이지 이동 버튼 */}
+        <div className="flex items-center justify-center gap-2">
           <button
             disabled={page === 1 || loading}
             onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -474,6 +474,9 @@ export const AdminPaymentLogs = () => {
             <ChevronRight size={18} />
           </button>
         </div>
+
+        {/* 그리드 정렬용 우측 여백 영역 */}
+        <div />
       </footer>
     </div>
   );
