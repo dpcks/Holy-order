@@ -554,7 +554,7 @@ export const AdminOrderManagement = () => {
 
 
 
-      <footer className="bg-[#1A0A0A] px-6 xl:px-10 py-5 xl:py-6 flex items-center justify-between shrink-0 text-white shadow-2xl">
+      <footer className="h-[90px] bg-[#1A0A0A] px-6 xl:px-10 border-t border-white/10 flex items-center justify-between shrink-0 text-white shadow-2xl">
         <div className="flex items-center gap-6 xl:gap-12">
           <div>
             <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em] mb-1">Today Orders</p>

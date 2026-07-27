@@ -363,7 +363,7 @@ export const AdminLayout = () => {
         </nav>
 
         {/* 푸터 영역 (관리자 정보) */}
-        <div className={`px-4 py-4 border-t border-white/10 flex flex-col gap-3 overflow-hidden ${isCollapsed ? 'items-center' : ''}`}>
+        <div className={`h-[90px] px-4 border-t border-white/10 flex flex-col justify-center gap-2 overflow-hidden shrink-0 ${isCollapsed ? 'items-center' : ''}`}>
           <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5'}`}>
             <div className="w-8 h-8 bg-primary/20 text-primary border border-primary/30 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 uppercase">
               {adminInfo?.name ? adminInfo.name.charAt(0) : '관'}
