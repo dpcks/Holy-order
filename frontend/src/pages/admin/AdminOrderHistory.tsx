@@ -591,9 +591,9 @@ export const AdminOrderHistory = () => {
       </div>
 
       {/* 페이지네이션 */}
-      <footer className="h-[90px] px-8 border-t border-gray-100 flex items-center justify-between shrink-0 bg-white shadow-sm">
+      <footer className="h-[90px] px-8 border-t border-gray-100 grid grid-cols-3 items-center shrink-0 bg-white shadow-sm">
         {/* N개씩 보기 및 수량 안내 */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 justify-start">
           <select
             value={limit}
             onChange={(e) => { setLimit(Number(e.target.value)); setPage(1); }}
@@ -603,13 +603,13 @@ export const AdminOrderHistory = () => {
             <option value={50}>50개씩 보기</option>
             <option value={100}>100개씩 보기</option>
           </select>
-          <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest">
+          <p className="text-[12px] text-gray-400 font-bold uppercase tracking-widest whitespace-nowrap">
             전체 {totalCount}개 중 {orders.length}개의 주문내역
           </p>
         </div>
 
-        {/* 페이지 이동 버튼 */}
-        <div className="flex items-center gap-2">
+        {/* 중앙: 페이지 이동 버튼 */}
+        <div className="flex items-center justify-center gap-2">
           <button
             disabled={page === 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
@@ -641,6 +641,9 @@ export const AdminOrderHistory = () => {
             <ChevronRight size={18} />
           </button>
         </div>
+
+        {/* 그리드 정렬용 우측 여백 영역 */}
+        <div />
       </footer>
 
       {/* 주문 상세 모달 */}
