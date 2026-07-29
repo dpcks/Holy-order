@@ -17,6 +17,21 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.9.0',
+    date: '2026-07-29',
+    title: '재고 관리 UI 전면 재구성 — 우선순위 점검표',
+    updates: [
+      { text: '가로형 Kanban Board를 제거하고 한 품목이 한 번만 표시되는 재고 우선순위 점검표로 재구성', isNew: true },
+      { text: '재고 상태를 품절·주문 필요·주의·정상·기준 미설정 5단계로 백엔드 alert_threshold와 일치', isNew: true },
+      { text: '클릭 가능한 상태 요약 카드로 전체/품절/주문 필요/주의/정상/미설정 즉시 필터링', isNew: true },
+      { text: '오늘 확인할 품목 패널에 부족 품목 우선 표시 및 구매 목록 클립보드 복사 기능 추가', isNew: true },
+      { text: '상태·카테고리 필터 분리, 복합 적용 가능; 부족한 순·품목명 순·최근 수정 순·지정 순 정렬', isNew: true },
+      { text: '수량 빠른 수정은 current_stock 단독 PATCH + optimistic update + rollback으로 경량화', isNew: true },
+      { text: '데스크톱/iPad: sticky 헤더 단일 표, 모바일: 카드 목록, 우측 편집 Drawer(모바일 하단 시트) 적용', isNew: true },
+      { text: '백엔드 IngredientCreate/Update에 ge=0, max_length=100 Pydantic 유효성 검증 추가', isNew: true }
+    ]
+  },
+  {
     version: 'v1.8.1',
     date: '2026-07-29',
     title: 'PWA 설치 통계 신뢰성 복구 및 API 계약 정합화 (P0)',

@@ -223,3 +223,118 @@ def test_volunteer_schedule_sunday_validation(client, db_session):
     assert res_json["success"] is True
     assert res_json["data"]["sunday_date"] == "2026-07-26"
     assert res_json["data"]["volunteers"]["names"] == ["김성도", "이집사"]
+
+
+# ==========================================
+# 재고 관리 (Ingredient) 테스트
+# ==========================================
+
+def test_ingredient_crud_and_alerts(client, db_session):
+    """
+    재고 품목 CRUD 및 부족 알림 기준(current_stock <= alert_threshold) 검증
+    """
+    # 1. 품목 생성
+    create_payload = {
+        "name": "우유",
+        "category": "재료",
+        "unit": "팩",
+        "current_stock": 3,
+        "alert_threshold": 3,
+        "memo": "교회 앞 마트",
+        "display_order": 1
+    }
+    res = client.post("/api/v1/admin/ingredients", json=create_payload)
+    assert res.status_code == 200
+    data = res.json()["data"]
+    ingredient_id = data["id"]
+    assert data["name"] == "우유"
+    assert data["current_stock"] == 3
+    assert data["alert_threshold"] == 3
+
+    # 2. 목록 조회
+    res_list = client.get("/api/v1/admin/ingredients")
+    assert res_list.status_code == 200
+    items = res_list.json()["data"]
+    assert any(i["id"] == ingredient_id for i in items)
+
+    # 3. 부족 알림 — current_stock == alert_threshold → 포함
+    res_alerts = client.get("/api/v1/admin/ingredients/alerts")
+    assert res_alerts.status_code == 200
+    alert_ids = [i["id"] for i in res_alerts.json()["data"]]
+    assert ingredient_id in alert_ids
+
+    # 4. 부분 PATCH: current_stock만 변경
+    patch_payload = {"current_stock": 12}
+    res_patch = client.patch(f"/api/v1/admin/ingredients/{ingredient_id}", json=patch_payload)
+    assert res_patch.status_code == 200
+    patched = res_patch.json()["data"]
+    assert patched["current_stock"] == 12
+    # 나머지 필드 유지 확인
+    assert patched["name"] == "우유"
+    assert patched["alert_threshold"] == 3
+    assert patched["memo"] == "교회 앞 마트"
+
+    # 5. 수정 후 부족 알림에서 제외 (current_stock > alert_threshold)
+    res_alerts2 = client.get("/api/v1/admin/ingredients/alerts")
+    alert_ids2 = [i["id"] for i in res_alerts2.json()["data"]]
+    assert ingredient_id not in alert_ids2
+
+    # 6. 소프트 삭제
+    res_del = client.delete(f"/api/v1/admin/ingredients/{ingredient_id}")
+    assert res_del.status_code == 200
+    # 목록에서 제외 확인
+    res_list2 = client.get("/api/v1/admin/ingredients")
+    ids_after_delete = [i["id"] for i in res_list2.json()["data"]]
+    assert ingredient_id not in ids_after_delete
+
+
+def test_ingredient_negative_values_rejected(client, db_session):
+    """
+    음수 재고, 음수 임계값, 음수 정렬 순서는 422로 거부되어야 한다.
+    """
+    # 음수 current_stock
+    res = client.post("/api/v1/admin/ingredients", json={
+        "name": "테스트", "current_stock": -1, "alert_threshold": 0
+    })
+    assert res.status_code == 422
+
+    # 음수 alert_threshold
+    res2 = client.post("/api/v1/admin/ingredients", json={
+        "name": "테스트", "current_stock": 0, "alert_threshold": -1
+    })
+    assert res2.status_code == 422
+
+    # 음수 display_order
+    res3 = client.post("/api/v1/admin/ingredients", json={
+        "name": "테스트", "current_stock": 0, "alert_threshold": 0, "display_order": -1
+    })
+    assert res3.status_code == 422
+
+
+def test_ingredient_stock_only_patch(client, db_session):
+    """
+    current_stock 단독 부분 PATCH — 이름, 단위, 메모, 임계값 유지 검증
+    """
+    create_payload = {
+        "name": "일회용컵",
+        "category": "소모품",
+        "unit": "개",
+        "current_stock": 100,
+        "alert_threshold": 20,
+        "memo": "대형마트 구매",
+        "display_order": 2
+    }
+    res_create = client.post("/api/v1/admin/ingredients", json=create_payload)
+    assert res_create.status_code == 200
+    item_id = res_create.json()["data"]["id"]
+
+    # current_stock 단독 PATCH
+    res_patch = client.patch(f"/api/v1/admin/ingredients/{item_id}", json={"current_stock": 8})
+    assert res_patch.status_code == 200
+    data = res_patch.json()["data"]
+    assert data["current_stock"] == 8
+    assert data["name"] == "일회용컵"
+    assert data["unit"] == "개"
+    assert data["alert_threshold"] == 20
+    assert data["memo"] == "대형마트 구매"
+    assert data["display_order"] == 2
