@@ -1207,7 +1207,10 @@ const DrawerContent = ({
     </div>
 
     {/* Drawer 하단 */}
-    <div className="px-6 pt-5 pb-8 md:pb-9 border-t border-gray-100 flex items-center gap-3 shrink-0 bg-white pb-safe">
+    <div
+      className="px-6 pt-5 border-t border-gray-100 flex items-center gap-3 shrink-0 bg-white"
+      style={{ paddingBottom: 'calc(1.75rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       {editingItem && (
         <button
           onClick={() => onDelete(editingItem)}
