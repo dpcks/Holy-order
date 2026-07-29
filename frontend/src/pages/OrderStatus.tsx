@@ -339,9 +339,9 @@ export const OrderStatus = () => {
   const currentIndex = activeOrders.findIndex(o => o.id === id);
 
   return (
-    <div className={`flex flex-col min-h-screen w-full max-w-[500px] mx-auto pb-8 relative transition-colors duration-700 ${isReadyFlash ? 'bg-primary/10' : 'bg-[#F9FAFB]'}`}>
+    <div className={`flex flex-col min-h-[100dvh] w-full max-w-[500px] mx-auto pb-8 relative transition-colors duration-700 ${isReadyFlash ? 'bg-primary/10' : 'bg-white'}`}>
 
-      <header className="flex items-center justify-between px-6 h-16 bg-[#F9FAFB]/80 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
+      <header className="flex items-center justify-between px-6 h-16 bg-white/95 backdrop-blur-md sticky top-0 z-20 border-b border-gray-100/50">
         <div className="w-10">
           {activeOrders.length > 1 && currentIndex > 0 && (
             <button

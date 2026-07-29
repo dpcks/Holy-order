@@ -164,10 +164,11 @@ export const MenuDetail = () => {
 
 
   return (
-    <div className="flex flex-col min-h-screen w-full max-w-[500px] mx-auto bg-white relative">
+    <div className="flex flex-col min-h-[100dvh] w-full max-w-[500px] mx-auto bg-white relative">
       <Header title="메뉴상세" showBack showCart />
 
-      <main className="flex-1">
+      {/* pb: 하단 fixed bar 실제 높이(수량+가격+버튼 약 160px) + safe-area */}
+      <main className="flex-1 pb-[calc(170px+env(safe-area-inset-bottom,0px))]">
         {/* 이벤트 안내 배너 (상세 페이지용) */}
         {isEventMode && (
           <div className="mx-4 mt-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl p-4 text-white shadow-md animate-in slide-in-from-top-2">
@@ -314,12 +315,10 @@ export const MenuDetail = () => {
           )}
         </div>
 
-        {/* 여백 확보용 스페이서 - 하단 고정 탭바 및 모바일 Safe Area 높이에 맞게 조절 */}
-        <div className="h-[210px] pb-[env(safe-area-inset-bottom)] w-full" />
       </main>
 
-      {/* 하단 Sticky 주문 바 */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 max-w-[500px] mx-auto z-50">
+      {/* 하단 Sticky 주문 바 — left-1/2 -translate-x-1/2로 정렬하여 500px 초과 기기에서도 body 노출 없음 */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 bg-white border-t border-gray-100 p-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] w-full max-w-[500px] z-50">
         {!menu.is_available ? (
           <div className="flex flex-col gap-3">
             <div className="bg-gray-100 text-gray-500 py-4 rounded-2xl text-center font-bold text-sm">
