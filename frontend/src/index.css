@@ -12,8 +12,6 @@
 }
 
 html, body {
-  height: 100%;
-  min-height: 100%;
   margin: 0;
   padding: 0;
   touch-action: manipulation;
@@ -21,26 +19,39 @@ html, body {
   scrollbar-width: none; /* Firefox */
 }
 
+/* html: 최소 높이 확보 + 흰색 기본 캔버스 + 시스템 다크 모드에서도 흰 배경 유지 */
+html {
+  min-height: 100%;
+  min-height: 100dvh;
+  background: #ffffff;
+  color-scheme: light;
+}
+
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Opera */
 }
 
+/* body: 전역 검은 배경(#0F0A0A) 제거 → 사용자 화면과 iOS overscroll에서 흰색 유지 */
 body {
   font-family: var(--font-sans);
-  background-color: #0F0A0A;
+  background-color: #ffffff;
   color: var(--color-text-main);
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
 }
 
+/* #root: height: 100% 의존 제거 → 100dvh 기반 최소 높이, 흰색 배경 */
 #root {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
   min-height: 100vh;
+  min-height: 100dvh;
+  background: #ffffff;
 }
 
 /* Safe Area Inset Helpers for PWA Standalone Mode */

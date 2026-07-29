@@ -17,16 +17,39 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.8.0',
+    date: '2026-07-29',
+    title: '사용자 PWA 스크롤·배경 연속성 개선 (검은 배경 노출 완전 제거)',
+    updates: [
+      { text: '전역 body 검은 배경(#0F0A0A) → 흰색으로 전환, iOS rubber-band overscroll에서도 흰색 유지', isNew: true },
+      { text: 'html/body/#root에 100dvh 적용 및 color-scheme: light 설정으로 iOS PWA 다크 모드 대응', isNew: true },
+      { text: 'MenuDetail·Cart의 210px 하드코딩 spacer 제거 → 실제 하단 바 높이만큼 정확한 bottom padding 적용', isNew: true },
+      { text: 'fixed bottom bar를 left-1/2 -translate-x-1/2 정렬로 변경하여 500px 초과 기기에서 body 노출 없음', isNew: true },
+      { text: 'OrderStatus 카드 사이 및 페이지 하단 검은 배경 제거 — bg-white + min-h-[100dvh]로 통일', isNew: true },
+      { text: '모든 하단 액션 바 safe-area-inset-bottom 흰색 처리 (home indicator 주변 보장)', isNew: true }
+    ]
+  },
+  {
+    version: 'v1.7.3',
+    date: '2026-07-27',
+    title: '봉사 스케줄 — 해당 주차 주일 카드 초록색 하이라이트',
+    updates: [
+      { text: '이번 주 주일 카드에 메인 컬러(#23734A) 굵은 테두리 및 글로우 링 하이라이트 적용', isNew: true },
+      { text: '주차 번호 뱃지도 해당 주차일 때 초록색 배경으로 통일감 부여', isNew: true },
+      { text: '오늘 주일 / 이번 주 주일 / 다음 주일 배지를 상황에 맞게 세분화', isNew: true }
+    ]
+  },
+  {
     version: 'v1.7.1',
-    date: new Date().toISOString().split('T')[0],
+    date: '2026-07-27',
     title: '관리자 봉사 스케줄 — 주일 카드 보드 & 탭 전환 & 지난달 명단 복사',
     updates: [
       { text: '해당 월의 주일(일요일 4~5개)만 깔끔하게 표시하는 주차별 카드 보드로 리디자인', isNew: true },
-      { text: '해당 주차 주일 카드 메인 초록색(#23734A) 테두리 및 글로우 하이라이트 적용', isNew: true },
       { text: '상단 탭(주일 주차별 보드 vs 월간 캘린더)으로 이전 달력 화면도 선택 조회 가능', isNew: true },
       { text: '지난달 주차별 봉사자 명단 일괄 복사 기능 및 5주차 달 세심한 예외 처리 적용', isNew: true },
       { text: '월별 주일 수, 배정 완료 수, 미배정 수 요약 헤더 및 오늘/다음 주일 강조 뱃지 탑재', isNew: true },
-      { text: '백엔드 일요일 날짜 엄격 검증(HTTP 422) 및 단위 테스트 구현', isNew: true }
+      { text: '백엔드 일요일 날짜 엄격 검증(HTTP 422) 및 단위 테스트 구현', isNew: true },
+      { text: '지난달 명단 복사 비동기 상태 평가 및 API 날짜 파싱 버그 수정', isNew: false }
     ]
   },
   {
