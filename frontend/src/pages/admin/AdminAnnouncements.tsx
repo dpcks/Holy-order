@@ -212,7 +212,7 @@ export const AdminAnnouncements = () => {
   const activeEvent = announcements.find(a => a.is_active);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* 헤더 */}
       <header className="shrink-0 flex items-center justify-between px-6 xl:px-8 py-5 border-b border-gray-100 bg-white">
         <div className="flex items-center gap-3">
@@ -233,7 +233,7 @@ export const AdminAnnouncements = () => {
         </button>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-6 xl:p-8 space-y-6">
+      <main className="flex-1 min-h-0 overflow-y-auto p-6 xl:p-8 space-y-6">
         {/* 현재 활성 이벤트 카드 */}
         {activeEvent && (
           <div className="bg-gradient-to-r from-amber-50 via-orange-50 to-rose-50 rounded-2xl p-5 border border-amber-100/50 shadow-sm">

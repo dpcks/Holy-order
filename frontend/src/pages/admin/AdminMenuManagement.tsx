@@ -686,7 +686,7 @@ export const AdminMenuManagement = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full min-h-0 bg-gray-50">
       {/* 헤더 */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
         <div className="flex items-start justify-between mb-4">
@@ -757,7 +757,7 @@ export const AdminMenuManagement = () => {
       </header>
 
       {/* 메뉴 그리드 */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 min-h-0 overflow-y-auto p-6">
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 xl:gap-6">
             {Array.from({ length: 10 }).map((_, i) => <MenuCardSkeleton key={i} />)}

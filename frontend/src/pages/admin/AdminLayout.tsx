@@ -294,10 +294,10 @@ export const AdminLayout = () => {
   }), [isSoundEnabled, handleToggleSound]);
 
   return (
-    <div className="flex h-full min-h-screen w-full bg-gray-100 overflow-hidden font-sans text-gray-900 pt-safe pb-safe pl-safe pr-safe">
+    <div className="flex h-screen h-[100dvh] max-h-screen max-h-[100dvh] w-full bg-gray-100 overflow-hidden font-sans text-gray-900 pt-safe pb-safe pl-safe pr-safe">
       {/* 사이드바 */}
       <aside
-        className={`bg-[#0F0A0A] flex flex-col shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-[80px]' : 'w-[260px]'
+        className={`bg-[#0F0A0A] flex flex-col shrink-0 h-full max-h-full overflow-hidden shadow-2xl z-20 transition-all duration-300 ease-in-out relative ${isCollapsed ? 'w-[80px]' : 'w-[260px]'
           }`}
       >
         {/* 로고 영역 */}
@@ -409,7 +409,7 @@ export const AdminLayout = () => {
       </aside>
 
       {/* 메인 콘텐츠 */}
-      <main className="flex-1 overflow-hidden bg-gray-50 flex flex-col">
+      <main className="flex-1 min-h-0 min-w-0 h-full overflow-hidden bg-gray-50 flex flex-col">
         <Outlet context={outletContext} />
       </main>
     </div>

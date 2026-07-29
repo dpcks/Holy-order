@@ -303,7 +303,7 @@ export const AdminOrderHistory = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
+    <div className="flex flex-col h-full min-h-0 bg-white relative">
       {/* 헤더 */}
       <header className="px-4 xl:px-8 py-4 xl:py-6 border-b border-gray-100 bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between mb-4 xl:mb-6">

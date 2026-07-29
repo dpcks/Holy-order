@@ -124,7 +124,7 @@ export const AdminSettings = () => {
   if (!settings || !localSettings) return <div className="flex h-full items-center justify-center text-gray-400">설정 정보를 불러올 수 없습니다.</div>;
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans">
+    <div className="flex flex-col h-full min-h-0 bg-[#F3F4F6] overflow-hidden font-sans">
       {/* 헤더 */}
       <header className="bg-white px-8 py-5 flex items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm">
         <div className="flex items-center gap-4">
@@ -148,7 +148,7 @@ export const AdminSettings = () => {
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto p-8 custom-scrollbar">
+      <main className="flex-1 min-h-0 overflow-auto p-8 custom-scrollbar">
         <div className="max-w-4xl mx-auto space-y-6">
 
           {/* 1. 영업 상태 제어 (가장 중요) */}
