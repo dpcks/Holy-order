@@ -1207,13 +1207,13 @@ const DrawerContent = ({
     </div>
 
     {/* Drawer 하단 */}
-    <div className="px-6 py-4 border-t border-gray-100 flex items-center gap-3 shrink-0 pb-safe">
+    <div className="px-6 pt-5 pb-8 md:pb-9 border-t border-gray-100 flex items-center gap-3 shrink-0 bg-white pb-safe">
       {editingItem && (
         <button
           onClick={() => onDelete(editingItem)}
           disabled={isDeleting}
           aria-label={`'${editingItem.name}' 삭제`}
-          className="w-12 h-12 bg-white border border-gray-200 text-gray-400 rounded-xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all disabled:opacity-50"
+          className="w-12 h-12 bg-white border border-gray-200 text-gray-400 rounded-2xl flex items-center justify-center hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all disabled:opacity-50 shadow-xs"
         >
           {isDeleting ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
         </button>
@@ -1221,7 +1221,7 @@ const DrawerContent = ({
       <button
         onClick={onSave}
         disabled={isSaving}
-        className="flex-1 bg-primary text-white h-12 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-primary-hover transition-all active:scale-[0.98] disabled:opacity-50"
+        className="flex-1 bg-primary text-white h-12 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-primary-hover transition-all active:scale-[0.98] disabled:opacity-50 shadow-md shadow-primary/20"
       >
         {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
         {isSaving ? '저장 중...' : editingItem ? '수정 완료' : '추가'}
