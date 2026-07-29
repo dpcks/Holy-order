@@ -17,6 +17,20 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v1.8.1',
+    date: '2026-07-29',
+    title: 'PWA 설치 통계 신뢰성 복구 및 API 계약 정합화 (P0)',
+    updates: [
+      { text: 'PWA heartbeat 전송 경로를 Vercel 상대 경로에서 Railway API(apiClient) 기반으로 복구', isNew: true },
+      { text: '관리자 PWA heartbeat 인증 토큰 키(adminToken) 일치 및 adminInfo 준비 후 전송 보장', isNew: true },
+      { text: 'DB pwa_installations.admin_id 외래키를 users.id에서 admins.id(ON DELETE SET NULL)로 수정', isNew: true },
+      { text: '일반 QR 웹 브라우저 접속 heartbeat 자동 제외 및 설치 증거(standalone 등) 있는 인스턴스만 집계', isNew: true },
+      { text: '최근 7일/30일 PWA 활성 통계를 last_seen_at 대신 last_standalone_at 실행 시각 기준으로 전환', isNew: true },
+      { text: '확인된 고유 사용자(user_id) 및 고유 관리자(admin_id) 중복 제거 지표 추가', isNew: true },
+      { text: '프런트엔드-백엔드 간 목록 응답 규격(masked_installation_id, total_count) 100% 일치', isNew: true }
+    ]
+  },
+  {
     version: 'v1.8.0',
     date: '2026-07-29',
     title: '사용자 PWA 스크롤·배경 연속성 개선 (검은 배경 노출 완전 제거)',
@@ -24,7 +38,7 @@ export const RELEASE_NOTES: ReleaseNote[] = [
       { text: '전역 body 검은 배경(#0F0A0A) → 흰색으로 전환, iOS rubber-band overscroll에서도 흰색 유지', isNew: true },
       { text: 'html/body/#root에 100dvh 적용 및 color-scheme: light 설정으로 iOS PWA 다크 모드 대응', isNew: true },
       { text: 'MenuDetail·Cart의 210px 하드코딩 spacer 제거 → 실제 하단 바 높이만큼 정확한 bottom padding 적용', isNew: true },
-      { text: 'fixed bottom bar를 left-1/2 -translate-x-1/2 정렬로 변경하여 500px 초과 기기에서 body 노출 없음', isNew: true },
+      { text: 'fixed bottom bar를 left-1/2 -translate-x-1/2 정렬로 변경하여 500px 초과 기기에서도 body 노출 없음', isNew: true },
       { text: 'OrderStatus 카드 사이 및 페이지 하단 검은 배경 제거 — bg-white + min-h-[100dvh]로 통일', isNew: true },
       { text: '모든 하단 액션 바 safe-area-inset-bottom 흰색 처리 (home indicator 주변 보장)', isNew: true }
     ]

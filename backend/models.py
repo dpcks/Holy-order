@@ -281,7 +281,7 @@ class PwaInstallation(Base):
     last_detection_method = Column(String(30), nullable=False, default="UNKNOWN")  # "STANDALONE_LAUNCH" | "APPINSTALLED_EVENT" | "RELATED_APPS" | "UNKNOWN"
     push_permission = Column(String(20), nullable=False, default="UNKNOWN")  # "GRANTED" | "DENIED" | "DEFAULT" | "UNSUPPORTED" | "UNKNOWN"
     related_app_installed = Column(Boolean, nullable=True)
-    admin_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    admin_id = Column(Integer, ForeignKey("admins.id", ondelete="SET NULL"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -289,6 +289,6 @@ class PwaInstallation(Base):
         UniqueConstraint("installation_id", "app_type", name="uq_pwa_installation_id_app_type"),
     )
 
-    admin = relationship("User", foreign_keys=[admin_id])
+    admin = relationship("Admin", foreign_keys=[admin_id])
 
 

@@ -35,7 +35,7 @@ def setup_test_db():
 
 @pytest.fixture
 def db_session():
-    db = TestingSessionLocal()
+    db = TestingSessionLocal(expire_on_commit=False)
     try:
         yield db
     finally:
@@ -54,6 +54,7 @@ def mock_admin(db_session):
     )
     db_session.add(admin)
     db_session.commit()
+    db_session.refresh(admin)
     return admin
 
 @pytest.fixture

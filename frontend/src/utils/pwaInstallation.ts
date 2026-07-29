@@ -5,6 +5,9 @@
  * - iPhone Safari 등 미지원 환경에서는 설치 여부를 false로 단정하지 않고 null로 처리
  */
 
+import { apiClient } from '../api/client';
+import type { StandardResponse } from '../types';
+
 export type PwaAppType = 'USER' | 'ADMIN';
 export type PwaPlatform = 'IOS' | 'ANDROID' | 'DESKTOP' | 'UNKNOWN';
 export type PwaBrowserFamily = 'SAFARI' | 'CHROME' | 'EDGE' | 'FIREFOX' | 'OTHER' | 'UNKNOWN';
@@ -18,6 +21,13 @@ export interface PwaInstallState {
   platform: PwaPlatform;
   browserFamily: PwaBrowserFamily;
   pushPermission: PushPermissionState;
+}
+
+export interface PwaHeartbeatResponse {
+  status: 'created' | 'updated' | 'unchanged' | 'ignored';
+  app_type: string;
+  reason?: string;
+  admin_id?: number;
 }
 
 const STORAGE_KEYS = {
@@ -55,10 +65,10 @@ export function detectPwaPlatform(): PwaPlatform {
 export function detectBrowserFamily(): PwaBrowserFamily {
   if (typeof window === 'undefined') return 'UNKNOWN';
   const ua = navigator.userAgent || '';
-  if (/Edg\//.test(ua)) return 'EDGE';
-  if (/Firefox\//.test(ua)) return 'FIREFOX';
-  if (/Chrome\//.test(ua)) return 'CHROME';
-  if (/Safari\//.test(ua)) return 'SAFARI';
+  if (/Edg\//i.test(ua) || /EdgiOS/i.test(ua)) return 'EDGE';
+  if (/Firefox\//i.test(ua) || /FxiOS/i.test(ua)) return 'FIREFOX';
+  if (/Chrome\//i.test(ua) || /CriOS/i.test(ua)) return 'CHROME';
+  if (/Safari\//i.test(ua)) return 'SAFARI';
   return 'OTHER';
 }
 
@@ -71,6 +81,20 @@ export function getPushPermissionState(): PushPermissionState {
   if (perm === 'denied') return 'DENIED';
   if (perm === 'default') return 'DEFAULT';
   return 'UNKNOWN';
+}
+
+export function hasPwaInstallationEvidence(
+  state: PwaInstallState,
+  override?: PwaDetectionMethod
+): boolean {
+  const method = override ?? state.detectionMethod;
+
+  return (
+    state.isRunningStandalone ||
+    state.isInstalledOnDevice === true ||
+    method === 'APPINSTALLED_EVENT' ||
+    method === 'RELATED_APPS'
+  );
 }
 
 export function getOrCreateInstallationId(appType: PwaAppType): string {
@@ -140,14 +164,19 @@ export async function reportPwaHeartbeat(
 ): Promise<void> {
   if (typeof window === 'undefined') return;
 
-  const isStandalone = isStandalonePwa();
+  // 관리자 모드인 경우 토큰 확인 (adminToken)
+  if (appType === 'ADMIN') {
+    const adminToken = localStorage.getItem('adminToken');
+    if (!adminToken) return;
+  }
+
   const isForce = options?.force ?? false;
   const lastReportKey = appType === 'ADMIN' ? STORAGE_KEYS.ADMIN_LAST_REPORT : STORAGE_KEYS.USER_LAST_REPORT;
   const lastReportStr = localStorage.getItem(lastReportKey);
   const now = Date.now();
 
-  // throttling: 최초 standalone 실행이나 force 호출이 아닌 경우 6시간 내 수신 생략
-  if (!isForce && !isStandalone && lastReportStr) {
+  // throttling: force나 APPINSTALLED_EVENT가 아니면 최근 6시간 이내 중복 전송 방지
+  if (!isForce && options?.detectionMethodOverride !== 'APPINSTALLED_EVENT' && lastReportStr) {
     const lastReportTime = parseInt(lastReportStr, 10);
     if (!isNaN(lastReportTime) && now - lastReportTime < REPORT_THROTTLE_MS) {
       return;
@@ -156,6 +185,12 @@ export async function reportPwaHeartbeat(
 
   try {
     const state = await detectPwaInstallState();
+
+    // [핵심 레퍼런스 가드] 설치 증거가 없으면 installation_id 생성 및 전송을 하지 않음 (일반 QR 웹 제외)
+    if (!hasPwaInstallationEvidence(state, options?.detectionMethodOverride)) {
+      return;
+    }
+
     const installationId = getOrCreateInstallationId(appType);
 
     const payload = {
@@ -168,31 +203,30 @@ export async function reportPwaHeartbeat(
       related_app_installed: state.isInstalledOnDevice,
     };
 
-    const endpoint = appType === 'ADMIN'
-      ? '/api/v1/admin/pwa/installations/heartbeat'
-      : '/api/v1/pwa/installations/heartbeat';
+    const path = appType === 'ADMIN'
+      ? '/admin/pwa/installations/heartbeat'
+      : '/pwa/installations/heartbeat';
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-
-    if (appType === 'ADMIN') {
-      const token = localStorage.getItem('adminAccessToken') || sessionStorage.getItem('adminAccessToken');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      } else {
-        // 관리자 인증 토큰 없으면 관리자 heartbeat 전송 생략
-        return;
+    // Railway API로 apiClient를 사용하여 전송 (x-skip-error-toast로 조용한 실패)
+    const response = await apiClient.post<
+      StandardResponse<PwaHeartbeatResponse>,
+      StandardResponse<PwaHeartbeatResponse>
+    >(
+      path,
+      payload,
+      {
+        headers: {
+          'x-skip-error-toast': 'true',
+        },
       }
-    }
+    );
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
-
-    if (response.ok) {
+    if (
+      response &&
+      response.success &&
+      response.data &&
+      ['created', 'updated', 'unchanged'].includes(response.data.status)
+    ) {
       localStorage.setItem(lastReportKey, now.toString());
     }
   } catch {
