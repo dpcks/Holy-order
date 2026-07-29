@@ -386,7 +386,7 @@ export const AdminSchedule = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between md:justify-end gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
           {/* 요약 뱃지 */}
           <div className="flex items-center gap-1.5 bg-gray-100/80 px-3 py-1.5 rounded-xl text-[12px] font-bold">
             <span className="text-gray-600">주일 {statsSummary.total}회</span>
@@ -394,28 +394,6 @@ export const AdminSchedule = () => {
             <span className="text-emerald-600">배정 완료 {statsSummary.assigned}회</span>
             <span className="text-gray-300">·</span>
             <span className="text-amber-600">미배정 {statsSummary.unassigned}회</span>
-          </div>
-
-          {/* 월 이동 컨트롤 */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-2xl border border-gray-200">
-              <button onClick={handlePrevMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-xl transition-all text-gray-700" title="이전 달">
-                <ChevronLeft size={18} />
-              </button>
-              <span className="text-[15px] font-black min-w-[100px] text-center tracking-tighter text-gray-900">
-                {format(currentDate, 'yyyy년 M월')}
-              </span>
-              <button onClick={handleNextMonth} className="p-1.5 hover:bg-white hover:shadow-sm rounded-xl transition-all text-gray-700" title="다음 달">
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            <button
-              onClick={handleThisMonth}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-[12px] font-bold transition-all shadow-xs"
-            >
-              이번 달
-            </button>
           </div>
         </div>
       </header>
@@ -473,25 +451,53 @@ export const AdminSchedule = () => {
         </div>
       </div>
 
-      {/* 말씀칸과 날짜 보드 사이: 지난달 명단 복사 액션 영역 */}
-      <div className="px-6 xl:px-8 pt-3 flex justify-between items-center shrink-0">
-        <div className="text-[13px] font-black text-gray-500 flex items-center gap-2">
-          <span>{format(currentDate, 'yyyy년 M월')} 주일 봉사 스케줄</span>
+      {/* 말씀칸과 날짜 보드 사이: 년월 이동 및 지난달 명단 복사 툴바 */}
+      <div className="px-6 xl:px-8 pt-3 flex flex-wrap justify-between items-center shrink-0 gap-3">
+        {/* 월 이동 컨트롤 */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-white p-1 rounded-2xl border border-gray-200 shadow-sm">
+            <button
+              onClick={handlePrevMonth}
+              className="p-1.5 hover:bg-gray-100 rounded-xl transition-all text-gray-700 active:scale-95"
+              title="이전 달"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="text-[16px] font-black min-w-[110px] text-center tracking-tight text-gray-900 px-1">
+              {format(currentDate, 'yyyy년 M월')}
+            </span>
+            <button
+              onClick={handleNextMonth}
+              className="p-1.5 hover:bg-gray-100 rounded-xl transition-all text-gray-700 active:scale-95"
+              title="다음 달"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+
+          <button
+            onClick={handleThisMonth}
+            className="px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-[12px] font-bold transition-all shadow-sm active:scale-95"
+          >
+            이번 달
+          </button>
         </div>
 
-        <button
-          onClick={handleCopyLastMonthSchedules}
-          disabled={isCopyingPrevMonth}
-          className="flex items-center gap-2 px-4 py-2 bg-[#1A0A0A] hover:bg-black text-white rounded-2xl text-[13px] font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
-          title="지난달 동일 주차 봉사자 명단을 복사합니다"
-        >
-          {isCopyingPrevMonth ? (
-            <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-          ) : (
-            <Copy size={14} />
-          )}
-          지난달 명단 복사
-        </button>
+        {viewMode === 'BOARD' && (
+          <button
+            onClick={handleCopyLastMonthSchedules}
+            disabled={isCopyingPrevMonth}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#1A0A0A] hover:bg-black text-white rounded-2xl text-[13px] font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
+            title="지난달 동일 주차 봉사자 명단을 복사합니다"
+          >
+            {isCopyingPrevMonth ? (
+              <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Copy size={14} />
+            )}
+            지난달 명단 복사
+          </button>
+        )}
       </div>
 
       {/* 메인 영역 (보드 뷰 vs 캘린더 뷰 선택) */}
