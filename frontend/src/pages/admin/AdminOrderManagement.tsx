@@ -324,7 +324,7 @@ export const AdminOrderManagement = () => {
   };
 
   return (
-    <div className="relative flex flex-col h-full bg-[#F9FAFB] overflow-hidden">
+    <div className="relative flex flex-col h-full min-h-0 bg-[#F9FAFB] overflow-hidden">
       <header className="bg-white border-b border-gray-200 px-5 xl:px-6 py-2 xl:py-3 flex items-center justify-between shrink-0 shadow-sm z-10">
         <div className="flex items-center gap-6">
           <div>

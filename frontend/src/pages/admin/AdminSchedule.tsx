@@ -373,7 +373,7 @@ export const AdminSchedule = () => {
     : [];
 
   return (
-    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden font-sans relative">
+    <div className="flex flex-col h-full min-h-0 bg-[#F3F4F6] overflow-hidden font-sans relative">
       {/* 헤더 */}
       <header className="bg-white px-6 xl:px-8 py-3 xl:py-4 flex flex-col md:flex-row md:items-center justify-between border-b border-gray-200 shrink-0 z-20 shadow-sm gap-3">
         <div className="flex items-center gap-4">
@@ -495,7 +495,7 @@ export const AdminSchedule = () => {
       </div>
 
       {/* 메인 영역 (보드 뷰 vs 캘린더 뷰 선택) */}
-      <main className="flex-1 p-6 xl:p-8 pt-4 overflow-y-auto custom-scrollbar flex flex-col">
+      <main className="flex-1 min-h-0 p-6 xl:p-8 pt-4 overflow-y-auto custom-scrollbar flex flex-col">
         {viewMode === 'BOARD' ? (
           /* 주일 주차별 보드 뷰 */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-5">

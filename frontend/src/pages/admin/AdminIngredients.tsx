@@ -406,7 +406,7 @@ export const AdminIngredients = () => {
   // 렌더: 메인
   // ─────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full bg-[#F3F4F6] overflow-hidden relative">
+    <div className="flex flex-col h-full min-h-0 bg-[#F3F4F6] overflow-hidden relative">
 
       {/* ── 헤더 ── */}
       <header className="bg-white px-4 md:px-8 py-4 md:py-5 border-b border-gray-200 shrink-0 z-20 shadow-sm">
@@ -443,59 +443,79 @@ export const AdminIngredients = () => {
         </div>
       </header>
 
-      {/* ── 스크롤 가능 본문 ── */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-6 space-y-4">
+      {/* ── 상단 고정 영역 (요약 카드, 오늘 확인할 품목, 툴바) ── */}
+      <div className="px-4 md:px-6 pt-4 md:pt-5 pb-2 md:pb-3 shrink-0 space-y-3">
 
-          {/* ── 상태 요약 카드 ── */}
-          <SummaryCards
-            stats={summaryStats}
-            activeFilter={statusFilter}
-            onFilterChange={setStatusFilter}
+        {/* ── 상태 요약 카드 ── */}
+        <SummaryCards
+          stats={summaryStats}
+          activeFilter={statusFilter}
+          onFilterChange={setStatusFilter}
+        />
+
+        {/* ── 오늘 확인할 품목 패널 ── */}
+        {urgentItems.length > 0 ? (
+          <UrgentPanel
+            items={urgentItems}
+            onCopy={handleCopyPurchaseList}
+            copied={copied}
+            onClickItem={handleOpenDrawer}
           />
-
-          {/* ── 오늘 확인할 품목 패널 ── */}
-          {urgentItems.length > 0 ? (
-            <UrgentPanel
-              items={urgentItems}
-              onCopy={handleCopyPurchaseList}
-              copied={copied}
-              onClickItem={handleOpenDrawer}
-            />
-          ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 px-6 py-5 flex items-center gap-3 shadow-sm">
-              <span className="text-2xl">✅</span>
-              <div>
-                <p className="font-black text-gray-800 text-sm">현재 바로 확인할 부족 재고가 없습니다.</p>
-                <p className="text-xs text-gray-400 mt-0.5">모든 품목이 정상 범위입니다.</p>
-              </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-100 px-5 py-3.5 flex items-center gap-3 shadow-sm">
+            <span className="text-xl">✅</span>
+            <div>
+              <p className="font-black text-gray-800 text-sm">현재 바로 확인할 부족 재고가 없습니다.</p>
+              <p className="text-xs text-gray-400 mt-0.5">모든 품목이 정상 범위입니다.</p>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ── 검색·필터·정렬 툴바 ── */}
-          <Toolbar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            categoryFilter={categoryFilter}
-            onCategoryChange={setCategoryFilter}
-            sortMode={sortMode}
-            onSortChange={setSortMode}
-          />
+        {/* ── 검색·필터·정렬 툴바 ── */}
+        <Toolbar
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          sortMode={sortMode}
+          onSortChange={setSortMode}
+        />
+      </div>
 
-          {/* ── 빈 데이터 ── */}
-          {ingredients.length === 0 ? (
-            <EmptyAll onAdd={() => handleOpenDrawer()} />
-          ) : filteredItems.length === 0 ? (
-            <EmptyFiltered onReset={() => { setSearchQuery(''); setStatusFilter('전체'); setCategoryFilter('전체'); }} />
-          ) : (
-            <>
-              {/* 데스크톱/iPad: 표 (md 이상) */}
-              <div className="hidden md:block">
-                <IngredientTable
-                  items={filteredItems}
-                  savingIds={savingIds}
+      {/* ── 테이블/목록 영역 (독립 내부 스크롤) ── */}
+      <main className="flex-1 min-h-0 px-4 md:px-6 pb-4 md:pb-6 flex flex-col overflow-hidden">
+        {ingredients.length === 0 ? (
+          <EmptyAll onAdd={() => handleOpenDrawer()} />
+        ) : filteredItems.length === 0 ? (
+          <EmptyFiltered onReset={() => { setSearchQuery(''); setStatusFilter('전체'); setCategoryFilter('전체'); }} />
+        ) : (
+          <>
+            {/* 데스크톱/iPad: 표 (md 이상) */}
+            <div className="hidden md:flex flex-col flex-1 min-h-0">
+              <IngredientTable
+                items={filteredItems}
+                savingIds={savingIds}
+                inlineEditId={inlineEditId}
+                inlineValue={inlineValue}
+                inlineRef={inlineRef}
+                onUpdateStock={handleUpdateStock}
+                onStartInlineEdit={handleStartInlineEdit}
+                onInlineChange={setInlineValue}
+                onInlineKeyDown={handleInlineKeyDown}
+                onInlineBlur={handleInlineCommit}
+                onClickRow={handleOpenDrawer}
+              />
+            </div>
+
+            {/* 모바일: 카드 목록 (md 미만) */}
+            <div className="md:hidden flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
+              {filteredItems.map(item => (
+                <MobileCard
+                  key={item.id}
+                  item={item}
+                  isSaving={savingIds.has(item.id)}
                   inlineEditId={inlineEditId}
                   inlineValue={inlineValue}
                   inlineRef={inlineRef}
@@ -504,32 +524,12 @@ export const AdminIngredients = () => {
                   onInlineChange={setInlineValue}
                   onInlineKeyDown={handleInlineKeyDown}
                   onInlineBlur={handleInlineCommit}
-                  onClickRow={handleOpenDrawer}
+                  onClickCard={handleOpenDrawer}
                 />
-              </div>
-
-              {/* 모바일: 카드 목록 (md 미만) */}
-              <div className="md:hidden space-y-3">
-                {filteredItems.map(item => (
-                  <MobileCard
-                    key={item.id}
-                    item={item}
-                    isSaving={savingIds.has(item.id)}
-                    inlineEditId={inlineEditId}
-                    inlineValue={inlineValue}
-                    inlineRef={inlineRef}
-                    onUpdateStock={handleUpdateStock}
-                    onStartInlineEdit={handleStartInlineEdit}
-                    onInlineChange={setInlineValue}
-                    onInlineKeyDown={handleInlineKeyDown}
-                    onInlineBlur={handleInlineCommit}
-                    onClickCard={handleOpenDrawer}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+              ))}
+            </div>
+          </>
+        )}
       </main>
 
       {/* ── 편집 Drawer ── */}
@@ -835,21 +835,22 @@ const IngredientTable = ({
   onInlineBlur: (item: Ingredient) => void;
   onClickRow: (item: Ingredient) => void;
 }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="bg-gray-50 border-b border-gray-100 sticky top-0 z-10">
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-24">상태</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider">품목</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-20">분류</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-44">현재 재고</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-24">기준</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider hidden xl:table-cell">메모</th>
-          <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider hidden xl:table-cell w-28">수정</th>
-          <th className="px-4 py-3 w-12" />
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-50">
+  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex-1 min-h-0 overflow-hidden flex flex-col h-full">
+    <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+      <table className="w-full text-sm border-separate border-spacing-0">
+        <thead>
+          <tr className="sticky top-0 z-10">
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-24 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">상태</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider bg-gray-50 border-b border-gray-100 sticky top-0 z-10">품목</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-20 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">분류</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-44 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">현재 재고</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider w-24 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">기준</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider hidden xl:table-cell bg-gray-50 border-b border-gray-100 sticky top-0 z-10">메모</th>
+            <th className="px-4 py-3 text-left text-xs font-black text-gray-400 uppercase tracking-wider hidden xl:table-cell w-28 bg-gray-50 border-b border-gray-100 sticky top-0 z-10">수정</th>
+            <th className="px-4 py-3 w-12 bg-gray-50 border-b border-gray-100 sticky top-0 z-10" />
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
         {items.map(item => {
           const status = getInventoryStatus(item);
           const meta = STATUS_META[status];
@@ -914,6 +915,7 @@ const IngredientTable = ({
       </tbody>
     </table>
   </div>
+</div>
 );
 
 // ─────────────────────────────────────────────────────

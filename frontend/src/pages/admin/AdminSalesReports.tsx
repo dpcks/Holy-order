@@ -257,7 +257,7 @@ export const AdminSalesReports = () => {
   const dutyData = stats ? groupDuty(stats.duty_breakdown) : [];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full min-h-0 overflow-y-auto">
       {/* 헤더 */}
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-start justify-between shrink-0">
         <div>
