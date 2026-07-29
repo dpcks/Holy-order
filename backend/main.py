@@ -126,7 +126,7 @@ def run_auto_migrations():
                 last_detection_method VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN',
                 push_permission VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
                 related_app_installed BOOLEAN,
-                admin_id INTEGER REFERENCES users(id),
+                admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                 CONSTRAINT uq_pwa_installation_id_app_type UNIQUE (installation_id, app_type)
@@ -135,6 +135,27 @@ def run_auto_migrations():
         db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_installation_id ON pwa_installations (installation_id);"))
         db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_last_seen_at ON pwa_installations (last_seen_at);"))
         db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS pwa_installation_id INTEGER REFERENCES pwa_installations(id);"))
+
+        # admin_id 외래키가 users.id를 참조하던 잘못된 제약조건 수정 (admins.id 참조)
+        try:
+            db.execute(text("ALTER TABLE pwa_installations DROP CONSTRAINT IF EXISTS pwa_installations_admin_id_fkey;"))
+            db.execute(text("""
+                UPDATE pwa_installations p
+                SET admin_id = NULL
+                WHERE admin_id IS NOT NULL
+                  AND NOT EXISTS (
+                    SELECT 1 FROM admins a WHERE a.id = p.admin_id
+                  );
+            """))
+            db.execute(text("""
+                ALTER TABLE pwa_installations
+                ADD CONSTRAINT pwa_installations_admin_id_fkey
+                FOREIGN KEY (admin_id)
+                REFERENCES admins(id)
+                ON DELETE SET NULL;
+            """))
+        except Exception as fk_err:
+            print(f"[AutoMigrate] FK migration notice: {fk_err}")
 
         db.commit()
         print("[AutoMigrate] Database schema updated successfully.")

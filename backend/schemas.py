@@ -537,18 +537,28 @@ class PwaStatsResponse(BaseModel):
     push_permission_granted: int
     pwa_orders_30d: int
     unique_ordering_installations_30d: int
+    confirmed_unique_users_30d: int
+    confirmed_unique_admins_30d: int
+    active_custom: int
+    active_days: int
 
 class PwaInstallationItem(BaseModel):
+    id: Optional[int] = None
     masked_installation_id: str
     app_type: str
     platform: str
     browser_family: str
     first_seen_at: Optional[str] = None
     last_seen_at: Optional[str] = None
+    first_standalone_at: Optional[str] = None
     last_standalone_at: Optional[str] = None
     last_detection_method: str
     push_permission: str
     admin_name: Optional[str] = None
+    has_install_evidence: bool = True
+    is_active_7d: bool = False
+    is_active_30d: bool = False
+    is_stale_90d: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

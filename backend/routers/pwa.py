@@ -26,7 +26,7 @@ def user_pwa_heartbeat(
     db: Session = Depends(get_db)
 ):
     try:
-        record = pwa_installation_service.upsert_heartbeat(
+        res = pwa_installation_service.upsert_heartbeat(
             db=db,
             installation_id=req.installation_id,
             app_type="USER",
@@ -40,14 +40,15 @@ def user_pwa_heartbeat(
         )
         return schemas.StandardResponse(
             success=True,
-            message="사용자 PWA 설치 상태가 성공적으로 기록되었습니다.",
-            data={"status": "ok", "app_type": record.app_type}
+            message="사용자 PWA 설치 상태가 기록되었습니다.",
+            data=res
         )
     except Exception as e:
-        # PWA heartbeat 실패가 사용자 경험에 지장을 주지 않도록 안전 반환
+        # PWA heartbeat 실패가 사용자 경험에 지장을 주지 않도록 내부 예외 문자열 노출을 방지하고 안전 반환
+        print(f"[PWA Heartbeat Error]: {e}")
         return schemas.StandardResponse(
             success=False,
-            message=f"PWA 기록 처리 중 오류: {str(e)}",
+            message="PWA 상태 기록에 실패했습니다.",
             data=None
         )
 
@@ -56,11 +57,11 @@ def user_pwa_heartbeat(
 @router.post("/api/v1/admin/pwa/installations/heartbeat", response_model=schemas.StandardResponse[dict])
 def admin_pwa_heartbeat(
     req: schemas.PwaHeartbeatRequest,
-    current_admin: models.User = Depends(get_current_admin),
+    current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     try:
-        record = pwa_installation_service.upsert_heartbeat(
+        res = pwa_installation_service.upsert_heartbeat(
             db=db,
             installation_id=req.installation_id,
             app_type="ADMIN",
@@ -74,13 +75,14 @@ def admin_pwa_heartbeat(
         )
         return schemas.StandardResponse(
             success=True,
-            message="관리자 PWA 설치 상태가 성공적으로 기록되었습니다.",
-            data={"status": "ok", "app_type": record.app_type, "admin_id": current_admin.id}
+            message="관리자 PWA 설치 상태가 기록되었습니다.",
+            data=res
         )
     except Exception as e:
+        print(f"[Admin PWA Heartbeat Error]: {e}")
         return schemas.StandardResponse(
             success=False,
-            message=f"관리자 PWA 기록 처리 중 오류: {str(e)}",
+            message="관리자 PWA 상태 기록에 실패했습니다.",
             data=None
         )
 
@@ -89,7 +91,7 @@ def admin_pwa_heartbeat(
 @router.get("/api/v1/admin/pwa/installations/stats", response_model=schemas.StandardResponse[schemas.PwaStatsResponse])
 def get_pwa_stats_api(
     active_days: int = Query(30, ge=1, le=365),
-    current_admin: models.User = Depends(get_current_admin),
+    current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     stats = pwa_installation_service.get_pwa_stats(db=db, active_days=active_days)
@@ -108,7 +110,7 @@ def list_pwa_installations_api(
     app_type: Optional[str] = Query(None),
     platform: Optional[str] = Query(None),
     activity: Optional[str] = Query(None),
-    current_admin: models.User = Depends(get_current_admin),
+    current_admin: models.Admin = Depends(get_current_admin),
     db: Session = Depends(get_db)
 ):
     result = pwa_installation_service.list_pwa_installations(

@@ -152,12 +152,88 @@ def test_order_creation_with_admin_key_rejected_from_linking(client, db_session,
     assert order_db.pwa_installation_id is None
 
 
-def test_pwa_stats_api(client):
+def test_pwa_heartbeat_without_evidence_ignored(client, db_session):
+    inst_id = str(uuid.uuid4())
+    payload = {
+        "installation_id": inst_id,
+        "platform": "IOS",
+        "browser_family": "SAFARI",
+        "is_running_standalone": False,
+        "detection_method": "UNKNOWN",
+        "push_permission": "DEFAULT",
+        "related_app_installed": None
+    }
+
+    # 일반 QR 웹 요청 -> status = ignored, DB 저장 안됨
+    res = client.post("/api/v1/pwa/installations/heartbeat", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["success"] is True
+    assert data["data"]["status"] == "ignored"
+
+    count = db_session.query(models.PwaInstallation).filter_by(installation_id=inst_id).count()
+    assert count == 0
+
+
+def test_pwa_stats_api(client, db_session, mock_admin):
+    # 1. 설치 증거 없는 웹 전용 헤드비트 (저장 안 됨)
+    client.post("/api/v1/pwa/installations/heartbeat", json={
+        "installation_id": str(uuid.uuid4()),
+        "platform": "IOS",
+        "is_running_standalone": False,
+        "detection_method": "UNKNOWN"
+    })
+
+    # 2. 유효한 USER 스탠드얼론 PWA 등록
+    user_inst_id = str(uuid.uuid4())
+    client.post("/api/v1/pwa/installations/heartbeat", json={
+        "installation_id": user_inst_id,
+        "platform": "IOS",
+        "is_running_standalone": True,
+        "detection_method": "STANDALONE_LAUNCH"
+    })
+
+    # 3. 유효한 ADMIN 스탠드얼론 PWA 등록 (mock_admin 토큰 사용)
+    admin_inst_id = str(uuid.uuid4())
+    client.post("/api/v1/admin/pwa/installations/heartbeat", json={
+        "installation_id": admin_inst_id,
+        "platform": "DESKTOP",
+        "is_running_standalone": True,
+        "detection_method": "STANDALONE_LAUNCH"
+    })
+
     res = client.get("/api/v1/admin/pwa/installations/stats")
     assert res.status_code == 200
     data = res.json()["data"]
-    assert "detected_total" in data
-    assert "active_7d" in data
-    assert "active_30d" in data
-    assert "by_app_type" in data
-    assert "by_platform" in data
+
+    assert data["detected_total"] == 2
+    assert data["active_7d"] == 2
+    assert data["active_30d"] == 2
+    assert data["by_app_type"]["USER"] == 1
+    assert data["by_app_type"]["ADMIN"] == 1
+    assert data["confirmed_unique_admins_30d"] == 1
+    assert "confirmed_unique_users_30d" in data
+    assert "active_custom" in data
+
+
+def test_pwa_list_api(client, db_session, mock_admin):
+    inst_id = str(uuid.uuid4())
+    client.post("/api/v1/pwa/installations/heartbeat", json={
+        "installation_id": inst_id,
+        "platform": "ANDROID",
+        "is_running_standalone": True,
+        "detection_method": "STANDALONE_LAUNCH"
+    })
+
+    res = client.get("/api/v1/admin/pwa/installations")
+    assert res.status_code == 200
+    data = res.json()["data"]
+
+    assert "items" in data
+    assert "total_count" in data
+    assert data["total_count"] >= 1
+    item = data["items"][0]
+    assert "masked_installation_id" in item
+    assert "is_active_7d" in item
+    assert "has_install_evidence" in item
+

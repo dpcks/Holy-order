@@ -262,6 +262,8 @@ export const AdminLayout = () => {
 
   // 관리자 PWA 설치 추적 heartbeat (인증된 관리자 전용)
   useEffect(() => {
+    if (!adminInfo?.id) return;
+
     reportPwaHeartbeat('ADMIN');
 
     const handleVisibilityChange = () => {
@@ -274,7 +276,7 @@ export const AdminLayout = () => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [adminInfo?.id]);
 
   const toggleSidebar = () => setIsCollapsed(!isCollapsed);
 

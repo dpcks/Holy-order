@@ -225,18 +225,19 @@ export const AdminSalesReports = () => {
   const [activeTab, setActiveTab] = useState<'SALES' | 'PWA'>('SALES');
 
   const { data: pwaStats } = useQuery({
-    queryKey: ['pwa_installations_stats'],
+    queryKey: QK.pwaInstallations.stats(30),
     queryFn: async () => {
       const res = await apiClient.get<StandardResponse<PwaStatsResponse>, StandardResponse<PwaStatsResponse>>(
         '/admin/pwa/installations/stats'
       );
       return res.success ? res.data : null;
     },
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 15,
+    refetchInterval: activeTab === 'PWA' ? 30_000 : false,
   });
 
   const { data: pwaInstallationsData } = useQuery({
-    queryKey: ['pwa_installations_list'],
+    queryKey: QK.pwaInstallations.list(),
     queryFn: async () => {
       const res = await apiClient.get<StandardResponse<PwaInstallationListResponse>, StandardResponse<PwaInstallationListResponse>>(
         '/admin/pwa/installations'
@@ -244,7 +245,8 @@ export const AdminSalesReports = () => {
       return res.success ? res.data : null;
     },
     enabled: activeTab === 'PWA',
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 15,
+    refetchInterval: activeTab === 'PWA' ? 30_000 : false,
   });
 
   const bankTransferTotal = stats?.payment_method_sales?.BANK_TRANSFER || 0;
@@ -374,30 +376,30 @@ export const AdminSalesReports = () => {
                 </div>
                 <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  실시간 기기 감지 중
+                  30초 자동 갱신
                 </span>
               </div>
 
               {/* 통계 요약 카드 4개 */}
               <div className="grid grid-cols-4 gap-4 mb-6">
                 <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">누적 설치 감지 기기</p>
-                  <p className="text-2xl font-black text-gray-900">{pwaStats ? pwaStats.detected_total.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">standalone 모드 최초 실행 기록 기준</p>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">누적 설치 감지 인스턴스</p>
+                  <p className="text-2xl font-black text-gray-900">{pwaStats ? pwaStats.detected_total.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">개</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">설치 증거(standalone 등) 확인 건수</p>
                 </div>
                 <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 7일 활성 기기</p>
-                  <p className="text-2xl font-black text-emerald-600">{pwaStats ? pwaStats.active_7d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">7일 이내 PWA 실행 및 반응 기기</p>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 7일 활성 PWA</p>
+                  <p className="text-2xl font-black text-emerald-600">{pwaStats ? pwaStats.active_7d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">개</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">7일 이내 standalone 실행 기록</p>
                 </div>
                 <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 30일 활성 기기</p>
-                  <p className="text-2xl font-black text-blue-600">{pwaStats ? pwaStats.active_30d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">30일 이내 PWA 실행 기록 기기</p>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">최근 30일 활성 PWA</p>
+                  <p className="text-2xl font-black text-blue-600">{pwaStats ? pwaStats.active_30d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">개</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">30일 이내 standalone 실행 기록</p>
                 </div>
                 <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
-                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">미사용 기기 (90일 이상)</p>
-                  <p className="text-2xl font-black text-gray-400">{pwaStats ? pwaStats.stale_90d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">대</span></p>
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">미사용 인스턴스 (90일 이상)</p>
+                  <p className="text-2xl font-black text-gray-400">{pwaStats ? pwaStats.stale_90d.toLocaleString() : 0}<span className="text-[12px] text-gray-400 font-normal ml-1">개</span></p>
                   <p className="text-[10px] text-gray-400 font-medium mt-1">앱 삭제 추정 또는 오랜 미접속</p>
                 </div>
               </div>
@@ -407,16 +409,16 @@ export const AdminSalesReports = () => {
                 {/* 왼쪽: 앱 유형 & 플랫폼 분포 */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">앱 유형별 감지 기기</h3>
+                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">앱 유형별 감지 인스턴스</h3>
                     <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                       <div className="flex-1 flex justify-between items-center">
                         <span className="text-[13px] font-bold text-gray-700">📱 사용자 주문 PWA</span>
-                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.USER ?? 0}대</span>
+                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.USER ?? 0}개</span>
                       </div>
                       <div className="w-[1px] h-6 bg-gray-200" />
                       <div className="flex-1 flex justify-between items-center">
                         <span className="text-[13px] font-bold text-gray-700">🛠️ 관리자 전용 PWA</span>
-                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.ADMIN ?? 0}대</span>
+                        <span className="text-[14px] font-black text-gray-900">{pwaStats?.by_app_type?.ADMIN ?? 0}개</span>
                       </div>
                     </div>
                   </div>
@@ -426,33 +428,40 @@ export const AdminSalesReports = () => {
                     <div className="grid grid-cols-3 gap-2">
                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
                         <p className="text-[11px] font-semibold text-gray-500">iOS (iPhone)</p>
-                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.IOS ?? 0}대</p>
+                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.IOS ?? 0}개</p>
                       </div>
                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
                         <p className="text-[11px] font-semibold text-gray-500">Android</p>
-                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.ANDROID ?? 0}대</p>
+                        <p className="text-[15px] font-black text-gray-900">{pwaStats?.by_platform?.ANDROID ?? 0}개</p>
                       </div>
                       <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center">
                         <p className="text-[11px] font-semibold text-gray-500">Desktop / 기타</p>
-                        <p className="text-[15px] font-black text-gray-900">{(pwaStats?.by_platform?.DESKTOP ?? 0) + (pwaStats?.by_platform?.UNKNOWN ?? 0)}대</p>
+                        <p className="text-[15px] font-black text-gray-900">{(pwaStats?.by_platform?.DESKTOP ?? 0) + (pwaStats?.by_platform?.UNKNOWN ?? 0)}개</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* 오른쪽: 주문 연결 & 안내 문구 */}
+                {/* 오른쪽: 고유 유저/관리자 지표 & 주문 연동 & 안내 문구 */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">최근 30일 PWA 주문 연동</h3>
-                    <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">PWA 실시간 주문 수</span>
-                        <span className="text-[14px] font-black text-primary">{pwaStats?.pwa_orders_30d ?? 0}건</span>
+                    <h3 className="text-[12px] font-bold text-gray-700 mb-2 uppercase tracking-wider">최근 30일 PWA 연동 지표</h3>
+                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div className="flex justify-between items-center pr-2 border-r border-gray-200">
+                        <span className="text-[12px] font-bold text-gray-700">PWA 실시간 주문</span>
+                        <span className="text-[13px] font-black text-primary">{pwaStats?.pwa_orders_30d ?? 0}건</span>
                       </div>
-                      <div className="w-[1px] h-6 bg-gray-200" />
-                      <div className="flex-1 flex justify-between items-center">
-                        <span className="text-[13px] font-bold text-gray-700">주문 생성 고유 기기</span>
-                        <span className="text-[14px] font-black text-primary">{pwaStats?.unique_ordering_installations_30d ?? 0}대</span>
+                      <div className="flex justify-between items-center pl-2">
+                        <span className="text-[12px] font-bold text-gray-700">주문 생성 인스턴스</span>
+                        <span className="text-[13px] font-black text-primary">{pwaStats?.unique_ordering_installations_30d ?? 0}개</span>
+                      </div>
+                      <div className="flex justify-between items-center pr-2 border-r border-gray-200 pt-2 border-t border-gray-200">
+                        <span className="text-[12px] font-bold text-gray-700">확인된 고유 사용자</span>
+                        <span className="text-[13px] font-black text-emerald-700">{pwaStats?.confirmed_unique_users_30d ?? 0}명</span>
+                      </div>
+                      <div className="flex justify-between items-center pl-2 pt-2 border-t border-gray-200">
+                        <span className="text-[12px] font-bold text-gray-700">확인된 고유 관리자</span>
+                        <span className="text-[13px] font-black text-purple-700">{pwaStats?.confirmed_unique_admins_30d ?? 0}명</span>
                       </div>
                     </div>
                   </div>
@@ -463,10 +472,9 @@ export const AdminSalesReports = () => {
                     <div className="text-[11px] text-blue-900/80 leading-relaxed font-medium space-y-1">
                       <p className="font-bold text-blue-900">💡 PWA 설치 및 기기 추적 안내</p>
                       <ul className="list-disc pl-3.5 space-y-0.5">
-                        <li><strong>설치 감지 기기</strong>: 앱을 홈 화면에서 standalone 모드로 실행한 기록을 기준으로 집계됩니다.</li>
-                        <li><strong>iOS(iPhone)</strong>: Safari 정책상 홈 화면에 추가 후 앱을 최초 1회 실행한 시점에 등록됩니다. (일반 웹 접속 시 미설치로 단정하지 않음)</li>
-                        <li><strong>앱 삭제</strong>: 브라우저 특성상 삭제 시점이 즉시 감지되지 않으며, `last_seen_at` 기준으로 활성/미사용 상태가 계산됩니다.</li>
-                        <li><strong>기기 기준</strong>: 사용자 수가 아닌 익명 설치 기기 단위 기준입니다.</li>
+                        <li><strong>설치 감지 인스턴스</strong>: 브라우저 저장소 ID 기준입니다. 앱 삭제나 사이트 데이터 초기화 후 재설치하면 새 인스턴스로 기록될 수 있습니다.</li>
+                        <li><strong>일반 QR 웹 방문</strong>: 일반 브라우저 QR 접속은 설치 수에 포함되지 않고 자동 제외됩니다.</li>
+                        <li><strong>고유 사용자·관리자</strong>: 주문 사용자 ID와 로그인 관리자 계정 기준으로 별도 집계하여 재설치 중복 영향을 최소화합니다.</li>
                       </ul>
                     </div>
                   </div>
@@ -479,7 +487,7 @@ export const AdminSalesReports = () => {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold text-gray-900">등록된 PWA 설치 기기 목록</h3>
                 <span className="text-[12px] font-semibold text-gray-500">
-                  총 {pwaInstallationsData?.total ?? 0}대 등록됨
+                  총 {pwaInstallationsData?.total_count ?? 0}개 등록됨
                 </span>
               </div>
 
@@ -500,10 +508,10 @@ export const AdminSalesReports = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50 text-[13px]">
-                      {pwaInstallationsData.items.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
+                      {pwaInstallationsData.items.map((item, idx) => (
+                        <tr key={item.id ?? idx} className="hover:bg-gray-50/50 transition-colors">
                           <td className="py-3 pl-2 font-mono font-bold text-gray-800">
-                            {item.installation_id_masked}
+                            {item.masked_installation_id}
                           </td>
                           <td className="py-3 font-semibold">
                             {item.app_type === 'USER' ? (
@@ -524,8 +532,12 @@ export const AdminSalesReports = () => {
                               {item.push_permission}
                             </span>
                           </td>
-                          <td className="py-3 text-gray-500 text-[12px]">{new Date(item.first_seen_at).toLocaleString()}</td>
-                          <td className="py-3 text-gray-500 text-[12px]">{new Date(item.last_seen_at).toLocaleString()}</td>
+                          <td className="py-3 text-gray-500 text-[12px]">
+                            {item.first_standalone_at ? new Date(item.first_standalone_at).toLocaleString() : (item.first_seen_at ? new Date(item.first_seen_at).toLocaleString() : '-')}
+                          </td>
+                          <td className="py-3 text-gray-500 text-[12px]">
+                            {item.last_standalone_at ? new Date(item.last_standalone_at).toLocaleString() : (item.last_seen_at ? new Date(item.last_seen_at).toLocaleString() : '-')}
+                          </td>
                           <td className="py-3 pr-2 text-right">
                             {item.is_active_7d ? (
                               <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[11px]">7일내 활성</span>

@@ -155,6 +155,13 @@ export const QK = {
     /** 관리자 인증 정보(JWT 검증용) */
     me: ['auth', 'me'] as const,
   },
+
+  // PWA 설치 기기 추적 및 통계
+  pwaInstallations: {
+    _domain: ['pwa-installations'] as const,
+    stats: (activeDays: number) => ['pwa-installations', 'stats', activeDays] as const,
+    list: (filters?: Record<string, unknown>) => ['pwa-installations', 'list', filters ?? {}] as const,
+  },
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,4 +190,5 @@ export const QK_DOMAIN: DomainMap = {
   admins: QK.admins._domain,
   users: QK.users._domain,
   auth: QK.auth._domain,
+  pwaInstallations: QK.pwaInstallations._domain,
 };
