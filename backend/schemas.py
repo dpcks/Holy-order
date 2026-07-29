@@ -424,23 +424,23 @@ class AnnouncementReportResponse(BaseModel):
 # ===============================
 class IngredientCreate(BaseModel):
     """재고 항목 생성 스키마"""
-    name: str
+    name: str = Field(min_length=1, max_length=100)
     category: Optional[str] = None          # 재료 / 소모품
     unit: Optional[str] = None              # 단위 (kg, 개, 팩 등)
-    current_stock: int = 0
-    alert_threshold: int = 0
+    current_stock: int = Field(default=0, ge=0)
+    alert_threshold: int = Field(default=0, ge=0)
     memo: Optional[str] = None
-    display_order: int = 0
+    display_order: int = Field(default=0, ge=0)
 
 class IngredientUpdate(BaseModel):
     """재고 항목 수정 스키마 - 모든 필드 Optional"""
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     category: Optional[str] = None
     unit: Optional[str] = None
-    current_stock: Optional[int] = None
-    alert_threshold: Optional[int] = None
+    current_stock: Optional[int] = Field(default=None, ge=0)
+    alert_threshold: Optional[int] = Field(default=None, ge=0)
     memo: Optional[str] = None
-    display_order: Optional[int] = None
+    display_order: Optional[int] = Field(default=None, ge=0)
 
 class IngredientResponse(BaseModel):
     """재고 항목 응답 스키마"""
@@ -457,6 +457,7 @@ class IngredientResponse(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 # ===============================
