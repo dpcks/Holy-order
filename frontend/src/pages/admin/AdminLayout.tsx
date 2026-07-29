@@ -260,6 +260,26 @@ export const AdminLayout = () => {
     };
   }, []);
 
+  // [아이패드/iOS 가상 키보드 닫힐 때 화면 밀림 복구]
+  useEffect(() => {
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        // iOS Safari 가상 키보드가 내려간 직후 window.scrollY 오프셋을 0으로 강제 복구
+        setTimeout(() => {
+          window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+          document.body.scrollTop = 0;
+          document.documentElement.scrollTop = 0;
+        }, 100);
+      }
+    };
+
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
   // 관리자 PWA 설치 추적 heartbeat (인증된 관리자 전용)
   useEffect(() => {
     if (!adminInfo?.id) return;
