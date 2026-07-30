@@ -352,12 +352,59 @@ export const AdminSchedule = () => {
     }
   };
 
-  // 미리보기 확인 후 실제 복사 적용
-  const handleConfirmCopy = () => {
+  // 미리보기 확인 후 실제 복사 적용 + DB 일괄 저장
+  const [isSavingCopy, setIsSavingCopy] = useState(false);
+
+  const handleConfirmCopy = async () => {
     if (!copyPreviewModal) return;
+    setIsSavingCopy(true);
+
+    // 1. 로컬 state 즉시 반영 (UI 먼저 업데이트)
     setSchedules(copyPreviewModal.newSchedules);
-    showToast(copyPreviewModal.toastMsg, 'success');
-    setCopyPreviewModal(null);
+
+    try {
+      // 2. 명단이 있는 주차만 골라서 DB에 일괄 저장
+      const schedulesToSave = copyPreviewModal.newSchedules.filter(
+        s => {
+          const names = Array.isArray(s.volunteers?.names) ? s.volunteers.names : [];
+          return names.length > 0;
+        }
+      );
+
+      const results = await Promise.allSettled(
+        schedulesToSave.map(schedule =>
+          apiClient.post<VolunteerSchedule, StandardResponse<VolunteerSchedule>>(
+            '/admin/schedules',
+            {
+              sunday_date: schedule.sunday_date,
+              volunteers: schedule.volunteers,
+              memo: schedule.memo,
+            }
+          )
+        )
+      );
+
+      const failedCount = results.filter(r => r.status === 'rejected').length;
+      const savedCount = results.filter(r => r.status === 'fulfilled').length;
+
+      // 3. Query 갱신 (서버 최신 데이터 반영)
+      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.schedules });
+
+      if (failedCount === 0) {
+        showToast(`${copyPreviewModal.toastMsg} (${savedCount}개 저장 완료)`, 'success');
+      } else {
+        showToast(
+          `${savedCount}개 저장 완료, ${failedCount}개 저장 실패. 실패한 주차는 수동으로 저장해 주세요.`,
+          'error'
+        );
+      }
+    } catch (err) {
+      console.error('명단 복사 저장 실패:', err);
+      showToast('일부 주차 저장에 실패했습니다. 직접 확인 후 저장해 주세요.', 'error');
+    } finally {
+      setIsSavingCopy(false);
+      setCopyPreviewModal(null);
+    }
   };
 
   const handleCancelCopy = () => {
@@ -967,7 +1014,7 @@ export const AdminSchedule = () => {
                 </div>
                 <p className="text-[13px] text-gray-500 leading-relaxed">
                   아래 명단이 이번 달 주차에 복사됩니다.<br />
-                  <span className="font-bold text-gray-700">저장 전까지 실제 DB에는 반영되지 않습니다.</span>
+                  <span className="font-bold text-gray-700">'복사 적용 및 저장'을 누르면 즉시 DB에 저장됩니다.</span>
                 </p>
               </div>
               <button
@@ -1027,16 +1074,27 @@ export const AdminSchedule = () => {
             <div className="px-6 pt-4 pb-6 border-t border-gray-100 bg-gray-50/50 flex gap-3 shrink-0">
               <button
                 onClick={handleCancelCopy}
-                className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-gray-600 text-[14px] font-bold hover:bg-gray-100 transition-all active:scale-[0.98]"
+                disabled={isSavingCopy}
+                className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-gray-600 text-[14px] font-bold hover:bg-gray-100 transition-all active:scale-[0.98] disabled:opacity-40"
               >
                 취소
               </button>
               <button
                 onClick={handleConfirmCopy}
-                className="flex-1 py-3.5 rounded-2xl bg-[#1A0A0A] text-white text-[14px] font-black hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+                disabled={isSavingCopy}
+                className="flex-1 py-3.5 rounded-2xl bg-[#1A0A0A] text-white text-[14px] font-black hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-60"
               >
-                <Copy size={15} />
-                복사 적용
+                {isSavingCopy ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    저장 중...
+                  </>
+                ) : (
+                  <>
+                    <Copy size={15} />
+                    복사 적용 및 저장
+                  </>
+                )}
               </button>
             </div>
           </div>
