@@ -92,7 +92,7 @@ class Order(Base):
     order_date = Column(Date, default=lambda: get_seoul_time().date(), index=True) # DB 내부 무결성용
     
     is_pwa = Column(Boolean, default=False) # PWA 앱 주문 여부
-    pwa_installation_id = Column(Integer, ForeignKey("pwa_installations.id"), nullable=True, index=True) # PWA 설치 기기 추적 연결
+    pwa_installation_id = Column(Integer, ForeignKey("pwa_installations.id", ondelete="SET NULL"), nullable=True, index=True) # PWA 설치 기기 추적 연결
     is_active = Column(Boolean, default=True, index=True) # 소프트 삭제 여부
     deleted_at = Column(DateTime(timezone=True), nullable=True) # 삭제 일시
     
