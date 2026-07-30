@@ -20,6 +20,8 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+import { clearAdminHeartbeatMetadata } from '../utils/pwaInstallation';
+
 // 응답 인터셉터: 401 에러 처리
 apiClient.interceptors.response.use(
   (response) => response,
@@ -27,6 +29,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn('🔒 [Auth] 인증이 만료되었습니다. 로그아웃 처리합니다.');
       localStorage.removeItem('adminToken');
+      clearAdminHeartbeatMetadata();
       // 현재 페이지가 관리자 영역이면 로그인 페이지로 강제 이동
       if (window.location.pathname.startsWith('/admin')) {
         window.location.href = '/admin/login';

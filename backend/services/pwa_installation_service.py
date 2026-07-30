@@ -99,7 +99,10 @@ def upsert_heartbeat(
 
     # 백엔드 throttling: 마지막 갱신 5분 미만이고 주요 상태 변경이 없으면 DB write 생략
     five_minutes_ago = now - timedelta(minutes=5)
-    should_update_time = record.last_seen_at is None or record.last_seen_at < five_minutes_ago
+    last_seen = record.last_seen_at
+    if last_seen and last_seen.tzinfo is None:
+        last_seen = last_seen.replace(tzinfo=timezone.utc)
+    should_update_time = last_seen is None or last_seen < five_minutes_ago
     state_changed = (
         (is_running_standalone and record.last_standalone_at is None) or
         record.push_permission != push_permission or

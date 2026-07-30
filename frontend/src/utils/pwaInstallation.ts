@@ -30,15 +30,35 @@ export interface PwaHeartbeatResponse {
   admin_id?: number;
 }
 
-const STORAGE_KEYS = {
+export type HeartbeatStatus = 'created' | 'updated' | 'unchanged' | 'ignored' | 'error';
+
+export interface HeartbeatResult {
+  status: HeartbeatStatus;
+  app_type: PwaAppType;
+  reason?: string;
+  admin_id?: number;
+}
+
+export const STORAGE_KEYS = {
   USER_ID: 'holy-order:pwa-installation-id:user',
   ADMIN_ID: 'holy-order:pwa-installation-id:admin',
   USER_LAST_REPORT: 'holy-order:pwa-installation-last-report:user',
   ADMIN_LAST_REPORT: 'holy-order:pwa-installation-last-report:admin',
-};
+  ADMIN_LAST_LINKED_ADMIN_ID: 'holy-order:pwa-installation-last-admin-id:admin',
+} as const;
+
+export function clearAdminHeartbeatMetadata(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_LAST_REPORT);
+  localStorage.removeItem(STORAGE_KEYS.ADMIN_LAST_LINKED_ADMIN_ID);
+}
 
 // 6시간 throttling
 const REPORT_THROTTLE_MS = 6 * 60 * 60 * 1000;
+
+// in-flight request deduplication (StrictMode 및 동시 호출 방지)
+let adminHeartbeatInFlight: Promise<HeartbeatResult> | null = null;
+let userHeartbeatInFlight: Promise<HeartbeatResult> | null = null;
 
 export function isStandalonePwa(): boolean {
   if (typeof window === 'undefined') return false;
@@ -161,76 +181,124 @@ export async function detectPwaInstallState(): Promise<PwaInstallState> {
 export async function reportPwaHeartbeat(
   appType: PwaAppType,
   options?: { force?: boolean; detectionMethodOverride?: PwaDetectionMethod }
-): Promise<void> {
-  if (typeof window === 'undefined') return;
-
-  // 관리자 모드인 경우 토큰 확인 (adminToken)
-  if (appType === 'ADMIN') {
-    const adminToken = localStorage.getItem('adminToken');
-    if (!adminToken) return;
+): Promise<HeartbeatResult> {
+  if (typeof window === 'undefined') {
+    return { status: 'ignored', app_type: appType, reason: 'ssr' };
   }
 
-  const isForce = options?.force ?? false;
-  const lastReportKey = appType === 'ADMIN' ? STORAGE_KEYS.ADMIN_LAST_REPORT : STORAGE_KEYS.USER_LAST_REPORT;
-  const lastReportStr = localStorage.getItem(lastReportKey);
-  const now = Date.now();
+  // in-flight request deduplication (StrictMode 및 동시 호출 방지)
+  if (appType === 'ADMIN' && adminHeartbeatInFlight) {
+    return adminHeartbeatInFlight;
+  }
+  if (appType === 'USER' && userHeartbeatInFlight) {
+    return userHeartbeatInFlight;
+  }
 
-  // throttling: force나 APPINSTALLED_EVENT가 아니면 최근 6시간 이내 중복 전송 방지
-  if (!isForce && options?.detectionMethodOverride !== 'APPINSTALLED_EVENT' && lastReportStr) {
-    const lastReportTime = parseInt(lastReportStr, 10);
-    if (!isNaN(lastReportTime) && now - lastReportTime < REPORT_THROTTLE_MS) {
-      return;
+  const executeHeartbeat = async (): Promise<HeartbeatResult> => {
+    // 관리자 모드인 경우 토큰 확인 (adminToken)
+    if (appType === 'ADMIN') {
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        return { status: 'ignored', app_type: appType, reason: 'no_admin_token' };
+      }
     }
+
+    const isForce = options?.force ?? false;
+    const lastReportKey = appType === 'ADMIN' ? STORAGE_KEYS.ADMIN_LAST_REPORT : STORAGE_KEYS.USER_LAST_REPORT;
+    const lastReportStr = localStorage.getItem(lastReportKey);
+    const now = Date.now();
+
+    // throttling: force나 APPINSTALLED_EVENT가 아니면 최근 6시간 이내 중복 전송 방지
+    if (!isForce && options?.detectionMethodOverride !== 'APPINSTALLED_EVENT' && lastReportStr) {
+      const lastReportTime = parseInt(lastReportStr, 10);
+      if (!isNaN(lastReportTime) && now - lastReportTime < REPORT_THROTTLE_MS) {
+        return { status: 'ignored', app_type: appType, reason: 'throttled' };
+      }
+    }
+
+    try {
+      const state = await detectPwaInstallState();
+
+      // [핵심 레퍼런스 가드] 설치 증거가 없으면 installation_id 생성 및 전송을 하지 않음 (일반 QR 웹 제외)
+      if (!hasPwaInstallationEvidence(state, options?.detectionMethodOverride)) {
+        return { status: 'ignored', app_type: appType, reason: 'no_installation_evidence' };
+      }
+
+      const installationId = getOrCreateInstallationId(appType);
+
+      const payload = {
+        installation_id: installationId,
+        platform: state.platform,
+        browser_family: state.browserFamily,
+        is_running_standalone: state.isRunningStandalone,
+        detection_method: options?.detectionMethodOverride || state.detectionMethod,
+        push_permission: state.pushPermission,
+        related_app_installed: state.isInstalledOnDevice,
+      };
+
+      const path = appType === 'ADMIN'
+        ? '/admin/pwa/installations/heartbeat'
+        : '/pwa/installations/heartbeat';
+
+      // Railway API로 apiClient를 사용하여 전송 (x-skip-error-toast로 조용한 실패)
+      const response = await apiClient.post<
+        StandardResponse<PwaHeartbeatResponse>,
+        StandardResponse<PwaHeartbeatResponse>
+      >(
+        path,
+        payload,
+        {
+          headers: {
+            'x-skip-error-toast': 'true',
+          },
+        }
+      );
+
+      if (
+        response &&
+        response.success &&
+        response.data &&
+        ['created', 'updated', 'unchanged'].includes(response.data.status)
+      ) {
+        localStorage.setItem(lastReportKey, now.toString());
+        return {
+          status: response.data.status as HeartbeatStatus,
+          app_type: appType,
+          admin_id: response.data.admin_id,
+        };
+      }
+
+      return {
+        status: 'error',
+        app_type: appType,
+        reason: response?.message || 'API response indicated failure',
+      };
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      return {
+        status: 'error',
+        app_type: appType,
+        reason: errorMsg || 'Network or unexpected error',
+      };
+    }
+  };
+
+  const promise = executeHeartbeat();
+
+  if (appType === 'ADMIN') {
+    adminHeartbeatInFlight = promise;
+  } else {
+    userHeartbeatInFlight = promise;
   }
 
   try {
-    const state = await detectPwaInstallState();
-
-    // [핵심 레퍼런스 가드] 설치 증거가 없으면 installation_id 생성 및 전송을 하지 않음 (일반 QR 웹 제외)
-    if (!hasPwaInstallationEvidence(state, options?.detectionMethodOverride)) {
-      return;
+    return await promise;
+  } finally {
+    if (appType === 'ADMIN') {
+      adminHeartbeatInFlight = null;
+    } else {
+      userHeartbeatInFlight = null;
     }
-
-    const installationId = getOrCreateInstallationId(appType);
-
-    const payload = {
-      installation_id: installationId,
-      platform: state.platform,
-      browser_family: state.browserFamily,
-      is_running_standalone: state.isRunningStandalone,
-      detection_method: options?.detectionMethodOverride || state.detectionMethod,
-      push_permission: state.pushPermission,
-      related_app_installed: state.isInstalledOnDevice,
-    };
-
-    const path = appType === 'ADMIN'
-      ? '/admin/pwa/installations/heartbeat'
-      : '/pwa/installations/heartbeat';
-
-    // Railway API로 apiClient를 사용하여 전송 (x-skip-error-toast로 조용한 실패)
-    const response = await apiClient.post<
-      StandardResponse<PwaHeartbeatResponse>,
-      StandardResponse<PwaHeartbeatResponse>
-    >(
-      path,
-      payload,
-      {
-        headers: {
-          'x-skip-error-toast': 'true',
-        },
-      }
-    );
-
-    if (
-      response &&
-      response.success &&
-      response.data &&
-      ['created', 'updated', 'unchanged'].includes(response.data.status)
-    ) {
-      localStorage.setItem(lastReportKey, now.toString());
-    }
-  } catch {
-    // PWA heartbeat 실패 시에도 애플리케이션 주문 및 정상 작동에 영향을 주지 않음
   }
 }
 

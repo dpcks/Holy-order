@@ -56,6 +56,58 @@ def test_admin_pwa_heartbeat(client, db_session, mock_admin):
     assert res.json()["data"]["admin_id"] == mock_admin.id
 
 
+def test_admin_account_switch_same_installation_id(client, db_session, mock_admin):
+    """동일 installation_id로 관리자 A -> B 계정 전환 시 admin_id가 B로 갱신되고 행 수는 1개 유지됨"""
+    from auth import get_current_admin, create_access_token
+    from main import app
+
+    token_a = create_access_token(data={"sub": mock_admin.login_id})
+    
+    admin_b = models.Admin(login_id="admin_b", password_hash="hashed_b", name="관리자B", role="ADMIN", is_active=True)
+    db_session.add(admin_b)
+    db_session.commit()
+    db_session.refresh(admin_b)
+    token_b = create_access_token(data={"sub": admin_b.login_id})
+
+    original_override = app.dependency_overrides.pop(get_current_admin, None)
+
+    try:
+        inst_id = str(uuid.uuid4())
+        payload = {
+            "installation_id": inst_id,
+            "platform": "DESKTOP",
+            "browser_family": "CHROME",
+            "is_running_standalone": True,
+            "detection_method": "STANDALONE_LAUNCH"
+        }
+
+        # 1. 관리자 A heartbeat
+        res_a = client.post(
+            "/api/v1/admin/pwa/installations/heartbeat",
+            json=payload,
+            headers={"Authorization": f"Bearer {token_a}"}
+        )
+        assert res_a.status_code == 200
+        assert res_a.json()["data"]["admin_id"] == mock_admin.id
+
+        # 2. 동일 installation_id로 관리자 B heartbeat
+        res_b = client.post(
+            "/api/v1/admin/pwa/installations/heartbeat",
+            json=payload,
+            headers={"Authorization": f"Bearer {token_b}"}
+        )
+        assert res_b.status_code == 200
+        assert res_b.json()["data"]["admin_id"] == admin_b.id
+
+        # 3. DB 검증: 동일 installation_id 및 app_type=ADMIN 레코드는 1개여야 하고 admin_id는 B여야 함
+        records = db_session.query(models.PwaInstallation).filter_by(installation_id=inst_id, app_type="ADMIN").all()
+        assert len(records) == 1
+        assert records[0].admin_id == admin_b.id
+    finally:
+        if original_override:
+            app.dependency_overrides[get_current_admin] = original_override
+
+
 def test_invalid_uuid_rejected(client):
     payload = {
         "installation_id": "invalid-uuid-string-1234",

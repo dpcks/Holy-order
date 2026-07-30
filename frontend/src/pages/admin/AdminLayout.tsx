@@ -15,7 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import { QK } from '../../api/queryKeys';
 import { apiClient } from '../../api/client';
 import type { AdminInfo, StandardResponse } from '../../types';
-import { reportPwaHeartbeat } from '../../utils/pwaInstallation';
+import { reportPwaHeartbeat, STORAGE_KEYS, clearAdminHeartbeatMetadata } from '../../utils/pwaInstallation';
 
 const navItems = [
   { to: '/admin', label: '주문 관리', icon: ClipboardList, end: true },
@@ -63,6 +63,7 @@ export const AdminLayout = () => {
             onClick={() => {
               toast.dismiss(t.id);
               localStorage.removeItem('adminToken');
+              clearAdminHeartbeatMetadata();
               navigate('/admin/login');
               toast.success('안전하게 로그아웃 되었습니다.', {
                 icon: '👋',
@@ -280,15 +281,27 @@ export const AdminLayout = () => {
     };
   }, []);
 
-  // 관리자 PWA 설치 추적 heartbeat (인증된 관리자 전용)
+  // 관리자 PWA 설치 추적 heartbeat (인증된 관리자 전용 & 계정 전환 감지)
   useEffect(() => {
     if (!adminInfo?.id) return;
 
-    reportPwaHeartbeat('ADMIN');
+    const currentAdminId = String(adminInfo.id);
+    const triggerHeartbeat = (forceOverride?: boolean) => {
+      const lastLinkedAdminId = localStorage.getItem(STORAGE_KEYS.ADMIN_LAST_LINKED_ADMIN_ID);
+      const isAccountChanged = forceOverride ?? (lastLinkedAdminId !== currentAdminId);
+
+      reportPwaHeartbeat('ADMIN', { force: isAccountChanged }).then((result) => {
+        if (result && ['created', 'updated', 'unchanged'].includes(result.status)) {
+          localStorage.setItem(STORAGE_KEYS.ADMIN_LAST_LINKED_ADMIN_ID, currentAdminId);
+        }
+      });
+    };
+
+    triggerHeartbeat();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        reportPwaHeartbeat('ADMIN');
+        triggerHeartbeat();
       }
     };
 
