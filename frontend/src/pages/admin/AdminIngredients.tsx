@@ -114,30 +114,54 @@ export const AdminIngredients = () => {
     mutationFn: async ({ id, nextStock }: { id: number; nextStock: number }) => {
       return apiClient.patch<StandardResponse<Ingredient>, StandardResponse<Ingredient>>(
         `/admin/ingredients/${id}`,
-        { current_stock: nextStock }
+        { current_stock: nextStock },
+        {
+          headers: {
+            'x-skip-error-toast': 'true',
+          },
+        }
       );
     },
     onMutate: async ({ id, nextStock }) => {
-      // Optimistic update
       setSavingIds(prev => new Set(prev).add(id));
       await queryClient.cancelQueries({ queryKey: QK.ingredients.list });
-      const snapshot = queryClient.getQueryData<Ingredient[]>(QK.ingredients.list);
+
+      const items = queryClient.getQueryData<Ingredient[]>(QK.ingredients.list) ?? [];
+      const target = items.find(item => item.id === id);
+      const previousStock = target ? target.current_stock : 0;
+
       queryClient.setQueryData<Ingredient[]>(QK.ingredients.list, old =>
-        old?.map(item => item.id === id ? { ...item, current_stock: nextStock } : item) ?? []
+        (old ?? []).map(item => (item.id === id ? { ...item, current_stock: nextStock } : item))
       );
-      return { snapshot };
+
+      return { id, previousStock };
     },
-    onError: (_err, { id }, ctx) => {
-      // Rollback
-      if (ctx?.snapshot) {
-        queryClient.setQueryData(QK.ingredients.list, ctx.snapshot);
+    onError: (_err, variables, context) => {
+      if (context) {
+        queryClient.setQueryData<Ingredient[]>(QK.ingredients.list, old =>
+          (old ?? []).map(item =>
+            item.id === context.id ? { ...item, current_stock: context.previousStock } : item
+          )
+        );
       }
-      toast.error('재고 수량 저장에 실패했습니다.');
-      setSavingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+      toast.error('재고 수량 저장에 실패했습니다.', {
+        id: `ingredient-stock-${variables.id}`,
+      });
     },
-    onSuccess: (_res, { id }) => {
-      setSavingIds(prev => { const s = new Set(prev); s.delete(id); return s; });
-      queryClient.invalidateQueries({ queryKey: QK_DOMAIN.ingredients });
+    onSuccess: (res, variables) => {
+      if (res && res.success && res.data) {
+        queryClient.setQueryData<Ingredient[]>(QK.ingredients.list, old =>
+          (old ?? []).map(item => (item.id === variables.id ? res.data : item))
+        );
+      }
+    },
+    onSettled: (_data, _error, variables) => {
+      setSavingIds(prev => {
+        const s = new Set(prev);
+        s.delete(variables.id);
+        return s;
+      });
+      void queryClient.invalidateQueries({ queryKey: QK_DOMAIN.ingredients });
     },
   });
 
@@ -316,13 +340,18 @@ export const AdminIngredients = () => {
   }, [savingIds]);
 
   const handleInlineCommit = useCallback((item: Ingredient) => {
+    if (savingIds.has(item.id)) {
+      setInlineEditId(null);
+      setInlineValue('');
+      return;
+    }
     const val = parseInt(inlineValue, 10);
     if (!isNaN(val) && val >= 0 && val !== item.current_stock) {
       stockMutation.mutate({ id: item.id, nextStock: val });
     }
     setInlineEditId(null);
     setInlineValue('');
-  }, [inlineValue, stockMutation]);
+  }, [inlineValue, savingIds, stockMutation]);
 
   const handleInlineKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, item: Ingredient) => {
     if (e.key === 'Enter') { e.preventDefault(); handleInlineCommit(item); }
@@ -770,7 +799,7 @@ const StockControl = ({
   const isEditing = inlineEditId === item.id;
 
   return (
-    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+    <div className="flex items-center gap-1" onClick={e => e.stopPropagation()} aria-busy={isSaving}>
       <button
         onClick={e => onUpdateStock(e, item, -1)}
         disabled={isSaving || item.current_stock <= 0}
