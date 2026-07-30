@@ -106,8 +106,10 @@ export const QK = {
   announcements: {
     _domain: ['announcements'] as const,
     list: ['announcements', 'list'] as const,
-    active: ['announcements', 'active'] as const, // 사용자 화면용
+    current: ['announcements', 'current'] as const, // 공개 화면 통합용 (free_event + notices)
+    active: ['announcements', 'active'] as const, // 하위 호환용
     detail: (id: number) => ['announcements', 'detail', id] as const,
+    publicDetail: (id: number) => ['announcements', 'public', id] as const,
     report: (id: number) => ['announcements', 'report', id] as const,
   },
 

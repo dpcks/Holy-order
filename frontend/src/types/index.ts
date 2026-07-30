@@ -229,6 +229,9 @@ export interface Volunteer {
 // 이벤트/공지 관련 (Announcements)
 // ==========================================
 
+export type PublicationStatus = 'DRAFT' | 'SCHEDULED' | 'LIVE' | 'ENDED';
+export type ContentType = 'NOTICE' | 'FREE_EVENT';
+
 export interface Announcement {
   id: number;
   title: string;
@@ -243,6 +246,12 @@ export interface Announcement {
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
+  updated_at?: string;
+  // 파생 상태 필드 (관리자 API에서 제공)
+  content_type?: ContentType;
+  publication_status?: PublicationStatus;
+  is_effective?: boolean;
+  linked_order_count?: number;
 }
 
 /** 공개 API /announcements/active 전용 응답 타입 */
@@ -261,6 +270,12 @@ export interface ActiveAnnouncement {
   ends_at: string | null;
   created_at: string;
 }
+
+export interface CurrentAnnouncementsResponse {
+  free_event: ActiveAnnouncement | null;
+  notices: ActiveAnnouncement[];
+}
+
 
 export interface MenuBreakdown {
   name: string;

@@ -8,10 +8,11 @@ import { TossLogo } from '../components/ui/TossLogo';
 import { Toast } from '../components/ui/Toast';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { QK } from '../api/queryKeys';
+import { useQueryClient } from '@tanstack/react-query';
+import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
-import type { Duty, StandardResponse, PaymentMethod, Announcement } from '../types';
+import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
+import type { Duty, StandardResponse, PaymentMethod } from '../types';
 
 import { isStandalonePwa, getPwaInstallationIdForOrder } from '../utils/pwaInstallation';
 
@@ -186,13 +187,8 @@ export const Cart = () => {
   const finalPrice = totalPrice - discount;
 
   // 이벤트(공지) 상태 - React Query로 통합
-  const { data: activeEvent } = useQuery({
-    queryKey: QK.announcements.active,
-    queryFn: async () => {
-      const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
-      return (res.success && res.data) ? res.data : null;
-    }
-  });
+  const { data: currentAnnouncements } = useCurrentAnnouncements();
+  const activeEvent = currentAnnouncements?.free_event ?? null;
 
   const isEventMode = !!activeEvent?.is_event_mode;
   // 이벤트 모드일 때는 최종 결제 금액을 0원으로 처리
@@ -247,6 +243,7 @@ export const Cart = () => {
         request: requests.trim() || null,
         is_pwa: isStandalone,
         pwa_installation_key: getPwaInstallationIdForOrder(),
+        expected_announcement_id: activeEvent?.id ?? null,
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,
@@ -277,11 +274,6 @@ export const Cart = () => {
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
 
         // 주문 생성 직후 푸시 구독 등록 (이미 권한이 granted인 경우에만)
-        // 왜 토스 딥링크보다 먼저: 토스 앱 이동 후 복귀하면 OrderStatus effect에
-        // 의존해야 하는데, 복귀 전에 구독이 없으면 READY 알림을 놓칠 수 있다.
-        // 주문 생성 직후 푸시 구독 등록 (이미 권한이 granted인 경우에만)
-        // 왜 비동기 실행: 페이지 이동을 차단하지 않으면서 안드로이드/모바일 네트워크 지연 시에도
-        // 백그라운드에서 푸시 구독 등록 API가 끝까지 성공하도록 한다.
         if ('Notification' in window && Notification.permission === 'granted') {
           import('../utils/push')
             .then(({ registerOrderPushSubscription }) => {
@@ -320,6 +312,12 @@ export const Cart = () => {
         queryClient.invalidateQueries({ queryKey: QK.settings.public, exact: true } as any);
         navigate('/', { replace: true });
       }
+
+      // 409: 이벤트 상태 변경 (Golden bell 시작/종료) → announcements invalidate, 결제 재확인 안내, 자동 재전송 없음
+      if (statusCode === 409) {
+        queryClient.invalidateQueries({ queryKey: QK_DOMAIN.announcements });
+      }
+
       showToast(message, 'error');
     }
   };

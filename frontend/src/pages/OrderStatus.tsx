@@ -8,7 +8,7 @@ import { getWsUrl } from '../utils/url';
 import toast from 'react-hot-toast';
 import { TossLogo } from '../components/ui/TossLogo';
 import { clearPwaBadgesAndNotifications } from '../utils/push';
-import type { Order, SettingResponse, ActiveOrder, StandardResponse, Announcement } from '../types';
+import type { Order, SettingResponse, ActiveOrder, StandardResponse } from '../types';
 
 export const OrderStatus = () => {
   const { id } = useParams<{ id: string }>();
@@ -67,12 +67,16 @@ export const OrderStatus = () => {
     refetchOnWindowFocus: 'always',
   });
 
-  const { data: activeEvent } = useQuery({
-    queryKey: QK.announcements.active,
+  // 주문에 연결된 이벤트 상세 조회 (이벤트가 종료되었어도 주문 당시 연결된 후원자 정보 유지)
+  const attachedAnnouncementId = order?.announcement_id;
+  const { data: orderEvent } = useQuery({
+    queryKey: QK.announcements.publicDetail(attachedAnnouncementId || 0),
     queryFn: async () => {
-      const res = await apiClient.get<Announcement, StandardResponse<Announcement>>('/announcements/active');
+      if (!attachedAnnouncementId) return null;
+      const res = await apiClient.get<any, StandardResponse<any>>(`/announcements/${attachedAnnouncementId}/public`);
       return (res.success && res.data) ? res.data : null;
-    }
+    },
+    enabled: !!attachedAnnouncementId,
   });
 
   const showPrice = setting?.show_price ?? true;
@@ -425,11 +429,11 @@ export const OrderStatus = () => {
                     <PartyPopper size={24} />
                   </div>
                   <p className="text-[14px] font-bold text-amber-800 leading-relaxed break-keep">
-                    오늘은 <span className="text-orange-600 font-black">{activeEvent?.sponsor_name || '섬기는 분'} {activeEvent?.sponsor_duty || ''}</span>께서 섬겨주십니다.<br />감사 인사를 전해주세요~ ❤️
+                    오늘은 <span className="text-orange-600 font-black">{orderEvent?.sponsor_name || '섬기는 분'} {orderEvent?.sponsor_duty || ''}</span>께서 섬겨주십니다.<br />감사 인사를 전해주세요~ ❤️
                   </p>
-                  {activeEvent?.sponsor_name && (
+                  {orderEvent?.sponsor_name && (
                     <p className="text-[11px] text-amber-600 font-bold mt-2 pt-2 border-t border-amber-200/50">
-                      후원: {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}
+                      후원: {orderEvent.sponsor_name} {orderEvent.sponsor_duty || ''}
                     </p>
                   )}
                 </div>

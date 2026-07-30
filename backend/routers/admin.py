@@ -970,23 +970,59 @@ async def get_my_info(
     )
 # ────────────────────────────────────────
 
-@router.get("/announcements", response_model=schemas.StandardResponse[List[schemas.AnnouncementResponse]])
+@router.get("/announcements", response_model=schemas.StandardResponse[List[schemas.AdminAnnouncementResponse]])
 def get_announcements(db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
-    """전체 이벤트/공지 목록 조회 (최신순)"""
+    """전체 이벤트/공지 목록 조회 — 파생 상태(publication_status, content_type) 포함"""
+    from services.announcement_service import get_announcement_status, get_content_type, get_effective_free_event, get_effective_notices
+    from sqlalchemy import func
     announcements = db.query(models.Announcement).order_by(desc(models.Announcement.created_at)).all()
-    return schemas.StandardResponse(success=True, data=announcements, message="이벤트 목록을 조회했습니다.")
+    now = models.get_seoul_time().replace(tzinfo=None)
+
+    # 현재 유효한 이벤트/공지 ID 세트 (is_effective 판정용)
+    effective_event = get_effective_free_event(db, now)
+    effective_notices = get_effective_notices(db, now)
+    effective_ids = {a.id for a in effective_notices}
+    if effective_event:
+        effective_ids.add(effective_event.id)
+
+    result = []
+    for ann in announcements:
+        status = get_announcement_status(ann, now)
+        ctype = get_content_type(ann)
+        is_eff = ann.id in effective_ids
+        # 연결된 주문 수 집계
+        order_count = db.query(func.count(models.Order.id)).filter(
+            models.Order.announcement_id == ann.id,
+            models.Order.is_active == True
+        ).scalar() or 0
+        result.append(schemas.AdminAnnouncementResponse(
+            id=ann.id, title=ann.title, content=ann.content,
+            banner_text=ann.banner_text, image_url=ann.image_url,
+            is_event_mode=ann.is_event_mode, is_active=ann.is_active,
+            sponsor_name=ann.sponsor_name, sponsor_duty=ann.sponsor_duty,
+            event_type=ann.event_type, starts_at=ann.starts_at, ends_at=ann.ends_at,
+            created_at=ann.created_at, updated_at=ann.updated_at,
+            content_type=ctype, publication_status=status,
+            is_effective=is_eff, linked_order_count=order_count
+        ))
+
+    return schemas.StandardResponse(success=True, data=result, message="이벤트 목록을 조회했습니다.")
 
 
 @router.post("/announcements", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
 async def create_announcement(data: schemas.AnnouncementCreate, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
     """이벤트/공지 생성"""
-    # 유효성 검증
+    from services.announcement_service import validate_announcement_period
+    # 무료 이벤트일 때만 후원자/유형 필수
     if data.is_event_mode:
         if not data.sponsor_name or not data.event_type:
             raise HTTPException(status_code=400, detail="이벤트 모드일 경우 후원자 이름과 이벤트 유형은 필수입니다.")
-    
-    if data.starts_at and data.ends_at and data.starts_at > data.ends_at:
-        raise HTTPException(status_code=400, detail="시작 시간이 종료 시간보다 늦을 수 없습니다.")
+
+    # 시간 범위 검증
+    try:
+        validate_announcement_period(data.starts_at, data.ends_at)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     new_announcement = models.Announcement(
         title=data.title,
@@ -1022,6 +1058,7 @@ async def update_announcement(announcement_id: int, data: schemas.AnnouncementUp
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
 
     # 유효성 검증 (업데이트 시에도 체크)
+    from services.announcement_service import validate_announcement_period, validate_free_event_overlap
     is_event = data.is_event_mode if data.is_event_mode is not None else announcement.is_event_mode
     if is_event:
         sponsor = data.sponsor_name if data.sponsor_name is not None else announcement.sponsor_name
@@ -1031,8 +1068,17 @@ async def update_announcement(announcement_id: int, data: schemas.AnnouncementUp
 
     s_at = data.starts_at if data.starts_at is not None else announcement.starts_at
     e_at = data.ends_at if data.ends_at is not None else announcement.ends_at
-    if s_at and e_at and s_at > e_at:
-        raise HTTPException(status_code=400, detail="시작 시간이 종료 시간보다 늦을 수 없습니다.")
+    try:
+        validate_announcement_period(s_at, e_at)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    is_active = data.is_active if data.is_active is not None else announcement.is_active
+    if is_event and is_active:
+        try:
+            validate_free_event_overlap(db, s_at, e_at, exclude_id=announcement.id)
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
 
     update_dict = data.model_dump(exclude_unset=True)
     for key, value in update_dict.items():
@@ -1061,6 +1107,18 @@ async def delete_announcement(announcement_id: int, db: Session = Depends(get_db
     if announcement.is_active:
         raise HTTPException(status_code=400, detail="현재 활성화된 이벤트는 삭제할 수 없습니다. 먼저 종료(Deactivate)해 주세요.")
 
+    # 삭제 안전장치: 연결된 주문이 있는 이벤트는 물리 삭제 불가 (정산 데이터 보호)
+    from sqlalchemy import func
+    linked_orders = db.query(func.count(models.Order.id)).filter(
+        models.Order.announcement_id == announcement_id,
+        models.Order.is_active == True
+    ).scalar() or 0
+    if linked_orders > 0:
+        raise HTTPException(
+            status_code=409,
+            detail=f"이 이벤트에 연결된 주문이 {linked_orders}건 있어 삭제할 수 없습니다. 정산 데이터 보호를 위해 비활성화(종료) 상태로 유지하세요."
+        )
+
     db.delete(announcement)
     db.commit()
 
@@ -1075,7 +1133,8 @@ async def delete_announcement(announcement_id: int, db: Session = Depends(get_db
 
 @router.post("/announcements/{announcement_id}/activate", response_model=schemas.StandardResponse[schemas.AnnouncementResponse])
 async def activate_announcement(announcement_id: int, db: Session = Depends(get_db), admin: models.Admin = Depends(auth.get_current_admin)):
-    """이벤트 활성화 - 기존 활성 이벤트를 자동으로 비활성화하여 동시에 1개만 활성 상태 유지"""
+    """이벤트/공지 활성화 (게시)"""
+    from services.announcement_service import validate_free_event_overlap
     announcement = db.query(models.Announcement).filter(models.Announcement.id == announcement_id).first()
     if not announcement:
         raise HTTPException(status_code=404, detail="해당 이벤트를 찾을 수 없습니다.")
@@ -1083,15 +1142,26 @@ async def activate_announcement(announcement_id: int, db: Session = Depends(get_
     # 시간 검증
     now = datetime.now()
     if announcement.starts_at and announcement.starts_at > now:
-        raise HTTPException(status_code=400, detail="아직 시작 시간이 되지 않은 이벤트는 활성화할 수 없습니다.")
+        # 미래 예약 항목: 예약 게시 허용 (SCHEDULED 상태)
+        # 실제 starts_at에 도달하면 자동으로 LIVE로 전환
+        pass
     if announcement.ends_at and announcement.ends_at < now:
         raise HTTPException(status_code=400, detail="이미 종료 시간이 지난 이벤트는 활성화할 수 없습니다.")
 
-    # 기존 활성 이벤트 전부 비활성화 (동시에 1개만 활성 원칙)
-    db.query(models.Announcement).filter(
-        models.Announcement.is_active == True,
-        models.Announcement.id != announcement_id
-    ).update({"is_active": False})
+    # 무료 이벤트인 경우: 시간 갹침 검사 (일반 공지는 중복 검사 안 함)
+    if announcement.is_event_mode:
+        try:
+            validate_free_event_overlap(db, announcement.starts_at, announcement.ends_at, exclude_id=announcement_id)
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+
+    # 일반 공지: 여러 개 동시 활성 가능 — 같은 유형(이벤트)일 때만 다른 활성 이벤트 비활성화
+    if announcement.is_event_mode:
+        db.query(models.Announcement).filter(
+            models.Announcement.is_active == True,
+            models.Announcement.is_event_mode == True,
+            models.Announcement.id != announcement_id
+        ).update({"is_active": False})
 
     announcement.is_active = True
     db.commit()
