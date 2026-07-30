@@ -257,8 +257,17 @@ export const AdminSchedule = () => {
 
   const [isCopyingPrevMonth, setIsCopyingPrevMonth] = useState(false);
 
-  // 지난달 전체 명단 복사 기능
-  const handleCopyLastMonthSchedules = async () => {
+  // 지난달 명단 복사 미리보기 모달 상태
+  type CopyPreviewItem = { weekLabel: string; prevDateStr: string; curDateStr: string; names: string[] };
+  const [copyPreviewModal, setCopyPreviewModal] = useState<{
+    open: boolean;
+    items: CopyPreviewItem[];
+    newSchedules: VolunteerSchedule[];
+    toastMsg: string;
+  } | null>(null);
+
+  // 지난달 전체 명단 복사 — 미리보기 모달 열기 (즉시 반영하지 않음)
+  const handleOpenCopyModal = async () => {
     try {
       setIsCopyingPrevMonth(true);
       const prevMonth = subMonths(currentDate, 1);
@@ -277,6 +286,7 @@ export const AdminSchedule = () => {
 
       const prevSchedulesData = (Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : [])) as VolunteerSchedule[];
 
+      const previewItems: { weekLabel: string; prevDateStr: string; curDateStr: string; names: string[] }[] = [];
       let copiedCount = 0;
       const newSchedules = [...schedules];
 
@@ -284,20 +294,26 @@ export const AdminSchedule = () => {
         // 지난달에 해당 주차(idx) 주일이 존재하는 경우에만 복사 (5주차 제외 대응)
         if (idx < prevSundays.length) {
           const prevSundayStr = format(prevSundays[idx], 'yyyy-MM-dd');
+          const curSundayStr = format(curSunday, 'yyyy-MM-dd');
           const prevSched = prevSchedulesData.find(s => {
             const sDate = typeof s.sunday_date === 'string' ? s.sunday_date.split('T')[0] : format(new Date(s.sunday_date), 'yyyy-MM-dd');
             return sDate === prevSundayStr;
           });
 
-          const prevNames = Array.isArray(prevSched?.volunteers?.names)
+          const prevNames: string[] = Array.isArray(prevSched?.volunteers?.names)
             ? prevSched.volunteers.names
-            : (Array.isArray(prevSched?.volunteers) ? prevSched.volunteers : []);
+            : (Array.isArray(prevSched?.volunteers) ? (prevSched.volunteers as unknown as string[]) : []);
+
+          previewItems.push({
+            weekLabel: `${idx + 1}주차`,
+            prevDateStr: format(prevSundays[idx], 'M/d'),
+            curDateStr: format(curSunday, 'M/d'),
+            names: prevNames,
+          });
 
           if (prevNames.length > 0) {
             copiedCount++;
-            const curSundayStr = format(curSunday, 'yyyy-MM-dd');
             const existsIndex = newSchedules.findIndex(s => s.sunday_date === curSundayStr);
-
             if (existsIndex >= 0) {
               newSchedules[existsIndex] = {
                 ...newSchedules[existsIndex],
@@ -317,21 +333,35 @@ export const AdminSchedule = () => {
 
       if (copiedCount === 0) {
         showToast('지난달에 등록된 봉사자 명단이 없습니다.', 'info');
-      } else {
-        setSchedules(newSchedules);
-        const matchLimit = Math.min(sundaysOfMonth.length, prevSundays.length);
-        const is5thWeekExcluded = sundaysOfMonth.length > prevSundays.length;
-        const msg = is5thWeekExcluded
-          ? `지난달 1~${matchLimit}주차 명단을 복사했습니다. (5주차 제외)`
-          : `지난달 주차별 봉사자 명단을 일괄 복사했습니다.`;
-        showToast(msg, 'success');
+        return;
       }
+
+      const matchLimit = Math.min(sundaysOfMonth.length, prevSundays.length);
+      const is5thWeekExcluded = sundaysOfMonth.length > prevSundays.length;
+      const toastMsg = is5thWeekExcluded
+        ? `지난달 1~${matchLimit}주차 명단을 복사했습니다. (5주차 제외)`
+        : `지난달 주차별 봉사자 명단을 일괄 복사했습니다.`;
+
+      // 바로 반영하지 않고 미리보기 모달만 열기
+      setCopyPreviewModal({ open: true, items: previewItems, newSchedules, toastMsg });
     } catch (err) {
       console.error('지난달 명단 복사 실패:', err);
       showToast('지난달 명단을 불러오는 중 오류가 발생했습니다.', 'error');
     } finally {
       setIsCopyingPrevMonth(false);
     }
+  };
+
+  // 미리보기 확인 후 실제 복사 적용
+  const handleConfirmCopy = () => {
+    if (!copyPreviewModal) return;
+    setSchedules(copyPreviewModal.newSchedules);
+    showToast(copyPreviewModal.toastMsg, 'success');
+    setCopyPreviewModal(null);
+  };
+
+  const handleCancelCopy = () => {
+    setCopyPreviewModal(null);
   };
 
   const handleSave = async (date: string) => {
@@ -485,7 +515,7 @@ export const AdminSchedule = () => {
 
         {viewMode === 'BOARD' && (
           <button
-            onClick={handleCopyLastMonthSchedules}
+            onClick={handleOpenCopyModal}
             disabled={isCopyingPrevMonth}
             className="flex items-center gap-2 px-4 py-2.5 bg-[#1A0A0A] hover:bg-black text-white rounded-2xl text-[13px] font-bold transition-all shadow-md active:scale-95 disabled:opacity-50"
             title="지난달 동일 주차 봉사자 명단을 복사합니다"
@@ -906,6 +936,112 @@ export const AdminSchedule = () => {
         isVisible={!!toast}
         onClose={() => setToast(null)}
       />
+
+      {/* 지난달 명단 복사 미리보기 확인 모달 */}
+      {copyPreviewModal?.open && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-label="지난달 명단 복사 확인"
+        >
+          {/* 배경 오버레이 */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={handleCancelCopy}
+          />
+
+          {/* 모달 시트 */}
+          <div className="relative bg-white w-full sm:w-[480px] sm:max-w-[95vw] max-h-[85vh] sm:max-h-[80vh] rounded-t-[32px] sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            {/* 핸들 바 (모바일) */}
+            <div className="flex justify-center pt-3 pb-1 sm:hidden">
+              <div className="w-10 h-1 rounded-full bg-gray-300" />
+            </div>
+
+            {/* 헤더 */}
+            <div className="px-6 pt-5 pb-4 border-b border-gray-100 flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Copy size={16} className="text-gray-700" />
+                  <h2 className="text-[16px] font-black text-gray-900">지난달 명단 복사</h2>
+                </div>
+                <p className="text-[13px] text-gray-500 leading-relaxed">
+                  아래 명단이 이번 달 주차에 복사됩니다.<br />
+                  <span className="font-bold text-gray-700">저장 전까지 실제 DB에는 반영되지 않습니다.</span>
+                </p>
+              </div>
+              <button
+                onClick={handleCancelCopy}
+                className="p-2 rounded-xl hover:bg-gray-100 transition-all text-gray-400 hover:text-gray-700 shrink-0"
+                aria-label="닫기"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* 주차별 미리보기 목록 */}
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+              {copyPreviewModal.items.map((item) => (
+                <div
+                  key={item.weekLabel}
+                  className={`rounded-2xl p-4 border ${
+                    item.names.length > 0
+                      ? 'bg-gray-50 border-gray-200'
+                      : 'bg-gray-50/50 border-dashed border-gray-200 opacity-60'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-black text-gray-400 uppercase tracking-widest">{item.weekLabel}</span>
+                      <span className="text-[11px] text-gray-400">{item.prevDateStr} → {item.curDateStr}</span>
+                    </div>
+                    {item.names.length > 0 ? (
+                      <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {item.names.length}명 복사 예정
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                        명단 없음
+                      </span>
+                    )}
+                  </div>
+                  {item.names.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.names.map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-[13px] font-bold text-gray-800 shadow-sm"
+                        >
+                          {name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-gray-400">지난달 해당 주차에 등록된 명단이 없습니다.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* 하단 버튼 */}
+            <div className="px-6 pt-4 pb-6 border-t border-gray-100 bg-gray-50/50 flex gap-3 shrink-0">
+              <button
+                onClick={handleCancelCopy}
+                className="flex-1 py-3.5 rounded-2xl border border-gray-200 text-gray-600 text-[14px] font-bold hover:bg-gray-100 transition-all active:scale-[0.98]"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmCopy}
+                className="flex-1 py-3.5 rounded-2xl bg-[#1A0A0A] text-white text-[14px] font-black hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <Copy size={15} />
+                복사 적용
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
