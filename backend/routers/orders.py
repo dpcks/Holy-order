@@ -20,21 +20,25 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     setting = db.query(models.Setting).first()
     if setting and not setting.is_open:
         raise HTTPException(status_code=403, detail="현재 영업 시간이 아닙니다. 주문을 생성할 수 없습니다.")
-        
-    # 1. 활성 이벤트(골든벨) 모드 확인 (시간 범위 포함)
-    from sqlalchemy import or_
-    now = models.get_seoul_time().replace(tzinfo=None)
-    active_event = db.query(models.Announcement).filter(
-        models.Announcement.is_active == True,
-        models.Announcement.is_event_mode == True,
-        or_(models.Announcement.starts_at == None, models.Announcement.starts_at <= now),
-        or_(models.Announcement.ends_at == None, models.Announcement.ends_at >= now)
-    ).first()
 
-    # 2. 이벤트 주문 여부 판단 (DB 조회 결과 또는 요청 데이터를 모두 고려)
-    # 프론트엔드에서 결제 수단을 FREE로 보냈거나 총액을 0으로 보냈다면 이벤트 주문으로 간주
-    is_event_request = (order.payment_method == schemas.PaymentMethodEnum.FREE or order.total_price == 0)
-    is_event_mode = active_event is not None or is_event_request
+    # 1. 공용 서비스를 통해 현재 유효한 무료 이벤트 확인
+    # [보안] 클라이언트가 보낸 payment_method/total_price 값으로 이벤트 여부를 결정하지 않는다.
+    # 오직 서버 DB 조회 결과(get_effective_free_event)만으로 판정한다.
+    from services.announcement_service import get_effective_free_event
+    active_event = get_effective_free_event(db)
+
+    # 2. stale 이벤트 상태 불일치 감지 — 장바구니 입력 중 이벤트가 변경된 경우
+    # expected_announcement_id는 Cart가 "보고 있던" 이벤트 ID (None이면 체크 생략)
+    if order.expected_announcement_id is not None:
+        server_event_id = active_event.id if active_event else None
+        if order.expected_announcement_id != server_event_id:
+            raise HTTPException(
+                status_code=409,
+                detail="이벤트 상태가 변경되었습니다. 결제 금액을 다시 확인해 주세요."
+            )
+
+    # 3. 이벤트 모드 판단 — 서버 DB 결과만 사용
+    is_event_mode = active_event is not None
 
     # 3. 메뉴 데이터 일괄 조회 및 금액 검증
     menu_ids = [item.menu_id for item in order.items]
@@ -173,11 +177,13 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
     menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
     menu_dict = {m.id: m for m in menus}
     
-    active_event = db.query(models.Announcement)\
-        .filter(models.Announcement.is_active == True, models.Announcement.is_event_mode == True)\
-        .first()
+    # 관리자 주문도 공용 서비스를 통해 이벤트 판정 (시간 조건 포함)
+    from services.announcement_service import get_effective_free_event
+    active_event = get_effective_free_event(db)
     is_event_mode = active_event is not None
     is_free_order = (order.payment_method in [schemas.PaymentMethodEnum.FREE, schemas.PaymentMethodEnum.VOLUNTEER])
+
+
 
     calculated_total = 0
     order_items_prepared = []

@@ -18,10 +18,15 @@ const CUP_OPTION_NAMES = ['텀블러', '일회용컵'];
 // 텀블러 선택 시 적용되는 고정 할인 금액 (원)
 const TUMBLER_DISCOUNT = 500;
 
+import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
+
 export const MenuDetail = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { menu, isEventMode = false } = location.state as { menu: Menu; isEventMode?: boolean };
+  const { menu } = (location.state || {}) as { menu: Menu };
+
+  const { data: currentAnnouncements } = useCurrentAnnouncements();
+  const isEventMode = !!currentAnnouncements?.free_event;
 
   const { addItem } = useCart();
 

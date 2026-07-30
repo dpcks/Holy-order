@@ -8,8 +8,9 @@ import { apiClient } from '../api/client';
 import { usePublicSettings } from '../hooks/usePublicSettings';
 import { Toast } from '../components/ui/Toast';
 import { PwaInstallGuideModal } from '../components/ui/PwaInstallGuideModal';
+import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
 import type { ToastType } from '../components/ui/Toast';
-import type { Menu, Category, StandardResponse, Announcement } from '../types';
+import type { Menu, Category, StandardResponse } from '../types';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -97,13 +98,9 @@ export const Home = () => {
     }
   });
 
-  const { data: activeEvent } = useQuery({
-    queryKey: QK.announcements.active,
-    queryFn: async () => {
-      const res = await apiClient.get<Announcement | null, StandardResponse<Announcement | null>>('/announcements/active');
-      return (res.success && res.data) ? res.data : null;
-    }
-  });
+  const { data: currentAnnouncements } = useCurrentAnnouncements();
+  const activeEvent = currentAnnouncements?.free_event ?? null;
+  const notices = currentAnnouncements?.notices ?? [];
 
   // 카테고리 로드 시 초기 선택 로직
   useEffect(() => {
@@ -115,16 +112,17 @@ export const Home = () => {
     }
   }, [categories, activeCategoryId]);
 
-  // 이벤트 로드 시 웰컴 모달 로직
+  // 이벤트/공지 로드 시 웰컴 모달 로직 (무료 이벤트 우선, 없으면 첫 번째 일반 공지)
+  const popupAnnouncement = activeEvent || notices[0] || null;
   useEffect(() => {
-    if (activeEvent) {
-      const modalShown = sessionStorage.getItem(`event_modal_${activeEvent.id}`);
+    if (popupAnnouncement) {
+      const modalShown = sessionStorage.getItem(`event_modal_${popupAnnouncement.id}`);
       if (!modalShown) {
         setShowWelcomeModal(true);
-        sessionStorage.setItem(`event_modal_${activeEvent.id}`, 'true');
+        sessionStorage.setItem(`event_modal_${popupAnnouncement.id}`, 'true');
       }
     }
-  }, [activeEvent]);
+  }, [popupAnnouncement]);
 
   const loading = loadingCategories || loadingSettings;
 
@@ -482,37 +480,37 @@ export const Home = () => {
       )}
 
       {/* 웰컴 모달 */}
-      {showWelcomeModal && activeEvent && (
+      {showWelcomeModal && popupAnnouncement && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-6" onClick={() => setShowWelcomeModal(false)}>
           <div
             className="bg-white w-full max-w-[400px] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300"
             onClick={(e) => e.stopPropagation()}
           >
-            {activeEvent.image_url && (
-              <img src={activeEvent.image_url} alt={activeEvent.title} className="w-full h-48 object-cover" />
+            {popupAnnouncement.image_url && (
+              <img src={popupAnnouncement.image_url} alt={popupAnnouncement.title} className="w-full h-48 object-cover" />
             )}
             <div className="p-6 text-center">
-              <div className={`w-14 h-14 ${activeEvent.is_event_mode ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gray-100'} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg`}>
-                {activeEvent.is_event_mode ? (
+              <div className={`w-14 h-14 ${popupAnnouncement.is_event_mode ? 'bg-gradient-to-br from-amber-400 to-orange-500' : 'bg-gray-100'} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg`}>
+                {popupAnnouncement.is_event_mode ? (
                   <PartyPopper size={28} className="text-white" />
                 ) : (
                   <Megaphone size={28} className="text-gray-600" />
                 )}
               </div>
-              <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{activeEvent.title}</h2>
-              {activeEvent.content && (
-                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep whitespace-pre-wrap">{activeEvent.content}</p>
+              <h2 className="text-xl font-black text-gray-900 mb-2 break-keep">{popupAnnouncement.title}</h2>
+              {popupAnnouncement.content && (
+                <p className="text-[13px] text-gray-600 leading-relaxed mb-3 break-keep whitespace-pre-wrap">{popupAnnouncement.content}</p>
               )}
-              {activeEvent.sponsor_name && (
+              {popupAnnouncement.sponsor_name && (
                 <p className="text-[13px] font-bold text-amber-600 mb-4">
-                  {activeEvent.sponsor_name} {activeEvent.sponsor_duty || ''}님의 사랑으로 준비되었습니다 ❤️
+                  {popupAnnouncement.sponsor_name} {popupAnnouncement.sponsor_duty || ''}님의 사랑으로 준비되었습니다 ❤️
                 </p>
               )}
               <button
                 onClick={() => setShowWelcomeModal(false)}
                 className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3.5 rounded-2xl font-black text-[14px] shadow-lg hover:shadow-xl transition-all active:scale-95"
               >
-                {activeEvent.is_event_mode ? '감사히 주문하기 ☕' : '주문하기'}
+                {popupAnnouncement.is_event_mode ? '감사히 주문하기 ☕' : '주문하기'}
               </button>
             </div>
           </div>

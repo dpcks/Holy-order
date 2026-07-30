@@ -103,14 +103,22 @@ class PaymentMethodEnum(str, Enum):
     VOLUNTEER = "VOLUNTEER"
     TOSS = "TOSS"
 
+class PublicPaymentMethodEnum(str, Enum):
+    """공개 주문 전용 결제수단 — FREE/VOLUNTEER 요청은 서버가 차단한다."""
+    BANK_TRANSFER = "BANK_TRANSFER"
+    CASH = "CASH"
+    TOSS = "TOSS"
+
 class OrderCreate(BaseModel):
     user_id: int
     total_price: int
-    payment_method: PaymentMethodEnum
+    payment_method: PublicPaymentMethodEnum  # FREE/VOLUNTEER 클라이언트 요청 차단
     request: Optional[str] = None
     items: List[OrderItemCreate]
     is_pwa: Optional[bool] = False
     pwa_installation_key: Optional[str] = None
+    # Cart가 보고 있는 이벤트 ID — 서버 이벤트와 불일치 시 409 반환
+    expected_announcement_id: Optional[int] = None
 
 class AdminOrderCreate(BaseModel):
     user_name_snapshot: Optional[str] = "현장 주문"
@@ -382,7 +390,32 @@ class AnnouncementResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# 공개 API 전용 응답 타입
+# 관리자 목록 전용 — 파생 상태 포함
+class AdminAnnouncementResponse(BaseModel):
+    id: int
+    title: str
+    content: Optional[str] = None
+    banner_text: Optional[str] = None
+    image_url: Optional[str] = None
+    is_event_mode: bool
+    is_active: bool
+    sponsor_name: Optional[str] = None
+    sponsor_duty: Optional[str] = None
+    event_type: Optional[str] = None
+    starts_at: Optional[datetime] = None
+    ends_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    # 파생 필드 (서버에서 계산)
+    content_type: str = "NOTICE"          # NOTICE | FREE_EVENT
+    publication_status: str = "DRAFT"     # DRAFT | SCHEDULED | LIVE | ENDED
+    is_effective: bool = False            # 현재 실제로 사용자에게 노출되는지 여부
+    linked_order_count: int = 0           # 연결된 주문 수
+
+    class Config:
+        from_attributes = True
+
+# 공개 API /announcements/active 전용 응답 타입
 class ActiveAnnouncementResponse(BaseModel):
     id: int
     title: str
@@ -401,7 +434,13 @@ class ActiveAnnouncementResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# 정산 리포트 응답 타입
+# 신규 /announcements/current 공개 API 응답 타입
+class CurrentAnnouncementsResponse(BaseModel):
+    """공개 /announcements/current 응답 — 무료 이벤트와 일반 공지를 분리해서 반환."""
+    free_event: Optional[ActiveAnnouncementResponse] = None  # 현재 유효한 무료 이벤트 (1개 또는 None)
+    notices: List[ActiveAnnouncementResponse] = []           # 현재 유효한 일반 공지 목록
+
+
 class MenuBreakdown(BaseModel):
     name: str
     count: int
