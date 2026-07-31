@@ -11,7 +11,7 @@ import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { QK, QK_DOMAIN } from '../api/queryKeys';
-import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
+import { usePublicSettings } from '../hooks/usePublicSettings';
 import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
 import type { Duty, StandardResponse, PaymentMethod } from '../types';
 import { isStandalonePwa, getPwaInstallationIdForOrder } from '../utils/pwaInstallation';
@@ -162,7 +162,7 @@ const UserInfoModal = ({ onConfirm, onClose, requirePhone = true }: { onConfirm:
 export const Cart = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { items, removeItem, updateQuantity, totalPrice, totalTumblerDiscount, clearCart } = useCart();
+  const { items, removeItem, updateQuantity, totalPrice, totalTumblerDiscount, clearCart, legacyNotice, clearLegacyNotice } = useCart();
 
   const [requests, setRequests] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('BANK_TRANSFER');
@@ -170,8 +170,19 @@ export const Cart = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
 
+  // 서버 권위 계산 견적 상태
+  const [serverQuote, setServerQuote] = useState<{ normal_total: number; final_total: number; discount_total: number } | null>(null);
+
   // 토스트 상태
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+
+  // 31. 레거시 장바구니 v2 초기화 안내
+  useEffect(() => {
+    if (legacyNotice) {
+      setToast({ message: legacyNotice, type: 'info' });
+      clearLegacyNotice();
+    }
+  }, [legacyNotice, clearLegacyNotice]);
 
   // 공개 설정 조회 (PublicRealtimeLayout WS가 SETTINGS_UPDATED 시 자동 재조회)
   const { data: settings, isLoading: loadingSettings } = usePublicSettings();
@@ -182,59 +193,85 @@ export const Cart = () => {
     setToast({ message, type });
   };
 
-  // 텀블러 할인 포함 전체 할인
-  const discount = totalTumblerDiscount;
-  const finalPrice = totalPrice - discount;
-
-  // 이벤트(공지) 상태 - React Query로 통합
   const { data: currentAnnouncements } = useCurrentAnnouncements();
-  const activeEvent = currentAnnouncements?.free_event ?? null;
+  const activeEvent = currentAnnouncements?.free_event;
+  const isEventMode = activeEvent != null;
 
-  const isEventMode = !!activeEvent?.is_event_mode;
-  // 이벤트 모드일 때는 최종 결제 금액을 0원으로 처리
-  const eventFinalPrice = isEventMode ? 0 : finalPrice;
-
-  // 영업 종료 감지 시: 모달 닫기 + 홈으로 이동
+  // 31. 서버 권위 /orders/quote 견적 조회
   useEffect(() => {
-    if (!loadingSettings && isOpen === false) {
-      setShowUserModal(false);
-      navigate('/', { replace: true });
+    if (items.length === 0) {
+      setServerQuote(null);
+      return;
     }
-  }, [isOpen, loadingSettings, navigate]);
 
-  // 주문 버튼 클릭 → 영업 상태 확인 후 모달 오픈
+    let isMounted = true;
+    const fetchQuote = async () => {
+      try {
+        const quotePayload = {
+          pricing_version: 2,
+          expected_announcement_id: activeEvent?.id ?? null,
+          items: items.map(item => ({
+            menu_id: item.menu_id,
+            quantity: item.quantity,
+            option_ids: item.selected_option_ids || [],
+            client_item_key: item.cartItemId,
+          })),
+        };
+        const res = await apiClient.post<any, StandardResponse<any>>('/orders/quote', quotePayload);
+        if (isMounted && res.success && res.data) {
+          setServerQuote({
+            normal_total: res.data.normal_total,
+            final_total: res.data.final_total,
+            discount_total: res.data.discount_total,
+          });
+        }
+      } catch (err) {
+        console.warn('Quote fetch failed:', err);
+      }
+    };
+
+    fetchQuote();
+    return () => {
+      isMounted = false;
+    };
+  }, [items, activeEvent]);
+
+  // 클라이언트 자체 계산 금액 (서버 응답 fallback용)
+  const clientOriginalTotal = totalPrice;
+  const clientDiscountTotal = totalTumblerDiscount;
+  const clientFinalPrice = isEventMode ? 0 : Math.max(0, clientOriginalTotal - clientDiscountTotal);
+
+  // 서버 견적이 수신되었으면 서버 권위 가격 사용
+  const displayOriginalTotal = serverQuote ? serverQuote.normal_total : clientOriginalTotal;
+  const displayDiscountTotal = serverQuote ? serverQuote.discount_total : clientDiscountTotal;
+  const eventFinalPrice = serverQuote ? serverQuote.final_total : clientFinalPrice;
+
   const handleOrderClick = () => {
-    if (items.length === 0) return;
     if (loadingSettings || isOpen !== true) {
-      showToast('현재 주문이 불가합니다. 영업 상태를 확인해 주세요.', 'error');
+      showToast('현재 영업 시간이 아닙니다. 주문을 진행할 수 없습니다.', 'error');
+      navigate('/', { replace: true });
+      return;
+    }
+    if (items.length === 0) {
+      showToast('장바구니가 비어 있습니다.', 'info');
       return;
     }
     setShowUserModal(true);
   };
 
+  // 주문 제출 처리
+  const handleCreateOrder = async (userId: number) => {
+    if (isSubmitting) return;
 
+    if (loadingSettings || isOpen !== true) {
+      showToast('현재 영업 시간이 아닙니다. 주문을 진행할 수 없습니다.', 'error');
+      setShowUserModal(false);
+      navigate('/', { replace: true });
+      return;
+    }
 
-  // 유저 확인 완료 → 실제 주문 API 호출
-  const handleOrderWithUser = async (userId: number) => {
-    setShowUserModal(false);
     setIsSubmitting(true);
     try {
-      // [경쟁 조건 방지] 모달 작성 중 영업 종료 가능성 → POST 직전 최신 설정 강제 재조회
-      const latestSettings = await queryClient.fetchQuery({
-        queryKey: QK.settings.public,
-        queryFn: fetchPublicSettings,
-        staleTime: 0,
-      });
-      if (!latestSettings || latestSettings.is_open !== true) {
-        showToast('영업이 종료되었습니다. 주문이 취소되었습니다.', 'error');
-        navigate('/', { replace: true });
-        return;
-      }
-
-      // [중요] API 전송 시 sub_total은 반드시 할인 후 실제 결제 금액이어야 함.
-      // 백엔드에서 sum(sub_total) == total_price 일치 여부를 검증하기 때문.
-      // CartItem.sub_total은 원가(UI 표시용)이므로 여기서 텀블러 할인을 차감해 전송.
-      // tumbler_discount는 백엔드 허용 최소 금액 계산을 위해 함께 전송.
       const isStandalone = isStandalonePwa();
       const orderData = {
         user_id: userId,
@@ -244,12 +281,15 @@ export const Cart = () => {
         is_pwa: isStandalone,
         pwa_installation_key: getPwaInstallationIdForOrder(),
         expected_announcement_id: activeEvent?.id ?? null,
+        pricing_version: 2,
         items: items.map(item => ({
           menu_id: item.menu_id,
           quantity: item.quantity,
+          option_ids: item.selected_option_ids || [],
+          client_item_key: item.cartItemId,
           options_text: item.options_text,
-          sub_total: item.sub_total - item.tumbler_discount * item.quantity,
-          tumbler_discount: item.tumbler_discount,
+          sub_total: item.sub_total - (item.tumbler_discount || 0) * item.quantity,
+          tumbler_discount: item.tumbler_discount || 0,
         })),
       };
 
@@ -258,22 +298,18 @@ export const Cart = () => {
       if (response.success) {
         clearCart();
 
-        // 내 정보 저장 (이미 UserInfoModal에서 저장하지만, 여기서도 최신 상태를 유지하도록 확인)
         const savedUser = JSON.parse(localStorage.getItem('userInfo') || '{}');
         localStorage.setItem('userInfo', JSON.stringify({
           ...savedUser,
           id: userId,
         }));
 
-        // 여러 주문을 추적하기 위해 {id, orderNumber} 객체 배열로 관리
         const existingOrders = JSON.parse(localStorage.getItem('activeOrders') || '[]');
         const newOrder = { id: String(response.data.id), orderNumber: response.data.order_number };
 
-        // 중복 방지 및 추가 (타입 안정성을 위해 String으로 비교)
         const updatedOrders = [...existingOrders.filter((o: any) => String(o.id) !== String(newOrder.id)), newOrder];
         localStorage.setItem('activeOrders', JSON.stringify(updatedOrders));
 
-        // 주문 생성 직후 푸시 구독 등록 (이미 권한이 granted인 경우에만)
         if ('Notification' in window && Notification.permission === 'granted') {
           import('../utils/push')
             .then(({ registerOrderPushSubscription }) => {
@@ -286,7 +322,6 @@ export const Cart = () => {
             });
         }
 
-        // 토스 송금 선택 시 주문 생성 후 supertoss:// 딥링크 실행
         if (paymentMethod === 'TOSS' && settings?.bank_name && settings?.account_number) {
           const accountNo = settings.account_number.replace(/-/g, '');
           const tossUrl = `supertoss://send?bank=${encodeURIComponent(settings.bank_name)}&accountNo=${accountNo}&amount=${eventFinalPrice}`;
@@ -302,9 +337,10 @@ export const Cart = () => {
     } catch (error: any) {
       const statusCode = error.response?.status;
       const detail = error.response?.data?.detail;
-      const message = Array.isArray(detail)
-        ? detail.map((d: any) => d.msg).join(', ')
-        : detail || '주문 처리 중 오류가 발생했습니다.';
+      const message = typeof detail === 'object'
+        ? detail?.message
+        : (Array.isArray(detail) ? detail.map((d: any) => d.msg).join(', ') : detail || '주문 처리 중 오류가 발생했습니다.');
+
       console.error('Order submission failed:', error.response?.data ?? error);
 
       // 403: 서버가 영업 종료 판정 → 설정 invalidate 후 홈으로
@@ -342,7 +378,7 @@ export const Cart = () => {
       {/* 유저 정보 입력 모달 */}
       {showUserModal && (
         <UserInfoModal
-          onConfirm={handleOrderWithUser}
+          onConfirm={handleCreateOrder}
           onClose={() => setShowUserModal(false)}
           requirePhone={settings?.require_phone ?? true}
         />
@@ -613,7 +649,7 @@ export const Cart = () => {
             <section className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-[14px] text-gray-500 font-medium">상품금액</span>
-                <span className="text-[14px] font-bold text-gray-800">{totalPrice.toLocaleString()}원</span>
+                <span className="text-[14px] font-bold text-gray-800">{displayOriginalTotal.toLocaleString()}원</span>
               </div>
 
               {isEventMode ? (
@@ -621,15 +657,14 @@ export const Cart = () => {
                   <span className="text-[14px] text-amber-600 font-extrabold flex items-center gap-1.5">
                     <span className="text-base">🎉</span> 이벤트 할인
                   </span>
-                  <span className="text-[14px] font-black text-amber-600">-{totalPrice.toLocaleString()}원</span>
+                  <span className="text-[14px] font-black text-amber-600">-{displayOriginalTotal.toLocaleString()}원</span>
                 </div>
-              ) : discount > 0 ? (
-                // 텀블러 할인이 있을 때만 할인금액 행 표시
+              ) : displayDiscountTotal > 0 ? (
                 <div className="flex justify-between items-center mb-5 pb-5 border-b border-dashed border-gray-100">
                   <span className="text-[14px] text-emerald-600 font-extrabold flex items-center gap-1.5">
                     <span className="text-base">♻️</span> 텀블러 할인
                   </span>
-                  <span className="text-[14px] font-black text-emerald-600">-{discount.toLocaleString()}원</span>
+                  <span className="text-[14px] font-black text-emerald-600">-{displayDiscountTotal.toLocaleString()}원</span>
                 </div>
               ) : (
                 <div className="mb-5 pb-5 border-b border-gray-100" />
@@ -640,7 +675,7 @@ export const Cart = () => {
                 <div className="text-right">
                   {isEventMode && (
                     <div className="text-[13px] text-gray-400 line-through font-bold mb-0.5">
-                      {totalPrice.toLocaleString()}원
+                      {displayOriginalTotal.toLocaleString()}원
                     </div>
                   )}
                   <div className="flex items-center justify-end gap-2">
@@ -651,7 +686,7 @@ export const Cart = () => {
                 </div>
               </div>
             </section>
-          ) : discount > 0 ? (
+          ) : displayDiscountTotal > 0 ? (
             // 가격 표시 OFF 이지만 텀블러 할인이 적용된 경우 안내 배지 표시
             <section className="mb-4">
               <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3">
@@ -672,7 +707,7 @@ export const Cart = () => {
             disabled={isSubmitting}
             className="text-[16px] h-14"
           >
-            {isSubmitting ? '처리 중...' : (!showPrice ? '주문하기' : isEventMode ? '무료 주문하기 🎉' : `${finalPrice.toLocaleString()}원 주문하기`)}
+            {isSubmitting ? '처리 중...' : (!showPrice ? '주문하기' : isEventMode ? '무료 주문하기 🎉' : `${eventFinalPrice.toLocaleString()}원 주문하기`)}
           </Button>
         </div>
 

@@ -10,25 +10,101 @@ router = APIRouter(prefix="/api/v1", tags=["orders"])
 
 from websocket import manager
 
+from services.order_pricing_service import (
+    PRICING_VERSION,
+    TUMBLER_DISCOUNT_PER_UNIT,
+    calculate_order_quote
+)
+from services.announcement_service import get_effective_free_event
+
+@router.get("/pricing-policy", response_model=schemas.StandardResponse[schemas.PricingPolicyResponse])
+async def get_pricing_policy():
+    """공개 가격 정책 조회 (텀블러 할인 단가 및 스키마 버전 제공)"""
+    return schemas.StandardResponse(
+        success=True,
+        data=schemas.PricingPolicyResponse(
+            pricing_version=PRICING_VERSION,
+            tumbler_discount_per_unit=TUMBLER_DISCOUNT_PER_UNIT
+        ),
+        message="가격 정책을 조회했습니다."
+    )
+
+@router.post("/orders/quote", response_model=schemas.StandardResponse[schemas.OrderQuoteResponse])
+async def get_order_quote(quote_req: schemas.OrderQuoteRequest, db: Session = Depends(get_db)):
+    """서버 권위 주문 금액 견적 계산 API"""
+    if quote_req.pricing_version != PRICING_VERSION:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "CLIENT_PRICING_SCHEMA_OUTDATED",
+                "message": "주문 방식이 업데이트되었습니다. 앱을 새로고침한 뒤 장바구니를 다시 확인해 주세요.",
+                "required_pricing_version": PRICING_VERSION
+            }
+        )
+
+    active_event = get_effective_free_event(db)
+    is_event_mode = active_event is not None
+    free_event_id = active_event.id if active_event else None
+
+    quote = calculate_order_quote(db, quote_req.items, require_available=True)
+    final_total = 0 if is_event_mode else quote.normal_total
+
+    quote_items_res = [
+        schemas.OrderQuoteItemResponse(
+            client_item_key=it.client_item_key,
+            menu_id=it.menu_id,
+            quantity=it.quantity,
+            option_ids=list(it.selected_option_ids),
+            options_text=it.options_text,
+            menu_base_price=it.menu_base_price,
+            option_extra_price_per_unit=it.option_extra_price_per_unit,
+            discount_per_unit=it.discount_per_unit,
+            normal_unit_price=it.normal_unit_price,
+            normal_line_total=it.normal_line_total,
+        )
+        for it in quote.items
+    ]
+
+    return schemas.StandardResponse(
+        success=True,
+        data=schemas.OrderQuoteResponse(
+            pricing_version=PRICING_VERSION,
+            free_event_id=free_event_id,
+            is_event_mode=is_event_mode,
+            normal_total=quote.normal_total,
+            final_total=final_total,
+            discount_total=quote.discount_total,
+            items=quote_items_res,
+        ),
+        message="주문 금액을 계산했습니다."
+    )
+
 @router.post("/orders", response_model=schemas.StandardResponse[schemas.OrderResponse])
 async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+    # 0. 구버전 클라이언트 차단
+    if order.pricing_version != PRICING_VERSION:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "CLIENT_PRICING_SCHEMA_OUTDATED",
+                "message": "주문 방식이 업데이트되었습니다. 앱을 새로고침한 뒤 장바구니를 다시 확인해 주세요.",
+                "required_pricing_version": PRICING_VERSION
+            }
+        )
+
     user = db.query(models.User).filter(models.User.id == order.user_id, models.User.is_active == True).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없거나 활성화되지 않았습니다.")
         
-    # 0. 영업 상태 확인
+    # 1. 영업 상태 확인
     setting = db.query(models.Setting).first()
     if setting and not setting.is_open:
         raise HTTPException(status_code=403, detail="현재 영업 시간이 아닙니다. 주문을 생성할 수 없습니다.")
 
-    # 1. 공용 서비스를 통해 현재 유효한 무료 이벤트 확인
-    # [보안] 클라이언트가 보낸 payment_method/total_price 값으로 이벤트 여부를 결정하지 않는다.
-    # 오직 서버 DB 조회 결과(get_effective_free_event)만으로 판정한다.
-    from services.announcement_service import get_effective_free_event
+    # 2. 공용 서비스를 통해 현재 유효한 무료 이벤트 확인
     active_event = get_effective_free_event(db)
 
-    # 2. stale 이벤트 상태 불일치 감지 — 장바구니 입력 중 이벤트가 변경된 경우
-    # expected_announcement_id는 Cart가 "보고 있던" 이벤트 ID (None이면 체크 생략)
+    # 3. stale 이벤트 상태 불일치 감지 — 장바구니 입력 중 이벤트가 변경된 경우
     if order.expected_announcement_id is not None:
         server_event_id = active_event.id if active_event else None
         if order.expected_announcement_id != server_event_id:
@@ -37,74 +113,46 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
                 detail="이벤트 상태가 변경되었습니다. 결제 금액을 다시 확인해 주세요."
             )
 
-    # 3. 이벤트 모드 판단 — 서버 DB 결과만 사용
+    # 4. 서버 권위 가격 재계산
+    quote = calculate_order_quote(db, order.items, require_available=True)
+
     is_event_mode = active_event is not None
-
-    # 3. 메뉴 데이터 일괄 조회 및 금액 검증
-    menu_ids = [item.menu_id for item in order.items]
-    menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
-    menu_dict = {m.id: m for m in menus}
-    
-    calculated_total = 0
-    order_items_prepared = []
-    
-    for item in order.items:
-        menu = menu_dict.get(item.menu_id)
-        if not menu:
-            raise HTTPException(status_code=400, detail=f"존재하지 않는 메뉴(ID: {item.menu_id})가 포함되어 있습니다.")
-        
-        if not menu.is_available:
-            raise HTTPException(status_code=400, detail=f"'{menu.name}' 메뉴는 현재 품절입니다.")
-        
-        base_total = menu.price * item.quantity
-        item_total = item.sub_total
-        
-        # 텀블러 할인이 적용된 경우 허용 최소 금액 = 기본가 - (tumbler_discount × 수량)
-        # max(0, ...)로 음수 방지
-        allowed_discount = item.tumbler_discount * item.quantity
-        min_allowed_total = max(0, base_total - allowed_discount)
-        
-        # [중요] 이벤트 모드가 아닐 때만 금액 미달 검증 수행
-        if not is_event_mode and item_total < min_allowed_total:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
-            )
-            
-        # [중요] 이벤트 모드라도 통계(TOP 5)를 위해 개별 아이템의 원래 가치는 보존
-        calculated_total += item_total
-        order_items_prepared.append({
-            "menu_id": item.menu_id,
-            "menu_name_snapshot": menu.name,
-            "menu_price_snapshot": menu.price,
-            "menu_image_url_snapshot": menu.image_url,
-            "quantity": item.quantity,
-            "options_text": item.options_text,
-            "sub_total": item_total  # 이벤트 모드라도 프론트에서 넘어온 원래 금액을 저장
-        })
-
-    is_event_order = False
     if is_event_mode:
-        # 이벤트 모드: 원래 금액을 보관하고 실제 결제는 0원
-        is_event_order = True
-        final_price = 0
-        # 정산용 원래 가격 계산 (계산된 값이 0이면 메뉴가를 기준으로 합산)
-        original_price = calculated_total if calculated_total > 0 else sum(m.price * i.quantity for i, m in [(item, menu_dict[item.menu_id]) for item in order.items])
-        announcement_id = active_event.id if active_event else None
+        server_final_total = 0
+        original_price = quote.normal_total
         payment_method = "FREE"
+        announcement_id = active_event.id
     else:
-        # 일반 모드: 기존 금액 검증 로직 유지
-        if calculated_total != order.total_price:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"결제 금액이 올바르지 않습니다. (요청: {order.total_price}, 실제: {calculated_total})"
-            )
-        final_price = calculated_total
+        server_final_total = quote.normal_total
         original_price = None
-        announcement_id = None
         payment_method = order.payment_method.value
+        announcement_id = None
 
-    # 3. 당일 주문 번호 계산
+    # 5. 예상 금액과 서버 계산 금액 일치 여부 검증 (409 ORDER_PRICE_CHANGED)
+    if order.total_price != server_final_total:
+        quote_items_info = [
+            {
+                "client_item_key": it.client_item_key,
+                "normal_unit_price": it.normal_unit_price,
+                "normal_line_total": it.normal_line_total,
+                "options_text": it.options_text
+            }
+            for it in quote.items
+        ]
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "ORDER_PRICE_CHANGED",
+                "message": "메뉴 또는 옵션 가격이 변경되었습니다. 장바구니 금액을 다시 확인해 주세요.",
+                "expected_total": order.total_price,
+                "current_total": server_final_total,
+                "normal_total": quote.normal_total,
+                "free_event_id": active_event.id if active_event else None,
+                "items": quote_items_info
+            }
+        )
+
+    # 6. 당일 주문 번호 계산
     today = models.get_seoul_time().date()
     last_order = db.query(models.Order)\
         .filter(models.Order.order_date == today)\
@@ -112,7 +160,7 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         .first()
     next_order_number = 1 if not last_order else (last_order.order_number or 0) + 1
 
-    # 3.5. PWA Installation Key 선택적 연결 (USER 설치 기기만 연결, 실패 시에도 주문은 영향을 받지 않음)
+    # 7. PWA Installation Key 선택적 연결
     pwa_inst_id = None
     if order.pwa_installation_key:
         from services import pwa_installation_service
@@ -120,14 +168,14 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
         if inst_record:
             pwa_inst_id = inst_record.id
 
-    # 4. 주문 및 상세 내역 저장
+    # 8. 주문 및 상세 내역(확장 스냅샷 포함) 저장
     new_order = models.Order(
         user_id=order.user_id,
         user_duty_snapshot=user.duty,
         user_name_snapshot=user.name,
         user_phone_snapshot=user.phone,
         request=order.request,
-        total_price=final_price,
+        total_price=server_final_total,
         original_price=original_price,
         announcement_id=announcement_id,
         payment_method=payment_method,
@@ -140,12 +188,24 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
     
     try:
         db.add(new_order)
-        db.flush() # ID 생성을 위해 flush
+        db.flush()
         
-        for item_data in order_items_prepared:
+        for calc_item in quote.items:
             order_item = models.OrderItem(
                 order_id=new_order.id,
-                **item_data
+                menu_id=calc_item.menu_id,
+                menu_name_snapshot=calc_item.menu_name,
+                menu_price_snapshot=calc_item.menu_base_price,
+                menu_image_url_snapshot=calc_item.menu_image_url,
+                quantity=calc_item.quantity,
+                options_text=calc_item.options_text,
+                sub_total=calc_item.normal_line_total,  # 이벤트 주문도 정산 가치 보존
+                pricing_version=PRICING_VERSION,
+                option_price_snapshot=calc_item.option_extra_price_per_unit,
+                discount_per_unit_snapshot=calc_item.discount_per_unit,
+                discount_total_snapshot=calc_item.discount_total,
+                unit_price_snapshot=calc_item.normal_unit_price,
+                selected_options_snapshot=list(calc_item.selected_options_snapshot)
             )
             db.add(order_item)
             
@@ -159,11 +219,11 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
             message="잠깐 주문이 겹쳤어요. 다시 시도해주시면 바로 접수됩니다 🙏"
         )
     
-    # 실시간 알림 전송 (새 주문 전용 타입 NEW_ORDER 사용)
+    # 실시간 알림 전송
     await manager.broadcast({
         "type": "NEW_ORDER",
         "order_id": new_order.id,
-        "is_event_order": is_event_order,
+        "is_event_order": is_event_mode,
         "announcement_id": announcement_id,
         "status": new_order.status,
         "timestamp": datetime.now().isoformat()
@@ -173,73 +233,65 @@ async def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)
 
 @router.post("/orders/admin", response_model=schemas.StandardResponse[schemas.OrderResponse])
 async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depends(get_db)):
-    menu_ids = [item.menu_id for item in order.items]
-    menus = db.query(models.Menu).filter(models.Menu.id.in_(menu_ids)).all()
-    menu_dict = {m.id: m for m in menus}
-    
-    # 관리자 주문도 공용 서비스를 통해 이벤트 판정 (시간 조건 포함)
-    from services.announcement_service import get_effective_free_event
+    # 0. 구버전 클라이언트 차단
+    if order.pricing_version != PRICING_VERSION:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "CLIENT_PRICING_SCHEMA_OUTDATED",
+                "message": "주문 방식이 업데이트되었습니다. 앱을 새로고침한 뒤 장바구니를 다시 확인해 주세요.",
+                "required_pricing_version": PRICING_VERSION
+            }
+        )
+
     active_event = get_effective_free_event(db)
     is_event_mode = active_event is not None
     is_free_order = (order.payment_method in [schemas.PaymentMethodEnum.FREE, schemas.PaymentMethodEnum.VOLUNTEER])
 
-
-
-    calculated_total = 0
-    order_items_prepared = []
-    
-    for item in order.items:
-        menu = menu_dict.get(item.menu_id)
-        if not menu:
-            raise HTTPException(status_code=400, detail=f"존재하지 않는 메뉴(ID: {item.menu_id})가 포함되어 있습니다.")
-            
-        base_total = menu.price * item.quantity
-        item_total = item.sub_total
-        allowed_discount = item.tumbler_discount * item.quantity
-        min_allowed_total = max(0, base_total - allowed_discount)
-        
-        # 이벤트 모드나 관리자 수동 무료 주문이 아닌 경우에만 금액 검증 수행
-        if not is_event_mode and not is_free_order:
-            if item_total < min_allowed_total:
-                raise HTTPException(
-                    status_code=400, 
-                    detail=f"'{menu.name}' 메뉴의 금액이 허용 최소가({min_allowed_total}원)보다 낮게 요청되었습니다."
-                )
-            
-        calculated_total += item_total
-        order_items_prepared.append({
-            "menu_id": item.menu_id,
-            "menu_name_snapshot": menu.name,
-            "menu_price_snapshot": menu.price,
-            "menu_image_url_snapshot": menu.image_url,
-            "quantity": item.quantity,
-            "options_text": item.options_text,
-            "sub_total": item_total
-        })
+    # 관리자는 품절 메뉴도 현장 주문 가능하도록 require_available=False
+    quote = calculate_order_quote(db, order.items, require_available=False)
 
     is_event_order = False
     if is_event_mode:
         is_event_order = True
-        final_price = 0
-        original_price = order.total_price # 이벤트 모드일 때는 요청받은 원래 합계를 보존
+        server_final_total = 0
+        original_price = quote.normal_total
         announcement_id = active_event.id
         payment_method = "FREE"
     elif is_free_order:
-        # 관리자가 수동으로 무료(사역자 등) 처리한 경우
-        final_price = 0
-        original_price = order.total_price # 프론트에서 보낸 원래의 합계 금액
+        server_final_total = 0
+        original_price = quote.normal_total
         announcement_id = None
         payment_method = order.payment_method.value
     else:
-        if calculated_total != order.total_price:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"결제 금액이 올바르지 않습니다. (요청: {order.total_price}, 실제: {calculated_total})"
-            )
-        final_price = calculated_total
+        server_final_total = quote.normal_total
         original_price = None
         announcement_id = None
         payment_method = order.payment_method.value
+
+    # 예상 금액 불일치 시 409 반환
+    if order.total_price != server_final_total:
+        quote_items_info = [
+            {
+                "client_item_key": it.client_item_key,
+                "normal_unit_price": it.normal_unit_price,
+                "normal_line_total": it.normal_line_total,
+                "options_text": it.options_text
+            }
+            for it in quote.items
+        ]
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "ORDER_PRICE_CHANGED",
+                "message": "메뉴 또는 옵션 가격이 변경되었습니다. 금액을 다시 확인해 주세요.",
+                "expected_total": order.total_price,
+                "current_total": server_final_total,
+                "normal_total": quote.normal_total,
+                "free_event_id": active_event.id if active_event else None,
+                "items": quote_items_info
+            }
+        )
 
     today = models.get_seoul_time().date()
     last_order = db.query(models.Order)\
@@ -253,7 +305,7 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
         user_duty_snapshot=order.user_duty_snapshot,
         user_name_snapshot=order.user_name_snapshot,
         request=order.request,
-        total_price=final_price,
+        total_price=server_final_total,
         original_price=original_price,
         announcement_id=announcement_id,
         payment_method=payment_method,
@@ -266,11 +318,26 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
         db.add(new_order)
         db.flush()
         
-        for item_data in order_items_prepared:
-            order_item = models.OrderItem(order_id=new_order.id, **item_data)
+        for calc_item in quote.items:
+            order_item = models.OrderItem(
+                order_id=new_order.id,
+                menu_id=calc_item.menu_id,
+                menu_name_snapshot=calc_item.menu_name,
+                menu_price_snapshot=calc_item.menu_base_price,
+                menu_image_url_snapshot=calc_item.menu_image_url,
+                quantity=calc_item.quantity,
+                options_text=calc_item.options_text,
+                sub_total=calc_item.normal_line_total,
+                pricing_version=PRICING_VERSION,
+                option_price_snapshot=calc_item.option_extra_price_per_unit,
+                discount_per_unit_snapshot=calc_item.discount_per_unit,
+                discount_total_snapshot=calc_item.discount_total,
+                unit_price_snapshot=calc_item.normal_unit_price,
+                selected_options_snapshot=list(calc_item.selected_options_snapshot)
+            )
             db.add(order_item)
             
-        if not is_event_mode and order.status in ["PREPARING", "COMPLETED"] and order.payment_method in [schemas.PaymentMethodEnum.CASH, schemas.PaymentMethodEnum.BANK_TRANSFER]:
+        if not is_event_mode and not is_free_order and order.status in ["PREPARING", "COMPLETED"] and order.payment_method in [schemas.PaymentMethodEnum.CASH, schemas.PaymentMethodEnum.BANK_TRANSFER]:
             payment_log = models.PaymentLog(
                 order_id=new_order.id,
                 log_type="CALLBACK",

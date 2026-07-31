@@ -21,7 +21,7 @@ interface SelectedItem {
   selectedIceHot: string | null;
   selectedCup: string | null;
   selectedAddons: string[];
-  availableOptions: { name: string; extra_price: number }[];
+  availableOptions: { id: number; name: string; extra_price: number }[];
 }
 
 export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ isOpen, onClose }) => {
@@ -87,60 +87,39 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
 
   const createOrderMutation = useMutation({
     mutationFn: async () => {
-      // 메뉴 ID와 옵션 텍스트가 동일한 항목들을 그룹화하여 병합
-      const groupedItemsMap = new Map<string, any>();
+      const isFreeOrder = paymentMethod === 'FREE' || paymentMethod === 'VOLUNTEER' || isEventMode;
 
-      selectedItems.forEach(item => {
-        let extraPrice = 0;
-        const opts = [];
+      const itemsPayload = selectedItems.map(item => {
+        const optionIds: number[] = [];
         if (item.selectedIceHot) {
-          extraPrice += item.availableOptions.find(o => o.name === item.selectedIceHot)?.extra_price || 0;
-          opts.push(item.selectedIceHot);
+          const opt = item.availableOptions.find(o => o.name === item.selectedIceHot);
+          if (opt) optionIds.push(opt.id);
         }
         if (item.selectedCup) {
-          extraPrice += item.availableOptions.find(o => o.name === item.selectedCup)?.extra_price || 0;
-          opts.push(item.selectedCup);
+          const opt = item.availableOptions.find(o => o.name === item.selectedCup);
+          if (opt) optionIds.push(opt.id);
         }
         item.selectedAddons.forEach(addon => {
-          extraPrice += item.availableOptions.find(o => o.name === addon)?.extra_price || 0;
-          opts.push(addon);
+          const opt = item.availableOptions.find(o => o.name === addon);
+          if (opt) optionIds.push(opt.id);
         });
 
-        const optionsText = opts.join(', ') || null;
-        const isTumbler = item.selectedCup?.includes('텀블러');
-        const key = `${item.menuId}-${optionsText}`;
-        
-        const basePriceWithExtra = item.price + extraPrice;
-        const itemDiscount = isTumbler ? 500 : 0;
-        const subTotal = (basePriceWithExtra - itemDiscount) * item.quantity;
-
-        if (groupedItemsMap.has(key)) {
-          const existing = groupedItemsMap.get(key);
-          existing.quantity += item.quantity;
-          existing.sub_total += subTotal;
-        } else {
-          groupedItemsMap.set(key, {
-            menu_id: item.menuId,
-            quantity: item.quantity,
-            tumbler_discount: itemDiscount,
-            options_text: optionsText,
-            sub_total: subTotal
-          });
-        }
+        return {
+          menu_id: item.menuId,
+          quantity: item.quantity,
+          option_ids: optionIds,
+          client_item_key: item.id,
+        };
       });
-
-      const isFreeOrder = paymentMethod === 'FREE' || paymentMethod === 'VOLUNTEER';
 
       const payload = {
         user_name_snapshot: customerName.trim() || (paymentMethod === 'FREE' ? '사역자' : paymentMethod === 'VOLUNTEER' ? '식당 봉사' : '현장 주문'),
         user_duty_snapshot: paymentMethod === 'FREE' ? '사역자' : paymentMethod === 'VOLUNTEER' ? '식당 봉사' : '성도',
-        total_price: totalAmount, // 무료 주문이라도 원본 금액을 보내 백엔드에서 original_price로 기록하게 함
+        total_price: isFreeOrder ? 0 : totalAmount,
         payment_method: paymentMethod,
         status: 'PREPARING',
-        items: Array.from(groupedItemsMap.values()).map(item => ({
-          ...item,
-          sub_total: isFreeOrder ? 0 : item.sub_total
-        }))
+        pricing_version: 2,
+        items: itemsPayload
       };
       
       const res = await apiClient.post<any, StandardResponse<any>>('/orders/admin', payload);
@@ -191,7 +170,7 @@ export const AdminDirectOrderModal: React.FC<AdminDirectOrderModalProps> = ({ is
         selectedIceHot: defaultIceHot,
         selectedCup: defaultCup,
         selectedAddons: [],
-        availableOptions: options.map((o: any) => ({ name: o.name, extra_price: o.extra_price })).sort((a: any, b: any) => {
+        availableOptions: options.map((o: any) => ({ id: o.id, name: o.name, extra_price: o.extra_price })).sort((a: any, b: any) => {
           const getWeight = (name: string) => {
             const upper = name.toUpperCase();
             if (upper.includes('ICE')) return 1;

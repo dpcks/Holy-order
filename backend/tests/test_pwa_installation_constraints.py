@@ -48,8 +48,10 @@ def test_verify_constraints_on_valid_schema(test_engine):
     assert any("[PASS] table pwa_installations exists" in log for log in logs)
     assert any("[PASS] pwa_installations.admin_id is nullable" in log for log in logs)
     assert any("[PASS] admin_id FK -> admins.id" in log for log in logs)
-    assert any("[PASS] orders.pwa_installation_id exists" in log for log in logs)
+    assert any("[PASS] exactly one semantic admin FK exists" in log for log in logs)
+    assert any("[PASS] orders.pwa_installation_id is nullable" in log for log in logs)
     assert any("[PASS] order FK -> pwa_installations.id" in log for log in logs)
+    assert any("[PASS] exactly one semantic order FK exists" in log for log in logs)
     assert any("[PASS] no orphan admin_id rows" in log for log in logs)
 
 
@@ -124,3 +126,43 @@ def test_on_delete_set_null_relationships(test_db_session):
     test_db_session.commit()
     test_db_session.refresh(order)
     assert order.pwa_installation_id is None
+
+
+def test_main_import_does_not_execute_pwa_ddl(monkeypatch):
+    """from main import app 실행 시 main.py startup에서 PWA 관련 ALTER/CREATE TABLE DDL을 실행하지 않는지 검증"""
+    executed_sql_list = []
+
+    from sqlalchemy import engine as sa_engine
+    original_execute = sa_engine.Connection.execute
+
+    def spy_execute(self, clause, *multiparams, **params):
+        sql_str = str(clause)
+        if "pwa_installations" in sql_str or "pwa_installation_id" in sql_str:
+            executed_sql_list.append(sql_str)
+        return original_execute(self, clause, *multiparams, **params)
+
+    monkeypatch.setattr(sa_engine.Connection, "execute", spy_execute)
+
+    # main module import
+    import main
+    assert hasattr(main, "app")
+    # main.py startup에서 pwa DDL 실행 건수가 0이어야 함
+    assert len(executed_sql_list) == 0
+
+
+def test_apply_migration_idempotency(test_engine):
+    """apply_migration을 연속 2회 실행해도 DB 제약 조건이 깨지지 않고 VERIFY PASS가 유지되는지 검증"""
+    from scripts.apply_pwa_installation_constraints import apply_migration
+
+    # 1st run
+    res1 = apply_migration(test_engine)
+    assert res1 is True
+
+    # 2nd run
+    res2 = apply_migration(test_engine)
+    assert res2 is True
+
+    # verify PASS
+    is_passed, logs = verify_constraints(test_engine, verbose=False)
+    assert is_passed is True
+

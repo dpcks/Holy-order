@@ -17,6 +17,20 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v2.0.0',
+    date: '2026-07-31',
+    title: '서버 권위 가격 산정 시스템 도입 및 보안·가격 재계산 강화',
+    updates: [
+      { text: '서버 권위 가격 재계산 서비스 구축 — 클라이언트 전송 금액/할인값 결제 권위 완전 제거', isNew: true },
+      { text: '메뉴판 기본가, 텀블러 할인(500원), 유효 무료 이벤트 조회를 백엔드가 100% 직접 판정 및 계산', isNew: true },
+      { text: '장바구니 담은 후 메뉴/옵션 가격 변경 시 자동 결제 방지 및 최신 금액 재확인 안내(409)', isNew: true },
+      { text: '무료 이벤트 및 관리자 FREE/VOLUNTEER 주문 시 결제액 0원 처리 및 원본 정산 가치(original_price) 보존', isNew: true },
+      { text: 'ICE/HOT 및 텀블러/일회용컵 필수 선택 및 중복 충돌 옵션 검증 강화', isNew: true },
+      { text: 'order_items 테이블에 단가, 옵션가, 할인액, 선택 옵션 스냅샷(JSON) 저장', isNew: true },
+      { text: '장바구니 v2 스키마 도입 및 레거시 데이터 호환 검사/안전 초기화 및 안내 토스트 제공', isNew: true },
+    ]
+  },
+  {
     version: 'v1.9.0',
     date: '2026-07-29',
     title: '재고 관리 UI 전면 재구성 — 우선순위 점검표',

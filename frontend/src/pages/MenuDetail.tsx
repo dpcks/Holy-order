@@ -16,10 +16,9 @@ import { useEffect } from 'react';
 const TEMP_OPTION_NAMES = ['ICE', 'HOT'];
 // 컵 종류 옵션인지 판별하는 상수 - 백엔드 name 값 기준
 const CUP_OPTION_NAMES = ['텀블러', '일회용컵'];
-// 텀블러 선택 시 적용되는 고정 할인 금액 (원)
-const TUMBLER_DISCOUNT = 500;
 
 import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
+import { usePricingPolicy } from '../hooks/usePricingPolicy';
 
 export const MenuDetail = () => {
   const location = useLocation();
@@ -30,6 +29,7 @@ export const MenuDetail = () => {
   const isEventMode = !!currentAnnouncements?.free_event;
 
   const { addItem } = useCart();
+  const { tumblerDiscountPerUnit } = usePricingPolicy();
 
   const [quantity, setQuantity] = useState(1);
 
@@ -101,7 +101,7 @@ export const MenuDetail = () => {
   // extra_price와 별도로 관리하여 백엔드 데이터와 독립적으로 유지
   // ────────────────────────────────────────────────────────────────
   const isTumblerSelected = selectedCup?.name === '텀블러';
-  const tumblerDiscount = isTumblerSelected ? TUMBLER_DISCOUNT : 0;
+  const tumblerDiscount = isTumblerSelected ? tumblerDiscountPerUnit : 0;
 
   const extraPriceSum =
     (selectedTemp?.extra_price ?? 0) +
@@ -128,6 +128,10 @@ export const MenuDetail = () => {
       return false;
     }
 
+    const selectedOptions = [selectedTemp, selectedCup, ...selectedExtras].filter(
+      (opt): opt is MenuOption => opt !== null
+    );
+
     // 선택된 옵션들을 '/' 구분자로 이어붙여 텍스트 요약 생성
     const optionsTextParts: string[] = [];
     if (selectedTemp) optionsTextParts.push(selectedTemp.name);
@@ -141,10 +145,11 @@ export const MenuDetail = () => {
       name: menu.name,
       image_url: menu.image_url || undefined,
       quantity,
+      selected_option_ids: selectedOptions.map(o => o.id),
       // price/sub_total은 원가(할인 전) 기준 저장 → Cart에서 할인을 분리 표시하기 위함
       price: originalUnitPrice,
       sub_total: originalUnitPrice * quantity,
-      // 텀블러 할인은 단가 기준으로 저장 (quantity는 CartContext에서 걱은)
+      // 텀블러 할인은 단가 기준으로 저장
       tumbler_discount: tumblerDiscount,
       options_text: optionsTextParts.join(' / ') || null,
     });
@@ -286,7 +291,7 @@ export const MenuDetail = () => {
                             : 'bg-emerald-100 text-emerald-700'
                             }`}
                         >
-                          -{TUMBLER_DISCOUNT.toLocaleString()}원
+                          -{tumblerDiscountPerUnit.toLocaleString()}원
                         </span>
                       )}
                     </button>

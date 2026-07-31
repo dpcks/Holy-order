@@ -46,11 +46,20 @@ GitHub 저장소와 배포 플랫폼(Vercel, Railway)을 연동하여, 코드 �
 
 1. Railway 대시보드에서 **New Project** -> **Provision PostgreSQL** 선택.
 2. 동일 프로젝트 내에서 **New Service** -> **GitHub Repo** 선택 -> `Holy-order` 레포지토리 연결.
-3. 배포 설정 (Settings):
+3. **DB 스키마 마이그레이션 & 검증 (Single Source of Truth)**:
+   * application startup DDL(main.py) 대신 전용 idempotent migration으로 관리합니다.
+   * 백엔드 배포 전 Railway One-off command 또는 로컬/안전한 터널에서 마이그레이션 및 검증을 실행합니다:
+     ```bash
+     cd backend
+     python scripts/apply_pwa_installation_constraints.py
+     python scripts/verify_pwa_installation_constraints.py
+     ```
+   * `RESULT: PASS` 확인 후 애플리케이션을 배포합니다.
+4. 배포 설정 (Settings):
     *   **Root Directory**: `/backend` 로 설정.
     *   **Start Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT` 입력. (Procfile 대체)
-4. **Variables** 탭으로 이동하여 위의 `Railway 환경변수`들을 모두 입력.
-5. Deploy를 누르면 자동으로 빌드 및 배포가 진행되며 API 주소(Public Domain)가 발급됩니다.
+5. **Variables** 탭으로 이동하여 위의 `Railway 환경변수`들을 모두 입력.
+6. Deploy를 누르면 자동으로 빌드 및 배포가 진행되며 API 주소(Public Domain)가 발급됩니다.
 
 ---
 
