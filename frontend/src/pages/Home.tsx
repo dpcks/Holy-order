@@ -232,7 +232,7 @@ export const Home = () => {
   if (!loading && shopSettings && !shopSettings.is_open) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col w-full max-w-[500px] mx-auto bg-[#144730] font-sans overflow-hidden touch-none">
-        {/* 영업 종료 이미지 */}
+        {/* 영업 종료 이미지 — 전체 화면 그대로 유지 */}
         <div className="w-full flex-1 flex flex-col items-center justify-center">
           <img
             src="/img/design/cafe_closed.svg?v=2"
@@ -241,34 +241,13 @@ export const Home = () => {
           />
         </div>
 
-        {/* 안내 문구 영역 */}
-        {/* <div className="relative flex-1 flex flex-col items-center justify-end pb-24 px-8 text-center">
-          <div className="w-20 h-20 bg-white/10 backdrop-blur-xl rounded-3xl flex items-center justify-center mb-8 border border-white/20 animate-bounce">
-            <Coffee className="text-white" size={40} />
-          </div>
-
-          <h1 className="text-4xl font-black text-white tracking-tighter mb-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            지금은 영업 시간이<br />아닙니다
-          </h1>
-
-          <div className="w-12 h-1 bg-primary rounded-full mb-8" />
-
-          <p className="text-lg font-bold text-white/80 leading-relaxed break-keep mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-            {shopSettings.notice || "더 맛있는 커피를 위해 준비 중입니다.\n영업 시간에 다시 방문해 주세요!"}
-          </p>
-
-          <div className="px-6 py-3 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-            <p className="text-[12px] font-black text-primary uppercase tracking-[0.2em]">다음주에 만나요~~~</p>
-          </div>
-        </div> */}
-
-        {/* 하단 버튼 영역 — 주문 확인 + 앱 설치 유도 */}
-        <div className="relative p-4 border-t border-white/10 bg-black/50 backdrop-blur-2xl flex flex-col gap-3">
+        {/* 상단 오버레이 버튼 영역 — 이미지 위에 absolute 배치 */}
+        <div className="absolute top-0 left-0 right-0 flex flex-col gap-2 px-4 pt-4">
           {/* 진행 중인 주문이 있을 때 주문 확인 버튼 */}
           {activeOrders.length > 0 && (
             <button
               onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
-              className="w-full bg-primary text-white py-4 px-6 rounded-2xl shadow-xl flex items-center justify-between"
+              className="w-full bg-primary/90 backdrop-blur-md text-white py-3.5 px-5 rounded-2xl shadow-xl flex items-center justify-between border border-white/10"
             >
               <span className="font-black text-sm text-white">진행 중인 주문 확인하기</span>
               <div className="flex gap-1">
@@ -284,19 +263,14 @@ export const Home = () => {
             <button
               onClick={() => setShowInstallGuide(true)}
               aria-label="앱으로 설치하기"
-              className="animate-heartbeat w-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/25 text-white py-4 px-6 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors"
+              className="w-full active:scale-95 transition-transform"
             >
-              {/* 앱 아이콘 */}
-              <span className="w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v13M7 9l5 5 5-5" />
-                  <path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" />
-                </svg>
-              </span>
-              <div className="text-left">
-                <p className="font-black text-sm leading-tight">앱으로 설치하기</p>
-                <p className="text-[11px] text-white/60 font-medium leading-tight mt-0.5">음료 준비 알림을 바로 받아보세요</p>
-              </div>
+              <img
+                src="/img/design/APP_install_btn.svg"
+                alt="앱으로 설치하기"
+                className="w-full h-auto"
+                draggable={false}
+              />
             </button>
           )}
         </div>
@@ -308,6 +282,7 @@ export const Home = () => {
       </div>
     );
   }
+
 
 
   // 카테고리별 메뉴 정렬 (판매중 메뉴 상단, 품절(is_available=false) 메뉴 하단 정렬)
