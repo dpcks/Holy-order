@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { useCart } from '../context/CartContext';
 import { TossLogo } from '../components/ui/TossLogo';
 import { Toast } from '../components/ui/Toast';
+import { CloudinaryImage } from '../components/ui/CloudinaryImage';
 import type { ToastType } from '../components/ui/Toast';
 import { apiClient } from '../api/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,7 +14,6 @@ import { QK, QK_DOMAIN } from '../api/queryKeys';
 import { usePublicSettings, fetchPublicSettings } from '../hooks/usePublicSettings';
 import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
 import type { Duty, StandardResponse, PaymentMethod } from '../types';
-
 import { isStandalonePwa, getPwaInstallationIdForOrder } from '../utils/pwaInstallation';
 
 // 백엔드 DutyEnum과 동일하게 유지
@@ -388,7 +388,7 @@ export const Cart = () => {
             </div>
 
             <div className="flex flex-col gap-4">
-              {items.map((item) => (
+              {items.map((item, index) => (
                 <div key={item.cartItemId} className="flex gap-3 pb-4 border-b border-gray-50 last:border-0 last:pb-0 relative">
                   <button
                     onClick={() => removeItem(item.cartItemId)}
@@ -399,11 +399,28 @@ export const Cart = () => {
 
                   <div className="w-[72px] h-[72px] rounded-xl overflow-hidden bg-gray-100 shrink-0">
                     {item.image_url ? (
-                      <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                      // 72px 주문 섯네일: cart-thumbnail 프리셋 적용, 첫 두 항목은 eager
+                      <CloudinaryImage
+                        src={item.image_url}
+                        preset="cart-thumbnail"
+                        priority={index < 2}
+                        fallbackSrc="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=100&q=80"
+                        alt={item.name}
+                        width={216}
+                        height={216}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <div className="w-full h-full bg-[#1A1818]">
-                        <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=100&q=80" alt="coffee" className="w-full h-full object-cover opacity-80" />
-                      </div>
+                      <img
+                        src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=100&q=80"
+                        alt="coffee"
+                        loading={index < 2 ? 'eager' : 'lazy'}
+                        fetchPriority={index < 2 ? 'high' : 'auto'}
+                        decoding="async"
+                        width={216}
+                        height={216}
+                        className="w-full h-full object-cover opacity-80"
+                      />
                     )}
                   </div>
 

@@ -9,8 +9,12 @@ import { usePublicSettings } from '../hooks/usePublicSettings';
 import { Toast } from '../components/ui/Toast';
 import { PwaInstallGuideModal } from '../components/ui/PwaInstallGuideModal';
 import { useCurrentAnnouncements } from '../hooks/useCurrentAnnouncements';
+import { CloudinaryImage } from '../components/ui/CloudinaryImage';
 import type { ToastType } from '../components/ui/Toast';
 import type { Menu, Category, StandardResponse } from '../types';
+
+// 메뉴 이미지 로딩 실패 시 사용할 placeholder URL
+const MENU_PLACEHOLDER = 'https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80';
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -383,10 +387,11 @@ export const Home = () => {
               <div className="text-center text-gray-500 mt-10">메뉴가 없습니다.</div>
             ) : (
               <div className="grid grid-cols-2 gap-4 gap-y-8">
-                {currentMenus.map((menu) => (
+                {currentMenus.map((menu, index) => (
                   <MenuCard
                     key={menu.id}
                     menu={menu}
+                    priority={index < 2}
                     isEventMode={!!activeEvent?.is_event_mode}
                     showPrice={shopSettings?.show_price ?? true}
                     onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
@@ -405,10 +410,11 @@ export const Home = () => {
             <div className="text-center text-gray-500 mt-10">검색 결과가 없습니다.</div>
           ) : (
             <div className="grid grid-cols-2 gap-4 gap-y-8">
-              {filteredMenus.map((menu) => (
+              {filteredMenus.map((menu, index) => (
                 <MenuCard
                   key={menu.id}
                   menu={menu}
+                  priority={index < 2}
                   isEventMode={!!activeEvent?.is_event_mode}
                   showPrice={shopSettings?.show_price ?? true}
                   onClick={() => navigate(`/menu/${menu.id}`, { state: { menu, isEventMode: !!activeEvent?.is_event_mode } })}
@@ -521,7 +527,21 @@ export const Home = () => {
 };
 
 // 재사용을 위한 MenuCard 컴포넌트
-const MenuCard = ({ menu, isEventMode = false, showPrice = true, onClick, onShowToast }: { menu: Menu, isEventMode?: boolean, showPrice?: boolean, onClick: () => void, onShowToast: (msg: string, type: ToastType) => void }) => {
+const MenuCard = ({
+  menu,
+  priority = false,
+  isEventMode = false,
+  showPrice = true,
+  onClick,
+  onShowToast,
+}: {
+  menu: Menu;
+  priority?: boolean;
+  isEventMode?: boolean;
+  showPrice?: boolean;
+  onClick: () => void;
+  onShowToast: (msg: string, type: ToastType) => void;
+}) => {
   const handleCardClick = () => {
     if (!menu.is_available) {
       onShowToast(`'${menu.name}' 메뉴는 현재 품절입니다.`, 'error');
@@ -537,20 +557,29 @@ const MenuCard = ({ menu, isEventMode = false, showPrice = true, onClick, onShow
     >
       <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100 mb-3">
         {menu.image_url ? (
-          <img
+          // CloudinaryImage: Cloudinary URL이면 변환 URL+srcSet 적용, 아니면 원본 그대로 사용
+          <CloudinaryImage
             src={menu.image_url}
+            preset="menu-card"
+            priority={priority}
+            fallbackSrc={MENU_PLACEHOLDER}
             alt={menu.name}
+            width={480}
+            height={480}
             className={`w-full h-full object-cover transition-transform duration-300 ${menu.is_available ? 'group-hover:scale-105' : 'grayscale'}`}
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80";
-              e.currentTarget.classList.add('opacity-80');
-            }}
           />
         ) : (
-          <div className="w-full h-full bg-[#1A1818] flex items-center justify-center">
-            <img src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=400&q=80" alt="coffee placeholder" className={`w-full h-full object-cover opacity-80 ${menu.is_available ? '' : 'grayscale'}`} />
-          </div>
+          // image_url 없을 때 placeholder 직접 렌더링
+          <img
+            src={MENU_PLACEHOLDER}
+            alt="coffee placeholder"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
+            decoding="async"
+            width={480}
+            height={480}
+            className={`w-full h-full object-cover opacity-80 ${menu.is_available ? '' : 'grayscale'}`}
+          />
         )}
 
         {/* 품절 오버레이 */}

@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { QuantitySelector } from '../components/ui/QuantitySelector';
 import { useCart } from '../context/CartContext';
 import { Toast } from '../components/ui/Toast';
+import { CloudinaryImage } from '../components/ui/CloudinaryImage';
 import type { ToastType } from '../components/ui/Toast';
 import type { Menu, MenuOption } from '../types';
 import { usePublicSettings } from '../hooks/usePublicSettings';
@@ -193,19 +194,26 @@ export const MenuDetail = () => {
         <div className="px-4 pt-4 pb-2 flex flex-col gap-3">
           <div className="relative w-full aspect-[4/3] rounded-3xl overflow-hidden shadow-sm bg-gray-50 border border-gray-100">
             {menu.image_url ? (
-              <img
+              // 메뉴 상세의 hero 이미지는 항상 우선 로딩 (주요 콘텐츠)
+              <CloudinaryImage
                 src={menu.image_url}
+                preset="menu-detail"
+                priority
+                fallbackSrc="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80"
                 alt={menu.name}
+                width={1024}
+                height={768}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = "https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80";
-                }}
               />
             ) : (
               <img
                 src="https://images.unsplash.com/photo-1559525839-b184a4d698c7?w=800&q=80"
                 alt="coffee"
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                width={1024}
+                height={768}
                 className="w-full h-full object-cover"
               />
             )}
