@@ -150,3 +150,64 @@
 9. 하위 호환성과 배포 순서
 10. 롤백 방법
 11. 남은 위험과 후속 작업
+
+---
+
+## 배포 전 최종 안정화 작업 (28~30)
+
+28. `28_SCHEDULED_FREE_EVENT_PRESERVE_LIVE_EVENT.md` — 미래 예약 무료 이벤트 게시 시 현재 LIVE 이벤트를 조기 종료하지 않도록 활성화 정책 수정
+29. `29_RAILWAY_PWA_DB_CONSTRAINT_FINAL_VERIFICATION.md` — Railway 운영 DB의 PWA FK, ON DELETE, 중복 제약, 고아 참조를 읽기 전용으로 최종 검증
+30. `30_PWA_SCHEMA_MIGRATION_SINGLE_SOURCE_OF_TRUTH.md` — main.py 자동 DDL을 제거하고 전용 migration을 PWA 스키마의 단일 기준으로 통일
+
+실행 프롬프트:
+
+- `28_SCHEDULED_FREE_EVENT_PRESERVE_LIVE_EVENT_PROMPT.md`
+- `29_RAILWAY_PWA_DB_CONSTRAINT_FINAL_VERIFICATION_PROMPT.md`
+- `30_PWA_SCHEMA_MIGRATION_SINGLE_SOURCE_OF_TRUTH_PROMPT.md`
+
+권장 적용 순서:
+
+```text
+28번 이벤트 예약 활성화 수정
+→ 29번 운영 DB 사전 검증
+→ 30번 migration 단일화 적용
+→ 29번 운영 DB 최종 검증 재실행
+```
+
+---
+
+## 주문 가격·이벤트 정산 최종 안정화 작업 (31)
+
+31. `31_SERVER_AUTHORITATIVE_ORDER_PRICING_AND_OPTION_RECALCULATION.md` — 메뉴·옵션·텀블러 할인·무료 이벤트 원가·관리자 무료 주문 원가를 서버가 DB 기준으로 재계산하고 주문 항목 스냅샷을 보존
+
+실행 프롬프트:
+
+- `31_SERVER_AUTHORITATIVE_ORDER_PRICING_AND_OPTION_RECALCULATION_PROMPT.md`
+
+의존 관계:
+
+```text
+28번 예약 무료 이벤트 보존
+→ 31번 서버 권위 가격·옵션 재계산
+```
+
+31번은 기존 03번 서버 권위 주문 가격 명세의 현재 저장소 맞춤형 후속 구현 문서다. 22번 이벤트/공지 안전성 작업에서 남아 있던 이벤트 `original_price`와 옵션 가격 신뢰 문제를 함께 해결한다.
+
+---
+
+## 사용자 PWA 이미지 성능 최적화 작업 (32)
+
+32. `32_CLOUDINARY_RESPONSIVE_IMAGE_DELIVERY_OPTIMIZATION.md` — Cloudinary 메뉴 이미지에 `f_auto`, `q_auto`, 화면별 `w/h`, 반응형 `srcSet`, 첫 두 장 eager, 나머지 lazy, 사용자 HTML preconnect를 적용
+
+실행 프롬프트:
+
+- `32_CLOUDINARY_RESPONSIVE_IMAGE_DELIVERY_OPTIMIZATION_PROMPT.md`
+
+의존 관계:
+
+```text
+24번 사용자 PWA 화면 안정화
+→ 32번 Cloudinary 반응형 이미지 전달 최적화
+```
+
+32번은 DB와 백엔드를 변경하지 않는다. Cloudinary `secure_url`을 canonical 원본 URL로 유지하고 Home, MenuDetail, Cart 렌더링 시점에만 화면별 변환 URL을 생성한다. Service Worker 이미지 캐시는 별도 후속 작업으로 남긴다.

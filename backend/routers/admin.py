@@ -1155,14 +1155,6 @@ async def activate_announcement(announcement_id: int, db: Session = Depends(get_
         except ValueError as e:
             raise HTTPException(status_code=409, detail=str(e))
 
-    # 일반 공지: 여러 개 동시 활성 가능 — 같은 유형(이벤트)일 때만 다른 활성 이벤트 비활성화
-    if announcement.is_event_mode:
-        db.query(models.Announcement).filter(
-            models.Announcement.is_active == True,
-            models.Announcement.is_event_mode == True,
-            models.Announcement.id != announcement_id
-        ).update({"is_active": False})
-
     announcement.is_active = True
     db.commit()
     db.refresh(announcement)

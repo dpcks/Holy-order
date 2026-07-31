@@ -446,3 +446,153 @@ def test_12_12_admin_manual_free_order(client, db_session):
     assert order_data["original_price"] == 3000
     assert order_data["announcement_id"] is None
     assert order_data["payment_method"] == "FREE"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 28번 명세 전용 테스트 케이스
+# ──────────────────────────────────────────────────────────────────────────────
+
+def test_28_1_non_overlapping_scheduled_event_preserves_live_event(client, db_session):
+    """28-1. 미래 비중첩 예약 이벤트를 게시(is_active=True)해도 현재 LIVE 이벤트의 is_active는 True로 유지된다."""
+    now = _now_naive()
+
+    # 이벤트 A: 09:00~12:00 (LIVE)
+    event_a = Announcement(
+        title="이벤트 A",
+        is_event_mode=True,
+        is_active=True,
+        sponsor_name="A",
+        event_type="칠순감사",
+        starts_at=now - timedelta(hours=1),
+        ends_at=now + timedelta(hours=2),
+    )
+    # 이벤트 B: 13:00~15:00 (미래 예약)
+    event_b = Announcement(
+        title="이벤트 B",
+        is_event_mode=True,
+        is_active=False,
+        sponsor_name="B",
+        event_type="결혼감사",
+        starts_at=now + timedelta(hours=3),
+        ends_at=now + timedelta(hours=5),
+    )
+    db_session.add_all([event_a, event_b])
+    db_session.commit()
+
+    # 이벤트 B 게시(활성화)
+    res = client.post(f"/api/v1/admin/announcements/{event_b.id}/activate")
+    assert res.status_code == 200
+
+    ev_a = db_session.query(Announcement).filter(Announcement.id == event_a.id).first()
+    ev_b = db_session.query(Announcement).filter(Announcement.id == event_b.id).first()
+
+    # [핵심 검증 1] 이벤트 A와 B 모두 is_active == True 여야 함 (A가 조기 종료되지 않음)
+    assert ev_a is not None and ev_a.is_active is True
+    assert ev_b is not None and ev_b.is_active is True
+
+    # [핵심 검증 2] 현재 시각에는 A만 effective event로 조회되어야 함
+    eff = get_effective_free_event(db_session, now)
+    assert eff is not None
+    assert eff.id == event_a.id
+
+
+def test_28_2_effective_event_transition_at_scheduled_time(db_session):
+    """28-2. 시간이 겹치지 않는 두 이벤트 A(09~12), B(13~15)가 모두 is_active=True 일 때 시간에 따라 effective 이벤트가 정확히 전환된다."""
+    base_time = datetime(2026, 8, 1, 10, 0, 0)
+    event_a = Announcement(
+        title="이벤트 A",
+        is_event_mode=True,
+        is_active=True,
+        sponsor_name="A",
+        event_type="칠순",
+        starts_at=datetime(2026, 8, 1, 9, 0, 0),
+        ends_at=datetime(2026, 8, 1, 12, 0, 0),
+    )
+    event_b = Announcement(
+        title="이벤트 B",
+        is_event_mode=True,
+        is_active=True,
+        sponsor_name="B",
+        event_type="결혼",
+        starts_at=datetime(2026, 8, 1, 13, 0, 0),
+        ends_at=datetime(2026, 8, 1, 15, 0, 0),
+    )
+    db_session.add_all([event_a, event_b])
+    db_session.commit()
+
+    # 10:00 → A
+    eff_1000 = get_effective_free_event(db_session, datetime(2026, 8, 1, 10, 0, 0))
+    assert eff_1000 is not None and eff_1000.id == event_a.id
+
+    # 12:30 → None
+    eff_1230 = get_effective_free_event(db_session, datetime(2026, 8, 1, 12, 30, 0))
+    assert eff_1230 is None
+
+    # 13:00 → B
+    eff_1300 = get_effective_free_event(db_session, datetime(2026, 8, 1, 13, 0, 0))
+    assert eff_1300 is not None and eff_1300.id == event_b.id
+
+    # 15:00 → None
+    eff_1500 = get_effective_free_event(db_session, datetime(2026, 8, 1, 15, 0, 0))
+    assert eff_1500 is None
+
+
+def test_28_3_overlapping_event_blocked_and_preserves_states(client, db_session):
+    """28-3. 시간이 겹치는 이벤트 게시 시도 시 409 반환하며, 기존 A(is_active=True) 및 B(is_active=False) 상태가 변경되지 않는다."""
+    now = _now_naive()
+    event_a = Announcement(
+        title="이벤트 A",
+        is_event_mode=True,
+        is_active=True,
+        starts_at=now,
+        ends_at=now + timedelta(hours=4),
+    )
+    event_b = Announcement(
+        title="이벤트 B",
+        is_event_mode=True,
+        is_active=False,
+        starts_at=now + timedelta(hours=2),
+        ends_at=now + timedelta(hours=5),
+    )
+    db_session.add_all([event_a, event_b])
+    db_session.commit()
+
+    res = client.post(f"/api/v1/admin/announcements/{event_b.id}/activate")
+    assert res.status_code == 409
+
+    ev_a = db_session.query(Announcement).filter(Announcement.id == event_a.id).first()
+    ev_b = db_session.query(Announcement).filter(Announcement.id == event_b.id).first()
+    assert ev_a is not None and ev_a.is_active is True
+    assert ev_b is not None and ev_b.is_active is False
+
+
+def test_28_4_manual_deactivate_scope(client, db_session):
+    """28-4. A(LIVE)와 B(SCHEDULED)가 모두 is_active=True일 때 A를 비활성화해도 B의 is_active=True 상태는 유지된다."""
+    now = _now_naive()
+    event_a = Announcement(
+        title="이벤트 A",
+        is_event_mode=True,
+        is_active=True,
+        starts_at=now - timedelta(hours=1),
+        ends_at=now + timedelta(hours=1),
+    )
+    event_b = Announcement(
+        title="이벤트 B",
+        is_event_mode=True,
+        is_active=True,
+        starts_at=now + timedelta(hours=2),
+        ends_at=now + timedelta(hours=4),
+    )
+    db_session.add_all([event_a, event_b])
+    db_session.commit()
+
+    # A 종료 (비활성화)
+    res = client.post(f"/api/v1/admin/announcements/{event_a.id}/deactivate")
+    assert res.status_code == 200
+
+    ev_a = db_session.query(Announcement).filter(Announcement.id == event_a.id).first()
+    ev_b = db_session.query(Announcement).filter(Announcement.id == event_b.id).first()
+
+    assert ev_a is not None and ev_a.is_active is False
+    assert ev_b is not None and ev_b.is_active is True
+
