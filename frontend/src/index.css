@@ -79,6 +79,19 @@ body {
   animation: shimmer 2s infinite linear;
 }
 
+/* 심장박동 애니메이션 — 영업 종료 화면 PWA 설치 버튼 등에 사용 */
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14%       { transform: scale(1.07); }
+  28%       { transform: scale(1); }
+  42%       { transform: scale(1.05); }
+  70%       { transform: scale(1); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
 /* 스크롤바를 숨기면서 스크롤 기능은 유지하는 유틸리티 (Tailwind v4 충돌 방지를 위해 hide-scrollbar로 명명) */
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE/Edge */

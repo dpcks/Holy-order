@@ -262,9 +262,10 @@ export const Home = () => {
           </div>
         </div> */}
 
-        {/* 하단 푸터 (진행 중인 주문이 있다면 표시) */}
-        {activeOrders.length > 0 && (
-          <div className="relative p-6 border-t border-white/10 bg-black/50 backdrop-blur-2xl">
+        {/* 하단 버튼 영역 — 주문 확인 + 앱 설치 유도 */}
+        <div className="relative p-4 border-t border-white/10 bg-black/50 backdrop-blur-2xl flex flex-col gap-3">
+          {/* 진행 중인 주문이 있을 때 주문 확인 버튼 */}
+          {activeOrders.length > 0 && (
             <button
               onClick={() => navigate(`/order/status/${activeOrders[activeOrders.length - 1].id}`)}
               className="w-full bg-primary text-white py-4 px-6 rounded-2xl shadow-xl flex items-center justify-between"
@@ -276,11 +277,38 @@ export const Home = () => {
                 <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse delay-150"></span>
               </div>
             </button>
-          </div>
+          )}
+
+          {/* 앱 미설치 상태일 때만 PWA 설치 유도 버튼 표시 */}
+          {!isStandalone && (
+            <button
+              onClick={() => setShowInstallGuide(true)}
+              aria-label="앱으로 설치하기"
+              className="animate-heartbeat w-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/25 text-white py-4 px-6 rounded-2xl shadow-xl flex items-center justify-center gap-3 transition-colors"
+            >
+              {/* 앱 아이콘 */}
+              <span className="w-8 h-8 bg-white/15 rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v13M7 9l5 5 5-5" />
+                  <path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" />
+                </svg>
+              </span>
+              <div className="text-left">
+                <p className="font-black text-sm leading-tight">앱으로 설치하기</p>
+                <p className="text-[11px] text-white/60 font-medium leading-tight mt-0.5">음료 준비 알림을 바로 받아보세요</p>
+              </div>
+            </button>
+          )}
+        </div>
+
+        {/* PWA 설치 가이드 모달 */}
+        {showInstallGuide && (
+          <PwaInstallGuideModal onClose={() => setShowInstallGuide(false)} />
         )}
       </div>
     );
   }
+
 
   // 카테고리별 메뉴 정렬 (판매중 메뉴 상단, 품절(is_available=false) 메뉴 하단 정렬)
   const currentMenus = activeCategory?.menus
