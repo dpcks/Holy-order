@@ -29,12 +29,12 @@ def get_announcement_status(announcement: models.Announcement, now: Optional[dat
     if now is None:
         now = _now_naive()
 
-    # ENDED: ends_at이 존재하고 이미 지난 경우 (is_active 무관)
-    if announcement.ends_at and announcement.ends_at <= now:
-        return "ENDED"
-
     if not announcement.is_active:
         return "DRAFT"
+
+    # ENDED: ends_at이 존재하고 이미 지난 경우
+    if announcement.ends_at and announcement.ends_at <= now:
+        return "ENDED"
 
     # SCHEDULED: starts_at이 미래
     if announcement.starts_at and announcement.starts_at > now:
@@ -60,6 +60,9 @@ def get_effective_free_event(db: Session, now: Optional[datetime] = None) -> Opt
         models.Announcement.is_active == True,
         or_(models.Announcement.starts_at == None, models.Announcement.starts_at <= now),
         or_(models.Announcement.ends_at == None, models.Announcement.ends_at > now),
+    ).order_by(
+        models.Announcement.starts_at.desc().nullslast(),
+        models.Announcement.id.desc(),
     ).first()
 
 
