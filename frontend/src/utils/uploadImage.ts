@@ -1,9 +1,10 @@
 /*
-[File Role]
-Cloudinary 서버리스 이미지 업로드를 담당하는 유틸리티 파일입니다.
-환경변수에 등록된 Upload Preset을 활용하여 프론트엔드에서 백엔드를 거치지 않고
-안전하고 빠르게 이미지를 저장한 뒤, 최적화된 URL을 반환합니다.
-*/
+ * [File Role] Cloudinary 서버리스 이미지 업로드 유틸리티
+ *
+ * Cloudinary에 원본 이미지를 업로드하고,
+ * DB 저장에 사용할 canonical secure_url을 반환한다.
+ * 화면별 크기·포맷·품질 최적화는 cloudinaryImage.ts에서 전달 시점에 적용한다.
+ */
 
 export const uploadImageToCloudinary = async (file: File): Promise<string> => {
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
