@@ -111,51 +111,9 @@ def run_auto_migrations():
         db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS toss_enabled BOOLEAN DEFAULT FALSE;"))
         db.execute(text("ALTER TABLE settings ADD COLUMN IF NOT EXISTS show_price BOOLEAN DEFAULT TRUE;"))
         
-        # 4. PWA 설치 및 기기 추적 테이블 / 주문 연결 컬럼
-        db.execute(text("""
-            CREATE TABLE IF NOT EXISTS pwa_installations (
-                id SERIAL PRIMARY KEY,
-                installation_id VARCHAR(64) NOT NULL,
-                app_type VARCHAR(20) NOT NULL,
-                platform VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
-                browser_family VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
-                first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                first_standalone_at TIMESTAMP WITH TIME ZONE,
-                last_standalone_at TIMESTAMP WITH TIME ZONE,
-                last_detection_method VARCHAR(30) NOT NULL DEFAULT 'UNKNOWN',
-                push_permission VARCHAR(20) NOT NULL DEFAULT 'UNKNOWN',
-                related_app_installed BOOLEAN,
-                admin_id INTEGER REFERENCES admins(id) ON DELETE SET NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT uq_pwa_installation_id_app_type UNIQUE (installation_id, app_type)
-            );
-        """))
-        db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_installation_id ON pwa_installations (installation_id);"))
-        db.execute(text("CREATE INDEX IF NOT EXISTS ix_pwa_installations_last_seen_at ON pwa_installations (last_seen_at);"))
-        db.execute(text("ALTER TABLE orders ADD COLUMN IF NOT EXISTS pwa_installation_id INTEGER REFERENCES pwa_installations(id);"))
-
-        # admin_id 외래키가 users.id를 참조하던 잘못된 제약조건 수정 (admins.id 참조)
-        try:
-            db.execute(text("ALTER TABLE pwa_installations DROP CONSTRAINT IF EXISTS pwa_installations_admin_id_fkey;"))
-            db.execute(text("""
-                UPDATE pwa_installations p
-                SET admin_id = NULL
-                WHERE admin_id IS NOT NULL
-                  AND NOT EXISTS (
-                    SELECT 1 FROM admins a WHERE a.id = p.admin_id
-                  );
-            """))
-            db.execute(text("""
-                ALTER TABLE pwa_installations
-                ADD CONSTRAINT pwa_installations_admin_id_fkey
-                FOREIGN KEY (admin_id)
-                REFERENCES admins(id)
-                ON DELETE SET NULL;
-            """))
-        except Exception as fk_err:
-            print(f"[AutoMigrate] FK migration notice: {fk_err}")
+        # NOTE: PWA 설치 통계 스키마(pwa_installations, orders.pwa_installation_id, FK 제약)는
+        # 앱 startup DDL 대신 전용 마이그레이션(backend/scripts/apply_pwa_installation_constraints.py)을
+        # 통해 Single Source of Truth로 독립 관리합니다. (30번 명세 준수)
 
         db.commit()
         print("[AutoMigrate] Database schema updated successfully.")

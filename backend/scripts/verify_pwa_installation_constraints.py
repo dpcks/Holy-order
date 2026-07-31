@@ -78,7 +78,7 @@ def verify_constraints(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
         log_fail("column pwa_installations.admin_id does NOT exist")
 
     # -------------------------------------------------------------
-    # 3 & 4. admin_id 외래키 (FK) 및 ON DELETE SET NULL 검증
+    # 3 & 4. admin_id 외래키 (FK) 및 ON DELETE SET NULL / 중복 / users.id 참조 검증
     # -------------------------------------------------------------
     if dialect_name == "postgresql":
         with engine.connect() as conn:
@@ -106,39 +106,58 @@ def verify_constraints(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
             if not rows:
                 log_fail("pwa_installations.admin_id has NO foreign key constraint")
             else:
+                semantic_admin_fks = []
                 for row in rows:
                     ref_table = row.referenced_table
                     ref_col = row.referenced_column
                     del_rule = row.delete_rule.upper()
 
+                    if ref_table == "users":
+                        log_fail("admin_id references users.id")
+
                     if ref_table == "admins" and ref_col == "id":
-                        log_pass("admin_id FK -> admins.id")
+                        semantic_admin_fks.append(row)
+                        if del_rule in ("SET NULL", "SET_NULL"):
+                            log_pass("admin_id ON DELETE SET NULL")
+                        else:
+                            log_fail(f"admin_id delete rule is {del_rule} (expected SET NULL)")
                     else:
                         log_fail(f"admin_id FK points to {ref_table}.{ref_col} (expected admins.id)")
 
-                    if del_rule in ("SET NULL", "SET_NULL"):
-                        log_pass("admin_id ON DELETE SET NULL")
-                    else:
-                        log_fail(f"admin_id delete rule is {del_rule} (expected SET NULL)")
+                if len(semantic_admin_fks) == 1:
+                    log_pass("admin_id FK -> admins.id")
+                    log_pass("exactly one semantic admin FK exists")
+                elif len(semantic_admin_fks) > 1:
+                    log_fail(f"duplicate semantic admin FK count={len(semantic_admin_fks)}")
     else:
         # SQLite 등 기타 DB
         fks = inspector.get_foreign_keys("pwa_installations")
-        admin_fk = next((fk for fk in fks if "admin_id" in fk.get("constrained_columns", [])), None)
-        if admin_fk:
-            ref_table = admin_fk.get("referred_table")
-            ref_cols = admin_fk.get("referred_columns")
-            if ref_table == "admins" and ref_cols == ["id"]:
-                log_pass("admin_id FK -> admins.id")
-            else:
-                log_fail(f"admin_id FK points to {ref_table}.{ref_cols} (expected admins.id)")
-
-            ondelete = (admin_fk.get("options", {}) or {}).get("ondelete", "").upper()
-            if ondelete in ("SET NULL", "SET_NULL") or not ondelete:  # SQLite default setting
-                log_pass("admin_id ON DELETE SET NULL")
-            else:
-                log_fail(f"admin_id delete rule is {ondelete} (expected SET NULL)")
-        else:
+        admin_fks = [fk for fk in fks if "admin_id" in fk.get("constrained_columns", [])]
+        if not admin_fks:
             log_fail("pwa_installations.admin_id has NO foreign key constraint")
+        else:
+            semantic_admin_fks = []
+            for admin_fk in admin_fks:
+                ref_table = admin_fk.get("referred_table")
+                ref_cols = admin_fk.get("referred_columns")
+                if ref_table == "users":
+                    log_fail("admin_id references users.id")
+
+                if ref_table == "admins" and ref_cols == ["id"]:
+                    semantic_admin_fks.append(admin_fk)
+                    ondelete = (admin_fk.get("options", {}) or {}).get("ondelete", "").upper()
+                    if ondelete in ("SET NULL", "SET_NULL") or not ondelete:
+                        log_pass("admin_id ON DELETE SET NULL")
+                    else:
+                        log_fail(f"admin_id delete rule is {ondelete} (expected SET NULL)")
+                else:
+                    log_fail(f"admin_id FK points to {ref_table}.{ref_cols} (expected admins.id)")
+
+            if len(semantic_admin_fks) == 1:
+                log_pass("admin_id FK -> admins.id")
+                log_pass("exactly one semantic admin FK exists")
+            elif len(semantic_admin_fks) > 1:
+                log_fail(f"duplicate semantic admin FK count={len(semantic_admin_fks)}")
 
     # -------------------------------------------------------------
     # 5. admin_id 인덱스 검증
@@ -146,7 +165,7 @@ def verify_constraints(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
     pwa_indexes = inspector.get_indexes("pwa_installations")
     has_admin_index = any("admin_id" in idx.get("column_names", []) for idx in pwa_indexes)
     if has_admin_index:
-        log_pass("admin_id index exists")
+        log_pass("required admin_id index exists")
     else:
         log_fail("admin_id index does NOT exist")
 
@@ -157,7 +176,7 @@ def verify_constraints(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
         order_cols = {c["name"]: c for c in inspector.get_columns("orders")}
         if "pwa_installation_id" in order_cols:
             if order_cols["pwa_installation_id"].get("nullable", True):
-                log_pass("orders.pwa_installation_id exists")
+                log_pass("orders.pwa_installation_id is nullable")
             else:
                 log_fail("orders.pwa_installation_id exists but is NOT nullable")
         else:
@@ -190,39 +209,60 @@ def verify_constraints(engine, verbose: bool = True) -> Tuple[bool, List[str]]:
                 if not order_rows:
                     log_fail("orders.pwa_installation_id has NO foreign key constraint")
                 else:
+                    semantic_order_fks = []
                     for row in order_rows:
                         ref_table = row.referenced_table
                         ref_col = row.referenced_column
                         del_rule = row.delete_rule.upper()
 
                         if ref_table == "pwa_installations" and ref_col == "id":
-                            log_pass("order FK -> pwa_installations.id")
+                            semantic_order_fks.append(row)
+                            if del_rule in ("SET NULL", "SET_NULL"):
+                                log_pass("order FK ON DELETE SET NULL")
+                            else:
+                                log_fail(f"order FK delete rule is {del_rule} (expected SET NULL)")
                         else:
                             log_fail(f"order FK points to {ref_table}.{ref_col} (expected pwa_installations.id)")
 
-                        if del_rule in ("SET NULL", "SET_NULL"):
-                            log_pass("order FK ON DELETE SET NULL")
-                        else:
-                            log_fail(f"order FK delete rule is {del_rule} (expected SET NULL)")
+                    if len(semantic_order_fks) == 1:
+                        log_pass("order FK -> pwa_installations.id")
+                        log_pass("exactly one semantic order FK exists")
+                    elif len(semantic_order_fks) > 1:
+                        log_fail(f"duplicate semantic order FK count={len(semantic_order_fks)}")
         else:
             # SQLite 등 기타 DB
             order_fks = inspector.get_foreign_keys("orders")
-            order_fk = next((fk for fk in order_fks if "pwa_installation_id" in fk.get("constrained_columns", [])), None)
-            if order_fk:
-                ref_table = order_fk.get("referred_table")
-                ref_cols = order_fk.get("referred_columns")
-                if ref_table == "pwa_installations" and ref_cols == ["id"]:
-                    log_pass("order FK -> pwa_installations.id")
-                else:
-                    log_fail(f"order FK points to {ref_table}.{ref_cols} (expected pwa_installations.id)")
-
-                ondelete = (order_fk.get("options", {}) or {}).get("ondelete", "").upper()
-                if ondelete in ("SET NULL", "SET_NULL") or not ondelete:
-                    log_pass("order FK ON DELETE SET NULL")
-                else:
-                    log_fail(f"order FK delete rule is {ondelete} (expected SET NULL)")
-            else:
+            order_fks_list = [fk for fk in order_fks if "pwa_installation_id" in fk.get("constrained_columns", [])]
+            if not order_fks_list:
                 log_fail("orders.pwa_installation_id has NO foreign key constraint")
+            else:
+                semantic_order_fks = []
+                for order_fk in order_fks_list:
+                    ref_table = order_fk.get("referred_table")
+                    ref_cols = order_fk.get("referred_columns")
+                    if ref_table == "pwa_installations" and ref_cols == ["id"]:
+                        semantic_order_fks.append(order_fk)
+                        ondelete = (order_fk.get("options", {}) or {}).get("ondelete", "").upper()
+                        if ondelete in ("SET NULL", "SET_NULL") or not ondelete:
+                            log_pass("order FK ON DELETE SET NULL")
+                        else:
+                            log_fail(f"order FK delete rule is {ondelete} (expected SET NULL)")
+                    else:
+                        log_fail(f"order FK points to {ref_table}.{ref_cols} (expected pwa_installations.id)")
+
+                if len(semantic_order_fks) == 1:
+                    log_pass("order FK -> pwa_installations.id")
+                    log_pass("exactly one semantic order FK exists")
+                elif len(semantic_order_fks) > 1:
+                    log_fail(f"duplicate semantic order FK count={len(semantic_order_fks)}")
+
+        # 8-2. orders.pwa_installation_id 인덱스 검증
+        order_indexes = inspector.get_indexes("orders")
+        has_order_inst_index = any("pwa_installation_id" in idx.get("column_names", []) for idx in order_indexes)
+        if has_order_inst_index:
+            log_pass("required order_installation_id index exists")
+        else:
+            log_fail("order_installation_id index does NOT exist")
     else:
         log_fail("table orders does NOT exist")
 

@@ -196,7 +196,8 @@ def test_12_5_block_client_zero_price(client, db_session):
         ],
     }
     res = client.post("/api/v1/orders", json=payload)
-    assert res.status_code == 400
+    # 31번 명세: 클라이언트 total_price(0)와 서버 계산값(3000) 불일치 시 409 ORDER_PRICE_CHANGED 반환
+    assert res.status_code == 409
 
 
 def test_12_6_auto_apply_valid_free_event(client, db_session):
@@ -223,10 +224,10 @@ def test_12_6_auto_apply_valid_free_event(client, db_session):
     db_session.add_all([menu, user, setting])
     db_session.commit()
 
-    # 프론트는 정상 가격(3000원)을 보냄
+    # 31번 명세: 무료 이벤트 시 프런트 예상 결제 총액은 0원
     payload = {
         "user_id": user.id,
-        "total_price": 3000,
+        "total_price": 0,
         "payment_method": "BANK_TRANSFER",
         "expected_announcement_id": event.id,
         "items": [
@@ -426,7 +427,7 @@ def test_12_12_admin_manual_free_order(client, db_session):
     payload = {
         "user_name_snapshot": "사역자A",
         "user_duty_snapshot": "목사",
-        "total_price": 3000,
+        "total_price": 0,  # 31번 명세: 관리자 FREE 주문 시 예상 결제액은 0원
         "payment_method": "FREE",
         "items": [
             {

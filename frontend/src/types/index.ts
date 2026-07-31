@@ -164,10 +164,40 @@ export interface CartItem {
   name: string;
   image_url?: string;
   quantity: number;
+  selected_option_ids: number[]; // 31. 선택된 옵션 ID 목록 (서버 권위 가격 서비스용)
   options_text: string | null;
   price: number;           // 메뉴 기본가 + 옵션 추가금액 합계 (단가, 텀블러 할인 미반영)
   sub_total: number;       // price * quantity (텀블러 할인 미반영 금액)
   tumbler_discount: number; // 텀블러 선택 시 1개당 할인금액 (미선택이면 0)
+}
+
+// 31. 가격 정책 및 주문 견적 스키마
+export interface PricingPolicyResponse {
+  pricing_version: number;
+  tumbler_discount_per_unit: number;
+}
+
+export interface OrderQuoteItemResponse {
+  client_item_key?: string;
+  menu_id: number;
+  quantity: number;
+  option_ids: number[];
+  options_text: string | null;
+  menu_base_price: number;
+  option_extra_price_per_unit: number;
+  discount_per_unit: number;
+  normal_unit_price: number;
+  normal_line_total: number;
+}
+
+export interface OrderQuoteResponse {
+  pricing_version: number;
+  free_event_id?: number | null;
+  is_event_mode: boolean;
+  normal_total: number;
+  final_total: number;
+  discount_total: number;
+  items: OrderQuoteItemResponse[];
 }
 
 export interface StandardResponse<T> {

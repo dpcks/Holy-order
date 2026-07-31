@@ -120,6 +120,15 @@ class OrderItem(Base):
     quantity = Column(Integer, default=1)
     options_text = Column(String, nullable=True) # 예: "ICE, 샷 추가 1"
     sub_total = Column(Integer)
+    
+    # 31. 서버 권위 가격 및 옵션 스냅샷 확장 필드 (Single Source of Truth)
+    pricing_version = Column(Integer, nullable=False, default=1)
+    option_price_snapshot = Column(Integer, nullable=True)
+    discount_per_unit_snapshot = Column(Integer, nullable=True)
+    discount_total_snapshot = Column(Integer, nullable=True)
+    unit_price_snapshot = Column(Integer, nullable=True)
+    selected_options_snapshot = Column(JSON, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     

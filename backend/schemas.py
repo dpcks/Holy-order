@@ -91,10 +91,11 @@ class CategoryWithMenusResponse(BaseModel):
 class OrderItemCreate(BaseModel):
     menu_id: int
     quantity: int = Field(gt=0, description="1 이상이어야 합니다")
+    option_ids: List[int] = Field(default_factory=list, description="선택된 옵션 ID 목록")
+    client_item_key: Optional[str] = Field(default=None, description="프런트 장바구니 아이템 식별 키")
     options_text: Optional[str] = None
-    sub_total: int = Field(ge=0, description="0 이상이어야 합니다")
-    # 텀블러 선택 시 적용되는 아이템당 할인 단가 (1개 기준, 기본 0)
-    tumbler_discount: int = Field(default=0, ge=0, description="텀블러 할인 단가 (기본 0)")
+    sub_total: Optional[int] = Field(default=None, ge=0, description="0 이상이어야 합니다")
+    tumbler_discount: Optional[int] = Field(default=0, ge=0, description="텀블러 할인 단가 (기본 0)")
 
 class PaymentMethodEnum(str, Enum):
     BANK_TRANSFER = "BANK_TRANSFER"
@@ -119,6 +120,7 @@ class OrderCreate(BaseModel):
     pwa_installation_key: Optional[str] = None
     # Cart가 보고 있는 이벤트 ID — 서버 이벤트와 불일치 시 409 반환
     expected_announcement_id: Optional[int] = None
+    pricing_version: int = Field(default=2, description="가격 정책 버전 (신규 프런트는 2)")
 
 class AdminOrderCreate(BaseModel):
     user_name_snapshot: Optional[str] = "현장 주문"
@@ -128,6 +130,38 @@ class AdminOrderCreate(BaseModel):
     request: Optional[str] = None
     items: List[OrderItemCreate]
     status: str = "PREPARING"
+    pricing_version: int = Field(default=2, description="가격 정책 버전 (신규 프런트는 2)")
+
+# 31. 가격 정책 & 주문 견적 스키마
+class PricingPolicyResponse(BaseModel):
+    pricing_version: int = 2
+    tumbler_discount_per_unit: int = 500
+
+class OrderQuoteItemResponse(BaseModel):
+    client_item_key: Optional[str] = None
+    menu_id: int
+    quantity: int
+    option_ids: List[int] = []
+    options_text: Optional[str] = None
+    menu_base_price: int
+    option_extra_price_per_unit: int
+    discount_per_unit: int
+    normal_unit_price: int
+    normal_line_total: int
+
+class OrderQuoteRequest(BaseModel):
+    pricing_version: int = Field(default=2, description="가격 정책 버전")
+    expected_announcement_id: Optional[int] = None
+    items: List[OrderItemCreate]
+
+class OrderQuoteResponse(BaseModel):
+    pricing_version: int = 2
+    free_event_id: Optional[int] = None
+    is_event_mode: bool = False
+    normal_total: int
+    final_total: int
+    discount_total: int
+    items: List[OrderQuoteItemResponse]
 
 class PaymentLogCreate(BaseModel):
     order_id: int
@@ -161,6 +195,14 @@ class OrderItemResponse(BaseModel):
     quantity: int
     options_text: Optional[str]
     sub_total: int
+    
+    # 31. 확장 스냅샷 필드
+    pricing_version: int = 1
+    option_price_snapshot: Optional[int] = None
+    discount_per_unit_snapshot: Optional[int] = None
+    discount_total_snapshot: Optional[int] = None
+    unit_price_snapshot: Optional[int] = None
+    selected_options_snapshot: Optional[Any] = None
     
     model_config = ConfigDict(from_attributes=True)
 
