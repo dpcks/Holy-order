@@ -341,7 +341,7 @@ async def create_admin_order(order: schemas.AdminOrderCreate, db: Session = Depe
             payment_log = models.PaymentLog(
                 order_id=new_order.id,
                 log_type="CALLBACK",
-                amount=calculated_total,
+                amount=quote.normal_total,  # ⭕ quote.normal_total (또는 server_final_total)로 변경!
                 sender_name=order.user_name_snapshot or "현장 결제",
                 raw_data={"payment_method": order.payment_method.value, "type": "admin_direct"}
             )
