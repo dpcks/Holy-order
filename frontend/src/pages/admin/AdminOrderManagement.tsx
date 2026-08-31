@@ -525,9 +525,26 @@ export const AdminOrderManagement = () => {
                             )}
                             {transition && (
                               order.status === 'PENDING' && order.payment_method === 'TOSS' ? (
-                                <div className="flex-1 py-4 text-[13px] font-black rounded-2xl bg-[#0064FF]/10 text-[#0064FF] flex items-center justify-center gap-2 border border-[#0064FF]/20">
-                                  <TossLogo size={16} />
-                                  토스 송금 자동 확인 대기
+                                <div className="flex-1 flex items-center gap-2">
+                                  {/* 기존 토스 송금 자동 확인 대기 상태 표시 박스 */}
+                                  <div className="flex-1 py-3 px-2.5 text-[12px] font-black rounded-2xl bg-[#0064FF]/10 text-[#0064FF] flex items-center justify-center gap-1.5 border border-[#0064FF]/20 min-w-0">
+                                    <TossLogo size={14} className="shrink-0" />
+                                    <span className="truncate">토스 자동 대기</span>
+                                  </div>
+                                  {/* 관리자 수동 승인 버튼 */}
+                                  <button
+                                    onClick={() => handleStatusChange(order.id, transition.next)}
+                                    disabled={isUpdating}
+                                    className="px-3.5 py-3 text-[13px] font-black rounded-2xl bg-[#0064FF] text-white hover:bg-[#0052D4] transition-all shadow-md active:scale-95 flex items-center justify-center gap-1.5 shrink-0"
+                                    title="관리자가 직접 승인하여 제조를 시작합니다"
+                                  >
+                                    {isUpdating ? (
+                                      <RefreshCw size={14} className="animate-spin" />
+                                    ) : (
+                                      <CheckCircle size={15} />
+                                    )}
+                                    <span>수동 승인</span>
+                                  </button>
                                 </div>
                               ) : (
                                 <button
