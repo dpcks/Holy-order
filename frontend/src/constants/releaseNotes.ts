@@ -17,6 +17,16 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: 'v2.1.0',
+    date: '2026-08-31',
+    title: '토스 주문 관리자 수동 승인 지원 & PWA 앱 설치 UX·가이드 고도화',
+    updates: [
+      { text: '토스 송금 주문(TOSS) 자동 확인 대기 상태에서 관리자가 직접 즉시 승인(제조 시작)할 수 있는 [수동 승인] 버튼 추가', isNew: true },
+      { text: '영업 종료 화면에 PWA 앱 설치 유도 배너(APP_install_btn.svg) 상단 오버레이 배치 및 심장박동 애니메이션 적용', isNew: true },
+      { text: 'PWA 설치 가이드 모달 내 손가락 핀치 줌(Pinch-to-zoom), 더블 탭 확대, [+]/[-]/[초기화] 컨트롤 바 구축으로 가이드 이미지 100% 확대 지원', isNew: true },
+    ]
+  },
+  {
     version: 'v2.0.0',
     date: '2026-07-31',
     title: '서버 권위 가격 산정 시스템 도입 및 보안·가격 재계산 강화',
