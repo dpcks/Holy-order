@@ -524,21 +524,25 @@ export const AdminOrderManagement = () => {
                               </button>
                             )}
                             {transition && (
-                              order.status === 'PENDING' && order.payment_method === 'TOSS' ? (
-                                <div className="flex-1 py-4 text-[13px] font-black rounded-2xl bg-[#0064FF]/10 text-[#0064FF] flex items-center justify-center gap-2 border border-[#0064FF]/20">
-                                  <TossLogo size={16} />
-                                  토스 송금 자동 확인 대기
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => handleStatusChange(order.id, transition.next)}
-                                  disabled={isUpdating}
-                                  className={`flex-1 py-4 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${transition.color}`}
-                                >
-                                  {isUpdating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={18} />}
-                                  {transition.label}
-                                </button>
-                              )
+                              <button
+                                onClick={() => handleStatusChange(order.id, transition.next)}
+                                disabled={isUpdating}
+                                className={`flex-1 py-4 text-[14px] font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center justify-center gap-2 ${order.status === 'PENDING' && order.payment_method === 'TOSS'
+                                  ? 'bg-[#0064FF] text-white hover:bg-[#0052D4]'
+                                  : transition.color
+                                  }`}
+                              >
+                                {isUpdating ? (
+                                  <RefreshCw size={16} className="animate-spin" />
+                                ) : order.status === 'PENDING' && order.payment_method === 'TOSS' ? (
+                                  <TossLogo size={16} invert={true} />
+                                ) : (
+                                  <CheckCircle size={18} />
+                                )}
+                                {order.status === 'PENDING' && order.payment_method === 'TOSS'
+                                  ? '토스 승인 (제조 시작)'
+                                  : transition.label}
+                              </button>
                             )}
                           </div>
                         </div>
